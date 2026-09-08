@@ -1,0 +1,186 @@
+# Evaluation
+
+This is where the project earns its marks. Everything here must be reproducible from a seed.
+
+---
+
+## 1. The core problem
+
+Fraud datasets have no labels. Nobody publishes "these 100 transactions are fraud." Without labels there is no precision, no recall, and no defensible claim of improvement.
+
+**Solution: an anomaly-injection harness.** Take real public procurement data and script the injection of realistic frauds. The injected anomalies are the ground truth. Because injection is scripted and seeded, the whole evaluation reproduces exactly.
+
+---
+
+## 2. Injection harness
+
+### 2.1 What gets injected
+
+| Class | Method |
+|---|---|
+| **Duplicate** | Copy a real row. Perturb the vendor string — typos, "Pvt Ltd" to "Private Limited", spacing and case changes. Shift the date by a few days. Keep the amount identical or within a very small tolerance. |
+| **Split** | Replace one above-threshold transaction with 3-6 sub-threshold transactions to the same vendor and officer, inside a short window, summing to the original amount. |
+| **Inflation** | Multiply unit price by a factor in the range 1.5-3.0 for sampled line items within a category. |
+| **Vendor flag** | Synthesize a vendor whose invoices are round-number heavy, temporally clustered at period end, and whose first-digit distribution departs from the Benford expectation. |
+
+### 2.2 Parameters
+
+| Parameter | Value |
+|---|---|
+| Overall injection rate | 0.5% - 2% of rows |
+| Per-category injection cap (inflation) | Capped, so injection does not materially shift the category median it is measured against |
+| Seeds | Fixed and recorded. Results reported across multiple seeds. |
+| Reproducibility | Fully scripted. Same seed and same input produce byte-identical output. |
+
+### 2.3 Ground truth records
+
+Each injection writes a `ground_truth` row: the group id, the anomaly class, the row ids forming the anomaly, the source rows it was derived from, the seed, the parameters used, and the amount at risk.
+
+### 2.4 Isolation rule
+
+Injection markers (`is_injected`, `injection_group_id`, `injection_type`) live in the `transactions` table so detectors see exactly what an auditor would see. **Detectors must never read them.** Only the evaluation harness does. This is enforced by a test.
+
+---
+
+## 3. Matching a detected case to ground truth
+
+A case is a group of rows, and an injected anomaly is a group of rows. Scoring requires a rule for when they correspond.
+
+### 3.1 Row-group anomalies (D1, D2, D3)
+
+A detected case counts as a **true positive** when both hold:
+
+1. At least one injected row from the ground-truth group is present in the case, **and**
+2. No more than 50% of the case's rows are spurious — that is, not part of the ground-truth group.
+
+Otherwise the case is a false positive. A ground-truth group matched by no case is a false negative.
+
+Boundary behaviour at exactly 50% must be defined once in code and unit-tested.
+
+### 3.2 Vendor-level anomalies (D4)
+
+Row-overlap matching does not work for D4, because a vendor red-flag case contains all of that vendor's transactions while injection may have altered only a subset. Under the row rule, a correct detection would score as a false positive.
+
+**Rule for D4:** match at the vendor level. A D4 case is a true positive when its `vendor_key` is the vendor the anomaly was injected into. Row-level metrics for D4 are reported separately and interpreted with this in mind.
+
+### 3.3 Two granularities, both reported
+
+| Granularity | Question it answers |
+|---|---|
+| **Per case** (primary) | "How many of the frauds did we find, and how many alerts were wasted?" — the auditor's question |
+| **Per row** (secondary) | "How much of the implicated data did we surface?" — the completeness question |
+
+Both are reported, because examiners may ask for either and they genuinely differ.
+
+---
+
+## 4. Detection metrics
+
+Per detector, against the rule-based baseline, at both granularities:
+
+| Metric | Purpose |
+|---|---|
+| Precision | Of what we flagged, how much was real |
+| Recall | Of what was there, how much we found |
+| F1 | Balance |
+| PR-AUC | Threshold-independent quality — more honest than ROC-AUC on heavily imbalanced data |
+| Alert volume at fixed precision | Practical usability — how many alerts an auditor must work through to sustain a given precision |
+
+### 4.1 The unlabeled-flag problem
+
+Real procurement data already contains genuine duplicates, splits and inflated prices that nobody injected. When a detector correctly finds one, it scores as a false positive, because it is not in the ground-truth set. **Every detector's precision is therefore systematically understated.**
+
+This is not a bug to hide; it is a property to state and quantify:
+
+- Report **raw precision** — the strict number against injected ground truth
+- Manually review the top-k unlabeled flags per detector, classify each as plausible-real or spurious, and report **adjusted precision** alongside
+- State the review protocol and the value of k
+
+Doing this converts a weakness into evidence of methodological care.
+
+---
+
+## 5. Agent metrics
+
+### 5.1 Citation validity — reported as two numbers
+
+Reporting one number invites the question "so the model grades itself?" The check is therefore split.
+
+**Hard citation validity (deterministic).** For each citation: does the cited `row_id` exist, and do the values stated about it match the row's actual field values? Purely mechanical, no model involved. **This is the headline number, with a target of at least 95%.**
+
+**Semantic support rate (model-judged).** Does the cited row actually support the claim made about it? An LLM judgment, reported alongside the hard number and explicitly labelled as model-judged.
+
+Both are stored per citation, so both are computed by query rather than by re-parsing text.
+
+### 5.2 Triage accuracy
+
+Agreement between the agent's verdict (`likely_true_positive` / `likely_false_positive` / `inconclusive`) and injection ground truth, measured **only over cases the detectors flagged and the agent investigated**.
+
+**Stated caveat:** only the top-N cases by severity are investigated, and severity is amount-weighted. Triage accuracy is therefore measured on the high-value slice, not on flagged cases uniformly. This is defensible — it mirrors how audit teams triage — but the report must say it rather than let a panel discover it.
+
+### 5.3 Note factual accuracy
+
+Blinded human rubric on a sample of notes:
+
+- Sample size around 50 notes
+- Three graders
+- Notes shuffled and anonymized — grader cannot tell agent from template, or verifier-on from verifier-off
+- Rubric fixed in advance and included in the report
+- Inter-grader agreement reported
+
+### 5.4 Efficiency
+
+Per case: average tool calls, prompt and completion tokens, wall-clock latency. Also the number of notes regenerated and the number that failed after the retry limit.
+
+### 5.5 Money at risk
+
+Total value implicated by flagged cases on real data, and separately the value in cases confirmed by a reviewer. This is the headline demonstration figure. It must be labelled as *value implicated by flagged transactions*, not as *fraud detected* — the flags are suspicions, not findings.
+
+---
+
+## 6. Ablations
+
+Mandatory. Ablations are what distinguish a project that built something from a project that showed something.
+
+| Ablation | Configuration | Expected result | What it proves |
+|---|---|---|---|
+| **Verifier off** | Investigator releases notes with no citation checking | Citation-error rate rises sharply | The Verifier is load-bearing, not decoration |
+| **Template notes** | Replace the agent with template-filled notes from detector output | Information quality drops on the blinded rubric while citation validity stays high | The agent adds information a template cannot, which is the whole thesis |
+| **Model size** | Compare a smaller and a larger model on the same cases | Larger model improves structure adherence and reasoning quality | Characterizes the quality-per-compute trade-off |
+
+Each ablation runs on the same cases, the same seed, and the same dataset as the main run. Only the named variable changes.
+
+---
+
+## 7. Reproducibility
+
+| Requirement | Implementation |
+|---|---|
+| Every stochastic component seeded | One global seed in configuration, threaded through injection, sampling, Isolation Forest, and any model sampling |
+| Every run logged | Parameters, seed, configuration snapshot, and results written to a local experiment tracker and to `eval_results` |
+| Same seed reproduces results | Verified by test — a repeated run produces identical detector output |
+| Multiple seeds reported | Headline numbers reported as mean with spread across seeds, not a single lucky run |
+| Configuration snapshotted | The full config is stored with the run, so a result can always be traced to the settings that produced it |
+
+---
+
+## 8. Headline result format
+
+> On **N** real transactions with **M** injected anomalies, SpendGuard achieved **F1 = X** against a rule-based baseline at **Y**, with **Z%** hard citation validity, and flagged **V** of value implicated in suspicious real spend.
+
+Every number in that sentence must trace to a logged run.
+
+---
+
+## 9. Honesty caveats to include in the report
+
+These belong in the limitations section. Stating them is stronger than being asked about them.
+
+1. **Not duplicate-payment confirmation.** D1 detects duplicate transaction records. Confirming an actual double disbursement requires invoice-to-payment reconciliation, which the available public datasets do not contain.
+2. **Investigation is not exhaustive.** Detection covers 100% of rows; investigation covers the top-N cases by severity. The claim is "detects across 100%, investigates prioritized cases."
+3. **Precision is understated.** Real anomalies already present in the data score as false positives against injected ground truth. Adjusted precision from manual review of the top-k flags is reported alongside the raw figure.
+4. **Triage accuracy is measured on a severity-biased sample.**
+5. **The procurement policy is authored by the team**, with clauses derived from published public rules, because the datasets do not ship with the issuing organization's internal policy.
+6. **Semantic citation checking is model-judged**, and is reported separately from the deterministic check for that reason.
+7. **`officer_id` may be a coarse grain.** Where a dataset provides only a department rather than an individual buyer, D2 groups more loosely and will surface more benign groups. The grain used is recorded in each case's metadata.
+8. **No claim of superior raw detection accuracy** against commercial systems trained on vastly larger proprietary corpora. The contribution is the investigation and verification layer.
