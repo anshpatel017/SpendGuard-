@@ -2,6 +2,7 @@
 
 spendguard generate                 synthetic INR dataset -> data/raw/
 spendguard ingest <csv>             CSV -> DuckDB transactions + dataset card
+spendguard detect                   run the detectors, store cases for review
 spendguard inject                   plant seeded anomalies in a copy of the database
 spendguard evaluate                 score detectors against the planted anomalies
 spendguard check-policy             policy.md and config.py agree?
@@ -97,6 +98,56 @@ def ingest(
     console.print(f"[green]DuckDB[/green]  {result.db_path}")
     for path in result.card_paths:
         console.print(f"[green]Card[/green]    {path}")
+
+
+@app.command()
+def detect(
+    detector: Annotated[
+        list[str] | None, typer.Option(help="Detector(s) to run. Repeatable. Default: all.")
+    ] = None,
+    db: Annotated[Path | None, typer.Option(help="DuckDB to scan. Default: the clean one.")] = None,
+    reset: Annotated[bool, typer.Option(help="Clear the case store first.")] = False,
+) -> None:
+    """Scan 100% of transactions and store every case for review."""
+    from collections import defaultdict
+
+    from spendguard.cases import Case
+    from spendguard.detection import run_detection
+
+    with console.status("Scanning every transaction..."):
+        run = run_detection(db, detector, reset=reset)
+
+    if not run.cases:
+        console.print(
+            f"[green]No anomalies found[/green] in {run.transactions:,} transactions "
+            f"({', '.join(f'{k} {v:.2f}s' for k, v in run.seconds.items())})."
+        )
+        return
+
+    table = Table(title=f"Detection - {run.run_id} - {run.transactions:,} transactions")
+    for col in ("Detector", "Anomaly", "Cases", "High", "Medium", "Low", "Amount at risk", "Time"):
+        table.add_column(col, justify="left" if col in ("Detector", "Anomaly") else "right")
+    grouped: dict[tuple[str, str], list[Case]] = defaultdict(list)
+    for c in run.cases:
+        grouped[(c.detector, c.anomaly_type.value)].append(c)
+    for (name, kind), found in sorted(grouped.items()):
+        bands = [c.severity_band for c in found]
+        table.add_row(
+            name,
+            kind,
+            f"{len(found):,}",
+            str(bands.count("high")),
+            str(bands.count("medium")),
+            str(bands.count("low")),
+            settings.money(sum(c.amount_at_risk for c in found)),
+            f"{run.seconds[name]:.2f}s",
+        )
+    console.print(table)
+    if run.saved:
+        console.print(
+            f"Case store: {run.saved.inserted:,} new, {run.saved.refreshed:,} refreshed "
+            f"(review state kept), {run.saved.total_in_store:,} total"
+        )
 
 
 @app.command()

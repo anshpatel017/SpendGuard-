@@ -2,14 +2,47 @@
 
 from __future__ import annotations
 
+from datetime import date
 from pathlib import Path
 
+import duckdb
+import polars as pl
 import pytest
 
+from spendguard.db.duck import TRANSACTION_FIELDS, write_transactions
 from spendguard.eval.injection import InjectionConfig, InjectionResult, inject
 from spendguard.pipeline.ingest import IngestResult, ingest
 from spendguard.pipeline.mapping import DatasetMapping, load_mapping
 from spendguard.pipeline.synthetic import GeneratorConfig, SyntheticDataset, generate, write
+from spendguard.pipeline.vendors import normalize_vendor
+
+_SCHEMA = {
+    "row_id": pl.Int64, "vendor_name": pl.String, "vendor_key": pl.String,
+    "invoice_no": pl.String, "amount": pl.Float64, "txn_date": pl.Date,
+    "officer_id": pl.String, "item_desc": pl.String, "item_category": pl.String,
+    "quantity": pl.Float64, "unit_price": pl.Float64, "source_dataset": pl.String,
+    "source_row_ref": pl.String, "is_injected": pl.Boolean,
+    "injection_group_id": pl.String, "injection_type": pl.String,
+}  # fmt: skip
+
+
+def build_db(path: Path, rows: list[dict[str, object]]) -> duckdb.DuckDBPyConnection:
+    """A transactions table from hand-written rows; unspecified fields get plain defaults."""
+    full = []
+    for i, r in enumerate(rows, 1):
+        row: dict[str, object] = {
+            "row_id": i, "vendor_name": "Sharma Traders", "invoice_no": f"INV-{i:05d}",
+            "amount": 5000.0, "txn_date": date(2025, 4, 1), "officer_id": "ADM-001",
+            "item_desc": "Paper", "item_category": "Paper", "quantity": 10.0, "unit_price": 500.0,
+            "source_dataset": "test", "source_row_ref": None, "is_injected": False,
+            "injection_group_id": None, "injection_type": None, **r,
+        }  # fmt: skip
+        row.setdefault("vendor_key", normalize_vendor(str(row["vendor_name"])))
+        full.append(row)
+    con = duckdb.connect(str(path))
+    write_transactions(con, pl.DataFrame(full, schema=_SCHEMA).select(TRANSACTION_FIELDS))
+    return con
+
 
 SMALL = GeneratorConfig(n_transactions=3_000, seed=7)
 

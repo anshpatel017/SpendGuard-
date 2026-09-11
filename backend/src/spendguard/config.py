@@ -94,6 +94,12 @@ class Settings(BaseSettings):
     # -------------------------------------------------- detector tuning knobs
     # Not policy-derived; these are statistical choices, documented in the
     # detector specs rather than in the procurement policy.
+    duplicate_name_confirm: float = 80.0  # D1: name_similarity needed to confirm identity (D-12)
+    duplicate_match_threshold: float = 0.5  # D1: posterior match probability to raise a case
+    duplicate_em_max_iterations: int = 200
+    # D2: minimum run score to raise a case. Chosen to maximize F1 on the
+    # development seed (42) only; reported on held-out seeds (decision D-21).
+    split_score_threshold: float = 0.85
     inflation_zscore_threshold: float = 3.5
     inflation_min_category_size: int = 20
     benford_min_transactions: int = 30
