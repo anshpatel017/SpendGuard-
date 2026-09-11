@@ -2,10 +2,24 @@
 
 from spendguard.detectors.base import Detector
 from spendguard.detectors.baseline import BaselineDetector
+from spendguard.detectors.d1_duplicates import DuplicateDetector
+from spendguard.detectors.d2_splits import SplitDetector
 
-# Name -> detector class. Phases 3-4 register d1-d4 here.
+# Name -> detector class. Phase 4 registers d3 and d4 here.
 REGISTRY: dict[str, type[Detector]] = {
     BaselineDetector.name: BaselineDetector,
+    DuplicateDetector.name: DuplicateDetector,
+    SplitDetector.name: SplitDetector,
 }
 
-__all__ = ["REGISTRY", "BaselineDetector", "Detector"]
+# What `spendguard detect` runs by default. The baseline is a benchmark, not a product.
+PRODUCTION_DETECTORS: tuple[str, ...] = (DuplicateDetector.name, SplitDetector.name)
+
+__all__ = [
+    "PRODUCTION_DETECTORS",
+    "REGISTRY",
+    "BaselineDetector",
+    "Detector",
+    "DuplicateDetector",
+    "SplitDetector",
+]

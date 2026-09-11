@@ -61,6 +61,7 @@ class BaselineDetector:
             WHERE invoice_no IS NOT NULL
             GROUP BY lower(trim(vendor_name)), invoice_no, amount
             HAVING count(*) > 1
+            ORDER BY min(row_id)
             """
         ).fetchall()
         return [

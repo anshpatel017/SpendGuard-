@@ -119,6 +119,21 @@ Four fixed rules — each a real, commonly used control, none of which normalize
 
 Each failure is the gap a detector must close: exact matching misses disguised duplicates; the near-threshold rule drowns in legitimate large purchases; a mean-based price rule fires on honest premium and urgent purchases; and round-number vendors include legitimate fixed-fee contracts such as security services.
 
+### 4.0a Phase 3 results — D1 and D2
+
+Three injection seeds, 50k-row development dataset, per case, **mean ± standard deviation**. Seed 42 was used during design; **7 and 2026 are held out** — no threshold or model choice looked at them.
+
+| Anomaly | Detector | Precision | Recall | F1 | PR-AUC |
+|---|---|---:|---:|---:|---:|
+| duplicate | baseline | 1.000 ± 0.000 | 0.215 ± 0.015 | 0.354 ± 0.020 | 0.215 ± 0.015 |
+| duplicate | **D1** | **1.000 ± 0.000** | **0.903 ± 0.013** | **0.949 ± 0.007** | **0.903 ± 0.013** |
+| split | baseline | 0.017 ± 0.003 | 0.096 ± 0.017 | 0.029 ± 0.005 | 0.002 ± 0.001 |
+| split | **D2** | **0.828 ± 0.006** | **0.643 ± 0.014** | **0.724 ± 0.011** | **0.583 ± 0.011** |
+
+**Clean-data check.** On the same dataset with *no* planted anomalies, D1 and D2 together raise **0** cases. This check is part of every evaluation from now on: it caught a failure the injected-data metrics could not show (decision D-20, correction 3).
+
+**What D1 misses.** Almost exclusively duplicates paid under an unrelated reference (D-22). Duplicates disguised with a supplier-name typo are all found — the reason blocking is on amount rather than vendor key (D-19).
+
 ### 4.1 The unlabeled-flag problem
 
 Real procurement data already contains genuine duplicates, splits and inflated prices that nobody injected. When a detector correctly finds one, it scores as a false positive, because it is not in the ground-truth set. **Every detector's precision is therefore systematically understated.**

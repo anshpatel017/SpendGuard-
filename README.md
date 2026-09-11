@@ -61,11 +61,12 @@ SpendGuard/
 The slow work happens **offline in batch scripts**, not inside HTTP requests:
 
 ```
-spendguard generate        seeded synthetic INR data   →  data/raw/
-spendguard ingest <csv>    CSV  →  clean  →  normalize  →  DuckDB + dataset card
-spendguard detect          DuckDB  →  detectors  →  cases            (Phase 3)
-spendguard investigate     top-N cases  →  Investigator  →  Verifier  (Phase 6-7)
-spendguard evaluate        injection harness  →  metrics  →  MLflow   (Phase 10)
+spendguard generate        seeded synthetic INR data         →  data/raw/
+spendguard ingest <csv>    clean  →  normalize  →  DuckDB     + dataset card
+spendguard detect          D1, D2 over 100% of rows          →  case store for review
+spendguard inject          plant known anomalies in a copy   →  ground truth
+spendguard evaluate        score detectors vs the baseline   →  report
+spendguard investigate     top-N cases → Investigator → Verifier       (Phase 6-7)
 ```
 
 The API only **reads finished results** and **writes case-status updates**. That is why it stays thin and fast.

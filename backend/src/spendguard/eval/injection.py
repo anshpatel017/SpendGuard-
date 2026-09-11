@@ -83,7 +83,14 @@ class InjectionConfig:
         ("variant", 0.35),
         ("typo", 0.30),
     )
-    duplicate_reformat_invoice: float = 0.60
+    # (mode, probability) - how a duplicate's invoice reference is recorded.
+    # "rekeyed" is the hard case: paid twice under unrelated references, as when
+    # one payment is made from a statement and another from the invoice.
+    duplicate_invoice_modes: tuple[tuple[str, float], ...] = (
+        ("same", 0.35),
+        ("reformatted", 0.55),
+        ("rekeyed", 0.10),
+    )
 
     # split
     split_min_parts: int = 3
@@ -211,6 +218,29 @@ class _Injector:
         self.records: list[TruthRecord] = []
         self.shortfall: Counter[str] = Counter()
         self._serial: Counter[AnomalyType] = Counter()
+        self._invoices: dict[str, set[str]] | None = None
+
+    def _fresh_invoice(self, vendor_key: str, base: str | None, step: int) -> str | None:
+        """A reference in the supplier's own series that it has never issued.
+
+        Bumping blindly would reuse a number already on another transaction -
+        something no real supplier does, and a spurious signal for detectors.
+        """
+        if base is None:
+            return None
+        if self._invoices is None:
+            self._invoices = {}
+            for key, invoice in (
+                self.frame.select("vendor_key", "invoice_no").drop_nulls().iter_rows()
+            ):
+                self._invoices.setdefault(key, set()).add(invoice)
+        issued = self._invoices.setdefault(vendor_key, set())
+        candidate = _bump_invoice(base, step)
+        while candidate in issued:
+            candidate = _bump_invoice(candidate, 1)
+        assert candidate is not None
+        issued.add(candidate)
+        return candidate
 
     # ------------------------------------------------------------ plumbing
 
@@ -313,7 +343,10 @@ class _Injector:
                         group_id,
                         AnomalyType.SPLIT,
                         vendor_name=name,
-                        invoice_no=_bump_invoice(row["invoice_no"], i),
+                        # The deleted original's number is free for the first part.
+                        invoice_no=row["invoice_no"]
+                        if i == 0
+                        else self._fresh_invoice(row["vendor_key"], row["invoice_no"], i),
                         amount=amount,
                         quantity=float(quantity),
                         txn_date=when,
@@ -411,6 +444,9 @@ class _Injector:
         modes = [m for m, _ in self.cfg.duplicate_name_modes]
         probs = np.array([p for _, p in self.cfg.duplicate_name_modes])
         probs = probs / probs.sum()
+        invoice_modes = [m for m, _ in self.cfg.duplicate_invoice_modes]
+        invoice_probs = np.array([p for _, p in self.cfg.duplicate_invoice_modes])
+        invoice_probs = invoice_probs / invoice_probs.sum()
 
         order = self._shuffled(self.frame)
         made = 0
@@ -444,12 +480,19 @@ class _Injector:
                     while when.weekday() >= 5:
                         when -= timedelta(days=1)
 
-                reformat = self.rng.random() < self.cfg.duplicate_reformat_invoice
-                invoice = (
-                    _reformat_invoice(row["invoice_no"], when, self.rng)
-                    if reformat
-                    else row["invoice_no"]
-                )
+                invoice_mode = invoice_modes[
+                    int(self.rng.choice(len(invoice_modes), p=invoice_probs))
+                ]
+                if invoice_mode == "reformatted":
+                    invoice = _reformat_invoice(row["invoice_no"], when, self.rng)
+                elif invoice_mode == "rekeyed":
+                    # Paid again under a reference unrelated to the first:
+                    # from a statement, or a resubmitted invoice.
+                    invoice = self._fresh_invoice(
+                        row["vendor_key"], row["invoice_no"], int(self.rng.integers(50, 500))
+                    )
+                else:
+                    invoice = row["invoice_no"]
                 ids.append(
                     self._new_row(
                         row,
@@ -463,7 +506,7 @@ class _Injector:
                 applied.append(
                     {
                         "name_mode": mode,
-                        "invoice_reformatted": reformat,
+                        "invoice_mode": invoice_mode,
                         "shift_days": abs((when - row["txn_date"]).days),
                     }
                 )

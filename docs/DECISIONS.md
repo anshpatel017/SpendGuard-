@@ -228,6 +228,64 @@ Every over-merge is the same shape: `Kaveri Traders` and `Kaveri Enterprises LLP
 
 ---
 
+## D-19 — D1 blocks on amount and date, not vendor key (supersedes CLAUDE.md section 8)
+
+**Decision.** D1 stage 2 generates candidate pairs from **amount within ±0.5% and dates within 14 days**, then requires `name_similarity` ≥ 80 to confirm supplier identity. CLAUDE.md specified blocking on exact `vendor_key` first. Approved by the user on 2026-09-11.
+
+**Rationale.** A typo in the distinctive part of a name (`Shrama Traders`) changes `vendor_key`, so under exact-key blocking a disguised duplicate is never compared at all. That is a structural blind spot, not a tuning problem: 30% of injected duplicates are disguised with a typo. A duplicate keeps its amount by construction, so blocking on amount cannot miss it the same way.
+
+**Tolerance, defined exactly.** Two amounts qualify when `|a − b| < 0.5% × max(a, b)` — the policy's "differing by less than 0.5%" (SG-PP-4.4), measured against the larger amount so the test is symmetric and never depends on which row comes first. An earlier inclusive, one-sided form let ₹10,000 vs ₹10,050 qualify or not depending on row order and floating-point rounding; boundary tests now pin every case.
+
+**Implementation.** An equi-join on a logarithmic amount bucket of width −ln(1 − 0.005), joined against the bucket and its two neighbours, then the exact filter. Any qualifying pair has a log-ratio below one bucket width, so it lands in the same or an adjacent bucket. Verified **set-identical** to the brute-force join — 107,649 candidate pairs on the 50k dataset — in 0.04 s instead of 12.2 s. The brute-force join would take minutes on the 350k-row real dataset.
+
+---
+
+## D-20 — D1 match probability from a Fellegi–Sunter model fitted by EM
+
+**Decision.** Candidate pairs that pass the identity check are scored by a Fellegi–Sunter probabilistic record-linkage model — the model Splink implements — fitted to the data by expectation–maximization. Each pair is compared field by field (name similarity, invoice number, amount, date gap, officer, item); EM learns how often each comparison level occurs among true duplicates (`m`) and among non-duplicates (`u`). The posterior match probability is the `detector_score`, as D-08 already specified.
+
+**Rationale.**
+
+- **Data-driven, not hand-weighted.** The weights are estimated from the data, which keeps the project's "no manual expert rules" constraint. Nobody chose that an invoice match is worth more than an officer match — EM did.
+- **Explainable.** Every pair's score decomposes into per-field match weights, log₂(m/u). The Investigator can cite *why* two records were judged duplicates.
+- **Splink stays optional.** Implementing the model directly avoids depending on a library that may not install on Python 3.13, and leaves nothing hidden from a viva question. Splink remains a drop-in comparison if wanted.
+
+**Three corrections made while building it**, each found by testing and each recorded because a panel will ask how the model was validated:
+
+1. **u from look-alikes too far apart to be duplicates.** Left free, EM found the largest cluster of look-alike pairs — a supplier repeatedly selling one officer the same item — and called *that* the duplicate class. The u-probabilities are therefore estimated from a reference set selected *exactly* as candidates are, but 30–180 days apart, so by the policy's definition none is a duplicate. The reference must mirror candidate selection precisely: an earlier version also required the same vendor key, excluded the similar-but-different names common among candidates, and EM built a spurious class out of those.
+2. **Officer, item and amount compared jointly.** Among innocent look-alikes these agree *together*. Fellegi–Sunter assumes independence within each class, so as separate fields they counted one fact three times and outweighed the invoice evidence. As one joint "context" field, EM learned a different invoice number is strong evidence *against* (−14.95 bits) and a shared core number strong evidence *for* (+9.31).
+3. **MAP-EM with priors.** Plain EM always finds two classes, even when one does not exist: on the clean dataset it put **94.5%** of pairs in the duplicate class and flagged **1,732** false duplicates. Real data has few duplicates, which is exactly that regime. The starting m-values are now a Dirichlet prior worth 50 pairs, and the duplicate rate a Beta(2, 38) prior centred on 5%. On clean data D1 now raises **0** cases and estimates a 0.1% duplicate rate; on injected data, results are unchanged.
+
+**Result**, three seeds, mean ± sd: precision 1.000 ± 0.000, recall 0.903 ± 0.013, F1 0.949 ± 0.007 (baseline F1 0.354). The misses are almost entirely *re-keyed* duplicates — paid twice under unrelated references — which look identical to repeat business on every field a transaction carries. That is the honest limit of record linkage here, and a case the Investigator can resolve by reading both documents.
+
+**Invoice evidence.** Two invoice numbers "match at the core" when they share a numeric group other than the transaction's year or financial-year parts: `INV-04471` and `4471/2026` match; `ST/24-25/045` and `ST/24-25/046` do not.
+
+---
+
+## D-21 — D2: minimal runs, four equally weighted indicators, threshold from a development seed
+
+**Decision.** For each supplier and officer, D2 walks sub-threshold purchases in date order and takes the **shortest** runs that reach the ₹2,50,000 threshold within 14 days, trimmed from the front. Each run is scored on four indicators, **equally weighted** — the least-tuned choice: tightness of the window (SG-PP-3.3), share of the run that is the same item (SG-PP-3.4), share billed at **one identical unit rate**, and a 3–6 part shape. A run is raised only if it scores at least **0.85**.
+
+**Why minimal runs.** An officer buying from one supplier every few days otherwise chains months of routine purchases into one sprawling "split" that buries the real one.
+
+**Why the single-rate indicator.** A requirement divided into invoices is billed at one quoted rate; routine repeat purchasing is re-priced each time. On the development seed, 60% of real splits bill every part at an identical rate against 1% of routine runs. A second candidate — parts unusually large for their item — was examined and **rejected**: it separated the classes only because of how the harness chooses what to split, which would not transfer to real data.
+
+**Why a threshold at all.** Every sub-threshold run crossing the limit is a candidate, and routine purchasing produces thousands: 3,735 alerts on the development seed at precision 0.03. No auditor reads that list.
+
+**Protocol.** The threshold was chosen to maximize F1 on **seed 42 only**, fixed, and then reported on seeds **7 and 2026**, which played no part in any design decision. Development F1 0.726; held-out 0.709 and 0.735.
+
+**Result**, three seeds: precision 0.828 ± 0.006, recall 0.643 ± 0.014, F1 0.724 ± 0.011, PR-AUC 0.583 (baseline F1 0.029, PR-AUC 0.002). On the clean dataset, 0 of 3,540 candidate runs clear the threshold.
+
+---
+
+## D-22 — Harness realism: re-keyed duplicates and fresh split invoice numbers
+
+**Decision.** 10% of injected duplicates are recorded under an **unrelated** invoice reference (paid from a statement and from the invoice, or resubmitted). Split parts after the first take invoice numbers the supplier has **never issued**.
+
+**Rationale.** Without re-keyed duplicates, every planted duplicate kept a matching reference, EM learned that a different reference never occurs in a duplicate, and D1 scored recall 0.995 on data easier than reality. It would silently miss those duplicates in production and the evaluation would never show it. The split fix removes an unrealistic artefact: bumped numbers were colliding with invoices already issued to other transactions — something no supplier does, and a spurious signal for any detector.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |
@@ -236,5 +294,5 @@ Every over-merge is the same shape: `Kaveri Traders` and `Kaveri Enterprises LLP
 | ~~O-02~~ | ~~Approval threshold figure~~ | **Resolved — see D-16. ₹2,50,000.** |
 | **O-03** | **`reference_amount` in `amount_weight`.** Defining it as the maximum amount in the run makes severity non-comparable across runs — a single unusually large transaction rescales every other case, and the same case receives a different severity on a different subset. A fixed constant or a high percentile of the amount distribution would keep severity stable across the demo run, the evaluation run, and the ablations. | Recommend a fixed reference; awaiting decision |
 | **O-04** | **`severity_final` semantics.** When the agent drops a false positive "to Low", does `severity_final` become an actual number below 33, or does only the band move while the number stays? Both fields exist in the contract; one line settles it. | Undecided |
-| **O-06** | **D1 must not block on exact `vendor_key` alone.** A typo in the *distinctive* part of a name (`Shrama Traders`) changes the key, so a duplicate disguised that way lands in a different block and is never compared — exact-key blocking is structurally blind to it. Fuzzy stopword matching (D-12) only protects suffixes. Duplicates keep the same amount by construction, so D1 stage 2 should block on **amount within tolerance plus date window**, and use `name_similarity` to confirm identity. Settle before building D1. | Open — decide in Phase 3 |
+| ~~O-06~~ | ~~D1 must not block on exact `vendor_key` alone~~ | **Resolved — see D-19. Approved by the user, 2026-09-11.** |
 | **O-05** | **Item category source.** Where the dataset lacks a usable category, D3 needs pseudo-categories from description clustering. Whether this is in the core build or deferred is not yet fixed. | Undecided |

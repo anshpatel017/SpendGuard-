@@ -16,7 +16,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[unit]** Malformed dates and non-numeric amounts are coerced or dropped, and the count is reported, not silently swallowed. [FR-1.4]
 - [x] **[int]** Ingesting the same CSV twice produces identical `row_id` assignments. [FR-1.2]
 - [x] **[int]** `row_id` is unique across the whole table. [FR-1.2]
-- [ ] **[int]** A dataset missing `officer_id` ingests successfully and D2 degrades rather than crashing. [FR-1.6] *(ingestion half done in Phase 1; D2 half pending Phase 3)*
+- [x] **[int]** A dataset missing `officer_id` ingests successfully and D2 degrades rather than crashing. [FR-1.6] 
 - [x] **[int]** A dataset card is written with source, row count, date range, and per-column null rates. [FR-1.7]
 - [x] **[unit]** A non-INR dataset converts using the rate pinned in its configuration, and the rate and date appear in the dataset card. [FR-1.8]
 - [ ] **[unit]** Ingestion makes no network call to fetch an exchange rate — verified, not assumed. [FR-1.8]
@@ -29,30 +29,30 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 ### General
 
-- [ ] **[unit]** Every detector implements the shared interface and returns the Case schema. [FR-2.2]
-- [ ] **[unit]** Every `detector_score` falls in `[0, 1]`. [FR-2.9]
+- [x] **[unit]** Every detector implements the shared interface and returns the Case schema. [FR-2.2]
+- [x] **[unit]** Every `detector_score` falls in `[0, 1]`. [FR-2.9]
 - [ ] **[unit]** Every case carries a non-empty `row_ids` list and every id exists in `transactions`. [FR-2.11]
-- [ ] **[unit]** Every case carries `amount_at_risk` and a `severity_prelim` in `[0, 100]`. [FR-2.11]
-- [ ] **[unit]** Running a detector twice on identical input with the same seed produces identical cases. [NFR-4]
+- [x] **[unit]** Every case carries `amount_at_risk` and a `severity_prelim` in `[0, 100]`. [FR-2.11]
+- [x] **[unit]** Running a detector twice on identical input with the same seed produces identical cases. [NFR-4]
 - [x] **[int]** An empty input table produces zero cases and no exception. [FR-2.2]
 - [ ] **[int]** Detectors process the full table, not a sample — case row references span the full row_id range where anomalies exist. [FR-2.1]
 
 ### D1 duplicates
 
-- [ ] **[unit]** Two identical rows are detected as one case with two row_ids. [FR-2.3]
-- [ ] **[unit]** Same vendor variant spelling, same amount, dates two days apart, is detected. [FR-2.3]
-- [ ] **[unit]** Same vendor, same amount, dates far outside the window, is not detected. [FR-2.3]
-- [ ] **[unit]** Amounts just inside and just outside the tolerance behave correctly on both sides of the boundary. [FR-2.3]
-- [ ] **[unit]** A legitimate recurring monthly payment from the same vendor is not reported as a duplicate. [FR-2.4]
-- [ ] **[unit]** Three duplicates of one transaction form a single case with three row_ids, not three pairwise cases. [FR-2.2]
+- [x] **[unit]** Two identical rows are detected as one case with two row_ids. [FR-2.3]
+- [x] **[unit]** Same vendor variant spelling, same amount, dates two days apart, is detected. [FR-2.3]
+- [x] **[unit]** Same vendor, same amount, dates far outside the window, is not detected. [FR-2.3]
+- [x] **[unit]** Amounts just inside and just outside the tolerance behave correctly on both sides of the boundary. [FR-2.3]
+- [x] **[unit]** A legitimate recurring monthly payment from the same vendor is not reported as a duplicate. [FR-2.4]
+- [x] **[unit]** Three duplicates of one transaction form a single case with three row_ids, not three pairwise cases. [FR-2.2]
 
 ### D2 split purchases
 
-- [ ] **[unit]** Five transactions each below threshold, same vendor and officer, inside the window, totalling above threshold, are detected. [FR-2.5]
-- [ ] **[unit]** A group whose total is below threshold is not detected. [FR-2.5]
-- [ ] **[unit]** A group containing one transaction already above threshold is not detected — that is not a split. [FR-2.5]
-- [ ] **[unit]** Transactions spread outside the window are not grouped. [FR-2.5]
-- [ ] **[unit]** Changing the configured threshold changes the results, proving it is not hardcoded. [FR-2.6]
+- [x] **[unit]** Five transactions each below threshold, same vendor and officer, inside the window, totalling above threshold, are detected. [FR-2.5]
+- [x] **[unit]** A group whose total is below threshold is not detected. [FR-2.5]
+- [x] **[unit]** A group containing one transaction already above threshold is not detected — that is not a split. [FR-2.5]
+- [x] **[unit]** Transactions spread outside the window are not grouped. [FR-2.5]
+- [x] **[unit]** Changing the configured threshold changes the results, proving it is not hardcoded. [FR-2.6]
 - [x] **[unit]** An automated check asserts `APPROVAL_THRESHOLD` equals the figure in the policy threshold summary, and fails on a deliberate mismatch. [FR-2.14]
 - [x] **[unit]** The same check covers the D1 amount tolerance, the D1 and D2 date windows, and the D4 new-vendor period. [FR-2.14]
 - [x] **[unit]** Amounts at exactly ₹2,50,000 are handled per the policy wording — "at or above" the threshold is not a split. [FR-2.5]
@@ -141,8 +141,8 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 ## 7. Database
 
-- [ ] **[unit]** Case status transitions persist and survive a restart. [FR-5.3]
-- [ ] **[unit]** Reviewer notes persist against the correct case. [FR-5.2]
+- [x] **[unit]** Case status transitions persist and survive a restart. [FR-5.3]
+- [x] **[unit]** Reviewer notes persist against the correct case. [FR-5.2]
 - [ ] **[int]** Alembic migrations apply cleanly to an empty database. [NFR-10]
 - [ ] **[int]** The API opens DuckDB read-only, so a batch run and the API can operate concurrently. [Architecture 2.4]
 - [ ] **[int]** A batch run while the dashboard is open does not produce a lock error. [Architecture 2.4]
