@@ -23,14 +23,14 @@ Runs **fully local** on commodity GPU hardware. No paid APIs in the runtime syst
 | Layer | Technology |
 |---|---|
 | Frontend | React 18 + TypeScript, Vite, TanStack Query, TanStack Table, Tailwind + shadcn/ui, Recharts, Zod |
-| Backend | Python 3.11, FastAPI, Pydantic v2, SQLAlchemy 2.0 + Alembic, uvicorn |
+| Backend | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2.0 + Alembic, uvicorn |
 | Analytical store | DuckDB (transactions, detector output, evaluation results) |
-| Operational store | PostgreSQL (cases, status, audit notes, traces) — SQLite fallback |
+| Operational store | SQLite (cases, status, audit notes, traces) — PostgreSQL is a one-line swap via SQLAlchemy |
 | Detection / ML | scikit-learn, PyOD, rapidfuzz, Splink, scipy, pandas / Polars |
-| LLM | Qwen2.5-7B-Instruct (Q4_K_M) via Ollama; Groq/Gemini switchable for development |
+| LLM | Groq for development; Qwen2.5-3B-Instruct (Q4_K_M) via Ollama for the fully-local run; 7B on a Colab T4 for comparison |
 | Policy RAG | sentence-transformers (bge-small-en-v1.5) + FAISS |
 | Tracking | MLflow (local) |
-| Tooling | Docker Compose, pytest, ruff, mypy, ESLint, Prettier, GitHub Actions |
+| Tooling | pytest, ruff, mypy, ESLint, Prettier, GitHub Actions |
 
 ---
 
@@ -39,20 +39,19 @@ Runs **fully local** on commodity GPU hardware. No paid APIs in the runtime syst
 ```
 SpendGuard/
 ├── backend/
-│   ├── src/
-│   │   ├── pipeline/        ingestion, cleaning, vendor normalization
+│   ├── src/spendguard/
+│   │   ├── pipeline/        synthetic data, ingestion, cleaning, vendor normalization
 │   │   ├── detectors/       d1_duplicates, d2_splits, d3_inflation, d4_vendor
 │   │   ├── agent/           tools, investigator, verifier
 │   │   ├── eval/            injection harness, metrics, ablations
 │   │   ├── api/             FastAPI routers, Pydantic schemas
 │   │   └── db/              DuckDB + SQLAlchemy models, Alembic migrations
-│   ├── scripts/             CLI batch runners
+│   ├── mappings/            per-dataset column mappings (YAML)
 │   └── tests/
 ├── frontend/                React + TypeScript (Vite)
 ├── data/                    raw and processed datasets (gitignored)
 ├── docs/                    design, requirements, architecture, contracts
-├── policy/                  procurement policy used for RAG
-└── docker-compose.yml
+└── policy/                  procurement policy used for RAG
 ```
 
 ---
@@ -62,10 +61,11 @@ SpendGuard/
 The slow work happens **offline in batch scripts**, not inside HTTP requests:
 
 ```
-scripts/ingest.py       CSV  →  clean  →  normalize  →  DuckDB
-scripts/detect.py       DuckDB  →  detectors  →  cases (Postgres)
-scripts/investigate.py  top-N cases  →  Investigator  →  Verifier  →  audit notes
-scripts/evaluate.py     injection harness  →  metrics  →  MLflow
+spendguard generate        seeded synthetic INR data   →  data/raw/
+spendguard ingest <csv>    CSV  →  clean  →  normalize  →  DuckDB + dataset card
+spendguard detect          DuckDB  →  detectors  →  cases            (Phase 3)
+spendguard investigate     top-N cases  →  Investigator  →  Verifier  (Phase 6-7)
+spendguard evaluate        injection harness  →  metrics  →  MLflow   (Phase 10)
 ```
 
 The API only **reads finished results** and **writes case-status updates**. That is why it stays thin and fast.
@@ -74,7 +74,7 @@ The API only **reads finished results** and **writes case-status updates**. That
 
 ## Setup
 
-Requires Python 3.11+ and Node 20+.
+Requires Python 3.12+ and Node 20+.
 
 ```bash
 python -m venv .venv
