@@ -19,6 +19,7 @@ start pointing at different transactions. Gaps in the sequence are expected.
 from __future__ import annotations
 
 import hashlib
+import json
 import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -27,13 +28,7 @@ from pathlib import Path
 import polars as pl
 
 from spendguard.config import settings
-from spendguard.db.duck import (
-    DATASET_CARDS_DDL,
-    TRANSACTION_FIELDS,
-    TRANSACTIONS_INDEXES,
-    connect,
-    transactions_ddl,
-)
+from spendguard.db.duck import DATASET_CARDS_DDL, connect, write_transactions
 from spendguard.pipeline.dataset_card import build_card, write_card
 from spendguard.pipeline.mapping import DatasetMapping
 from spendguard.pipeline.vendors import normalize_vendor
@@ -195,19 +190,8 @@ def _to_canonical(frame: pl.DataFrame, dataset: str) -> pl.DataFrame:
 def _write_duckdb(
     table: pl.DataFrame, db_path: Path, dataset: str, card: dict[str, object]
 ) -> None:
-    import json
-
-    arrow = table.to_arrow(compat_level=pl.CompatLevel.oldest())
     with connect(db_path) as con:
-        con.execute(transactions_ddl())
-        con.register("staged", arrow)
-        con.execute(
-            f"INSERT INTO transactions ({', '.join(TRANSACTION_FIELDS)}) "
-            f"SELECT {', '.join(TRANSACTION_FIELDS)} FROM staged"
-        )
-        con.unregister("staged")
-        for statement in TRANSACTIONS_INDEXES:
-            con.execute(statement)
+        write_transactions(con, table)
         con.execute(DATASET_CARDS_DDL)
         con.execute(
             "INSERT OR REPLACE INTO dataset_cards VALUES (?, ?, ?)",

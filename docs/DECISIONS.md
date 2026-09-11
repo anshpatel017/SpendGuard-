@@ -198,6 +198,36 @@ Every over-merge is the same shape: `Kaveri Traders` and `Kaveri Enterprises LLP
 
 ---
 
+## D-17 — Injection harness design
+
+**Decision.** The harness writes a **separate** database and never modifies the clean one. Within it:
+
+- `rate` counts anomaly **groups**, not rows; the resulting row share (2.24% on the development dataset) is reported with every run.
+- Every injected anomaly stays **inside the policy's own definition** of it — duplicate shifts and split windows ≤ 10 days against 14-day policy windows, with headroom for a weekend roll.
+- A row belongs to **at most one** anomaly group.
+- Split originals are **deleted**: the requirement is replaced by its parts, as in a real split.
+- Inflation is capped at 5% of a category, and only placed in categories large enough to establish a norm.
+- Synthetic fraud vendors are priced round but **within their category's normal range**, so each planted anomaly tests exactly one detector.
+- Duplicates are disguised three ways — exact, legitimate spelling variant, typo — recorded per group, so D1's recall can later be broken down by disguise.
+
+**Rationale.** Each choice removes a way the evaluation could be unfair in either direction: anomalies no detector could find, anomalies that trip the wrong detector, overlapping ground truth, or planted outliers dragging the norm they are measured against.
+
+**Detector isolation.** Detectors read the `audit_transactions` view, which omits the answer-key columns and `source_row_ref` — injected rows have no source reference, so exposing that column would leak the answer through its absence. A test parses every detector module and fails on any string naming a hidden column or the raw table; it was verified by planting a leak and confirming the failure.
+
+---
+
+## D-18 — Rule baseline, and a correction to the synthetic data it exposed
+
+**Decision.** The baseline is four fixed, binary rules (docs/EVALUATION.md 4.0): exact duplicate match, amount within 10% below the threshold, unit price above 2× the category mean, and supplier invoices mostly in round thousands.
+
+**Finding.** Its first run scored **perfect precision on inflation**. That was a defect in the generator, not a strength of the rule: every commodity had a tight lognormal price spread, so no legitimate purchase ever reached 2× the category mean. Real categories are not like that — one "office chair" category holds economy and premium models, and emergency purchases carry a premium.
+
+**Correction.** The generator now draws a specification tier per purchase (10% economy at 0.70–0.85×, 20% premium at 1.35–1.70×) and makes 2% of purchases urgent at a further 1.3–2.0×. Half of those rows say so in the description (`- Premium Grade`, `(Urgent Supply)`); half do not. Baseline inflation precision fell from 1.000 to **0.357**, with 175 false alarms on honest purchases.
+
+**Why this matters beyond the number.** Leaving data this easy would have let D3 post near-perfect scores that a panel would rightly dismiss. The description markers also give the Investigator agent real evidence to cite when it dismisses a false alarm.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |

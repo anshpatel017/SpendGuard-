@@ -27,8 +27,12 @@ Fraud datasets have no labels. Nobody publishes "these 100 transactions are frau
 
 | Parameter | Value |
 |---|---|
-| Overall injection rate | 0.5% - 2% of rows |
-| Per-category injection cap (inflation) | Capped, so injection does not materially shift the category median it is measured against |
+| Injection rate | `rate` = anomaly **groups** per transaction, default 1%. Splits touch several rows each, so the share of rows touched is higher — **2.24%** on the 50k development dataset — and is reported with every run. |
+| Mix | 40% duplicate, 25% split, 35% inflation; vendor flags separately, 1% of suppliers, at least 2 |
+| Inside the policy definitions | Duplicate shifts ≤ 10 days and split windows ≤ 10 days, both inside the 14-day policy windows even after a weekend roll. An anomaly no correct detector could find would measure nothing. |
+| Disjoint | A row belongs to at most one anomaly group, so matching is unambiguous |
+| Per-category injection cap (inflation) | 5% of a category's rows, and only categories with enough rows to establish a norm |
+| Vendor-flag pricing | Round numbers, but priced within the category's normal range — so a fake vendor tests the vendor-flag detector alone and never also trips the price detector |
 | Seeds | Fixed and recorded. Results reported across multiple seeds. |
 | Reproducibility | Fully scripted. Same seed and same input produce byte-identical output. |
 
@@ -38,7 +42,9 @@ Each injection writes a `ground_truth` row: the group id, the anomaly class, the
 
 ### 2.4 Isolation rule
 
-Injection markers (`is_injected`, `injection_group_id`, `injection_type`) live in the `transactions` table so detectors see exactly what an auditor would see. **Detectors must never read them.** Only the evaluation harness does. This is enforced by a test.
+Injection markers (`is_injected`, `injection_group_id`, `injection_type`) live in the `transactions` table so detectors see exactly what an auditor would see. **Detectors must never read them.** Only the evaluation harness does.
+
+Enforced two ways. Detectors query the `audit_transactions` view, which omits the markers and `source_row_ref` (injected rows have none, so its absence would itself leak the answer). And a test parses every detector module and fails on any string literal naming a hidden column, the ground-truth table, or the raw `transactions` table. That test was verified by planting a leak and confirming it fails.
 
 ---
 
@@ -55,7 +61,11 @@ A detected case counts as a **true positive** when both hold:
 
 Otherwise the case is a false positive. A ground-truth group matched by no case is a false negative.
 
-Boundary behaviour at exactly 50% must be defined once in code and unit-tested.
+**Exactly 50% spurious still matches** — the boundary is inclusive, defined once in `eval/matching.py`, and unit-tested on both sides.
+
+**Matching is one-to-one and score-ordered.** Cases are visited from highest `detector_score` down, ties broken by `case_id`; each claims the best still-unclaimed group — most overlap, then least spurious. A second case landing on an already-claimed group is a **false positive**: an auditor handed five alerts for one split scheme has four redundant alerts, and the metric should say so. This is the object-detection convention, and it keeps the ranked list consistent with average precision.
+
+Types must agree: a duplicate case never matches a split group.
 
 ### 3.2 Vendor-level anomalies (D4)
 
@@ -83,8 +93,31 @@ Per detector, against the rule-based baseline, at both granularities:
 | Precision | Of what we flagged, how much was real |
 | Recall | Of what was there, how much we found |
 | F1 | Balance |
-| PR-AUC | Threshold-independent quality — more honest than ROC-AUC on heavily imbalanced data |
+| PR-AUC | Threshold-independent quality — more honest than ROC-AUC on heavily imbalanced data. Computed as average precision over **distinct score thresholds** (the scikit-learn definition), so tied scores enter together: a binary detector gets exactly precision × recall regardless of tie order. Missed groups count in the recall denominator. |
 | Alert volume at fixed precision | Practical usability — how many alerts an auditor must work through to sustain a given precision |
+
+### 4.0 The rule-based baseline
+
+Four fixed rules — each a real, commonly used control, none of which normalizes names, learns a distribution, or looks at more than one transaction at a time. Every rule is binary, so every baseline case scores 1.0.
+
+| Anomaly | Rule |
+|---|---|
+| duplicate | Same supplier name (case- and space-insensitive), same invoice number, same amount |
+| split | Amount within 10% below the approval threshold |
+| inflation | Unit price above twice the category mean |
+| vendor_flag | At least half of a supplier's invoices (minimum 10) are exact multiples of ₹1,000 |
+
+**First results** — 50,735 transactions, 504 injected groups, seed 42, per case:
+
+| Anomaly | Precision | Recall | F1 | TP | FP | FN |
+|---|---:|---:|---:|---:|---:|---:|
+| duplicate | 1.000 | 0.220 | 0.361 | 44 | 0 | 156 |
+| split | 0.013 | 0.072 | 0.022 | 9 | 682 | 116 |
+| inflation | 0.357 | 0.554 | 0.434 | 97 | 175 | 78 |
+| vendor_flag | 0.364 | 1.000 | 0.533 | 4 | 7 | 0 |
+| **all** | **0.151** | **0.306** | **0.202** | 154 | 864 | 350 |
+
+Each failure is the gap a detector must close: exact matching misses disguised duplicates; the near-threshold rule drowns in legitimate large purchases; a mean-based price rule fires on honest premium and urgent purchases; and round-number vendors include legitimate fixed-fee contracts such as security services.
 
 ### 4.1 The unlabeled-flag problem
 
