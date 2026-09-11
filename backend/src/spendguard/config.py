@@ -46,8 +46,11 @@ class Settings(BaseSettings):
     # ---------------------------------------------------------------- paths
     project_root: Path = PROJECT_ROOT
     duckdb_path: Path = PROJECT_ROOT / "data" / "processed" / "spendguard.duckdb"
-    database_url: str = f"sqlite:///{(PROJECT_ROOT / 'data' / 'processed' / 'spendguard.sqlite').as_posix()}"
+    database_url: str = (
+        f"sqlite:///{(PROJECT_ROOT / 'data' / 'processed' / 'spendguard.sqlite').as_posix()}"
+    )
     policy_path: Path = PROJECT_ROOT / "policy" / "policy.md"
+    mappings_dir: Path = PROJECT_ROOT / "backend" / "mappings"
     raw_data_dir: Path = PROJECT_ROOT / "data" / "raw"
     processed_data_dir: Path = PROJECT_ROOT / "data" / "processed"
     frozen_data_dir: Path = PROJECT_ROOT / "data" / "frozen"
@@ -153,7 +156,7 @@ class Settings(BaseSettings):
 
         if len(digits) > 3:
             head, tail = digits[:-3], digits[-3:]
-            groups = []
+            groups: list[str] = []
             while len(head) > 2:
                 groups.insert(0, head[-2:])
                 head = head[:-2]
