@@ -12,16 +12,22 @@ requires-python = ">=3.11"
 dependencies = [
     "duckdb>=1.1",
     "pandas>=2.2",
-    "polars>=1.0",
+    "polars>=1.1",
     "pyarrow>=17.0",
+    "numpy>=1.26",
     "pydantic>=2.9",
     "pydantic-settings>=2.5",
     "python-dateutil>=2.9",
+    "pyyaml>=6.0",
+    "rapidfuzz>=3.9",
     "sqlalchemy>=2.0",
     "alembic>=1.13",
     "typer>=0.12",
     "rich>=13.0",
 ]
+
+[project.scripts]
+spendguard = "spendguard.cli:app"
 
 [project.optional-dependencies]
 
@@ -29,9 +35,7 @@ dependencies = [
 detect = [
     "scikit-learn>=1.5",
     "scipy>=1.14",
-    "rapidfuzz>=3.9",
     "pyod>=2.0",
-    "Faker>=30.0",
 ]
 
 # Phase 10: experiment tracking
@@ -65,6 +69,7 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "types-python-dateutil",
+    "types-PyYAML",
 ]
 
 [tool.setuptools.packages.find]
@@ -91,7 +96,6 @@ ignore = ["E501"]
 
 [tool.mypy]
 python_version = "3.11"
-files = ["src"]
 ignore_missing_imports = true
 warn_unused_ignores = true
 warn_redundant_casts = true

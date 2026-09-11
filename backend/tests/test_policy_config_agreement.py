@@ -60,8 +60,10 @@ def test_every_detector_has_a_policy_anchor() -> None:
 def test_detects_a_deliberate_mismatch(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     """The check must actually fail when the policy disagrees - not silently pass."""
     original = settings.policy_path.read_text(encoding="utf-8")
-    tampered = original.replace("| **Principal control threshold** | **₹2,50,000** |",
-                               "| **Principal control threshold** | **₹5,00,000** |")
+    tampered = original.replace(
+        "| **Principal control threshold** | **₹2,50,000** |",
+        "| **Principal control threshold** | **₹5,00,000** |",
+    )
     assert tampered != original, "Tamper target not found; the policy table format changed"
 
     fake_policy = tmp_path / "policy.md"

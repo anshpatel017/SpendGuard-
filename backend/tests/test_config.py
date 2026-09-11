@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from spendguard.config import LLMProvider, SeverityBand, Settings, get_settings, settings
+from spendguard.config import LLMProvider, Settings, SeverityBand, get_settings, settings
 
 
 def test_package_imports() -> None:

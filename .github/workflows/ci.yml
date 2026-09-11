@@ -30,7 +30,7 @@ jobs:
         run: python -m ruff format --check backend/src backend/tests
 
       - name: Type check
-        run: python -m mypy --config-file backend/pyproject.toml
+        run: python -m mypy --config-file backend/pyproject.toml backend/src
 
       - name: Tests
         run: python -m pytest backend --cov=spendguard --cov-report=term-missing
