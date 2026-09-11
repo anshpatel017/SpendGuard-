@@ -1,0 +1,71 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+
+# --- Testing / typing / linting caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# --- Secrets and local config ---
+.env
+.env.local
+*.key
+
+# --- Data (never commit raw or derived data) ---
+data/raw/
+data/processed/
+data/frozen/
+data/demo/
+*.csv
+*.parquet
+*.duckdb
+*.duckdb.wal
+*.sqlite
+*.sqlite3
+*.db
+
+# ...but keep the folder structure and small fixtures
+!backend/tests/fixtures/*.csv
+!data/**/.gitkeep
+
+# --- Experiment tracking ---
+mlruns/
+mlartifacts/
+*.mlflow
+
+# --- Models and embeddings caches ---
+models/
+*.gguf
+.cache/
+embeddings_index/
+
+# --- Node / frontend ---
+node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# --- Editors and OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini

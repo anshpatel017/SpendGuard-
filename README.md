@@ -72,6 +72,34 @@ The API only **reads finished results** and **writes case-status updates**. That
 
 ---
 
+## Setup
+
+Requires Python 3.11+ and Node 20+.
+
+```bash
+python -m venv .venv
+```
+
+```bash
+./.venv/Scripts/python.exe -m pip install -e "./backend[dev,detect]"
+```
+
+```bash
+cp .env.example .env
+```
+
+Verify the install:
+
+```bash
+./.venv/Scripts/python.exe -m pytest backend
+```
+
+Dependency groups are installed as each phase needs them, so the initial install
+stays light: `detect` for the detectors, `agent` for the LLM layer and policy
+retrieval, `api` for FastAPI, `track` for MLflow, `linkage` for optional Splink.
+
+---
+
 ## Documentation
 
 | Document | Contents |
