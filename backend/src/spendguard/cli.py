@@ -2,6 +2,8 @@
 
 spendguard generate                 synthetic INR dataset -> data/raw/
 spendguard ingest <csv>             CSV -> DuckDB transactions + dataset card
+spendguard inject                   plant seeded anomalies in a copy of the database
+spendguard evaluate                 score detectors against the planted anomalies
 spendguard check-policy             policy.md and config.py agree?
 """
 
@@ -95,6 +97,88 @@ def ingest(
     console.print(f"[green]DuckDB[/green]  {result.db_path}")
     for path in result.card_paths:
         console.print(f"[green]Card[/green]    {path}")
+
+
+@app.command()
+def inject(
+    seed: Annotated[int, typer.Option(help="Random seed.")] = settings.random_seed,
+    rate: Annotated[float, typer.Option(help="Anomaly groups per transaction.")] = 0.01,
+    source: Annotated[Path | None, typer.Option(help="Clean DuckDB to copy from.")] = None,
+    out: Annotated[Path | None, typer.Option(help="Injected DuckDB to write.")] = None,
+) -> None:
+    """Plant seeded, realistic anomalies in a copy of the clean database."""
+    from spendguard.eval.injection import InjectionConfig
+    from spendguard.eval.injection import inject as run_inject
+
+    with console.status(f"Injecting anomalies (seed {seed}, rate {rate:.1%})..."):
+        result = run_inject(source, out, InjectionConfig(seed=seed, rate=rate))
+
+    table = Table(title=f"Injected - seed {result.seed}")
+    for col in ("Anomaly", "Groups", "Rows", "Amount at risk"):
+        table.add_column(col, justify="left" if col == "Anomaly" else "right")
+    for kind, groups in result.groups.items():
+        table.add_row(
+            kind,
+            str(groups),
+            f"{result.rows_injected[kind]:,}",
+            settings.money(result.amount_at_risk[kind]),
+        )
+    console.print(table)
+    console.print(
+        f"{result.rows_before:,} rows -> {result.rows_after:,} "
+        f"({result.row_share:.2%} injected, {result.rows_deleted} split originals replaced)"
+    )
+    if result.shortfall:
+        console.print(f"[yellow]Could not place:[/yellow] {result.shortfall}")
+    console.print(f"[green]Wrote[/green] {result.out_db}")
+
+
+@app.command()
+def evaluate(
+    detector: Annotated[
+        list[str] | None, typer.Option(help="Detector(s) to score. Repeatable.")
+    ] = None,
+    seed: Annotated[
+        int, typer.Option(help="Seed of the injected database.")
+    ] = settings.random_seed,
+    db: Annotated[Path | None, typer.Option(help="Injected DuckDB to evaluate.")] = None,
+) -> None:
+    """Score detectors against the planted anomalies."""
+    from spendguard.eval.injection import default_injected_path
+    from spendguard.eval.metrics import ALL
+    from spendguard.eval.runner import run_evaluation
+
+    path = db or default_injected_path(seed)
+    if not path.exists():
+        console.print(f"[red]No injected database at {path}.[/red] Run `spendguard inject` first.")
+        raise typer.Exit(code=1)
+
+    with console.status("Running detectors..."):
+        run = run_evaluation(path, detector or ["baseline"])
+
+    for granularity in ("case", "row"):
+        table = Table(title=f"Per {granularity} - {run.run_id}")
+        for col in ("Detector", "Anomaly", "Precision", "Recall", "F1", "PR-AUC", "TP", "FP", "FN"):
+            table.add_column(col, justify="left" if col in ("Detector", "Anomaly") else "right")
+        for m in run.metrics:
+            if m.granularity != granularity:
+                continue
+            style = "bold" if m.anomaly_type == ALL else None
+            table.add_row(
+                m.detector,
+                m.anomaly_type,
+                f"{m.precision:.3f}",
+                f"{m.recall:.3f}",
+                f"{m.f1:.3f}",
+                f"{m.pr_auc:.3f}" if m.pr_auc is not None else "-",
+                f"{m.tp:,}",
+                f"{m.fp:,}",
+                f"{m.fn:,}",
+                style=style,
+            )
+        console.print(table)
+    for path_out in run.report_paths:
+        console.print(f"[green]Report[/green] {path_out}")
 
 
 @app.command("check-policy")

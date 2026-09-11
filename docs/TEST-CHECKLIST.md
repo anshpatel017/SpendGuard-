@@ -34,7 +34,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [ ] **[unit]** Every case carries a non-empty `row_ids` list and every id exists in `transactions`. [FR-2.11]
 - [ ] **[unit]** Every case carries `amount_at_risk` and a `severity_prelim` in `[0, 100]`. [FR-2.11]
 - [ ] **[unit]** Running a detector twice on identical input with the same seed produces identical cases. [NFR-4]
-- [ ] **[int]** An empty input table produces zero cases and no exception. [FR-2.2]
+- [x] **[int]** An empty input table produces zero cases and no exception. [FR-2.2]
 - [ ] **[int]** Detectors process the full table, not a sample — case row references span the full row_id range where anomalies exist. [FR-2.1]
 
 ### D1 duplicates
@@ -55,7 +55,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [ ] **[unit]** Changing the configured threshold changes the results, proving it is not hardcoded. [FR-2.6]
 - [x] **[unit]** An automated check asserts `APPROVAL_THRESHOLD` equals the figure in the policy threshold summary, and fails on a deliberate mismatch. [FR-2.14]
 - [x] **[unit]** The same check covers the D1 amount tolerance, the D1 and D2 date windows, and the D4 new-vendor period. [FR-2.14]
-- [ ] **[unit]** Amounts at exactly ₹2,50,000 are handled per the policy wording — "at or above" the threshold is not a split. [FR-2.5]
+- [x] **[unit]** Amounts at exactly ₹2,50,000 are handled per the policy wording — "at or above" the threshold is not a split. [FR-2.5]
 
 ### D3 price inflation
 
@@ -74,21 +74,21 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 ### Baseline
 
-- [ ] **[unit]** The baseline implements the same interface as the detectors. [FR-2.10]
-- [ ] **[int]** The baseline runs over the same dataset and produces a comparable metrics table. [FR-2.10]
+- [x] **[unit]** The baseline implements the same interface as the detectors. [FR-2.10]
+- [x] **[int]** The baseline runs over the same dataset and produces a comparable metrics table. [FR-2.10]
 
 ---
 
 ## 3. Injection harness
 
-- [ ] **[unit]** Injecting with a fixed seed twice produces byte-identical output. [FR-7.1]
-- [ ] **[unit]** Ground truth records anomaly groups with row ids and anomaly type. [FR-7.2]
-- [ ] **[unit]** Injected duplicates carry realistic vendor-string perturbation and date shift, and preserve the amount. [FR-7.1]
-- [ ] **[unit]** Injected splits replace one large transaction with several sub-threshold ones summing to the original. [FR-7.1]
-- [ ] **[unit]** Injected inflation multiplies unit price within the specified range. [FR-7.1]
-- [ ] **[unit]** The injection rate matches the configured rate within tolerance. [FR-7.1]
-- [ ] **[int]** Injected rows are traceable back to their source rows for auditing the harness itself. [FR-7.2]
-- [ ] **[man]** Per-category injection rate for D3 is capped, so injection does not materially shift the category median it is measured against.
+- [x] **[unit]** Injecting with a fixed seed twice produces byte-identical output. [FR-7.1]
+- [x] **[unit]** Ground truth records anomaly groups with row ids and anomaly type. [FR-7.2]
+- [x] **[unit]** Injected duplicates carry realistic vendor-string perturbation and date shift, and preserve the amount. [FR-7.1]
+- [x] **[unit]** Injected splits replace one large transaction with several sub-threshold ones summing to the original. [FR-7.1]
+- [x] **[unit]** Injected inflation multiplies unit price within the specified range. [FR-7.1]
+- [x] **[unit]** The injection rate matches the configured rate within tolerance. [FR-7.1]
+- [x] **[int]** Injected rows are traceable back to their source rows for auditing the harness itself. [FR-7.2]
+- [x] **[man]** Per-category injection rate for D3 is capped, so injection does not materially shift the category median it is measured against.
 
 ---
 
@@ -184,14 +184,14 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 - [ ] **[int]** Per-case precision, recall, F1 and PR-AUC are produced per detector against the baseline. [FR-7.3]
 - [ ] **[int]** Per-row metrics are produced as a secondary table. [FR-7.4]
-- [ ] **[int]** The case-overlap matching rule is implemented exactly as specified and unit-tested at its boundaries. [FR-7.3]
-- [ ] **[int]** D4 vendor-level cases are matched by the rule appropriate to vendor-level cases, not by row overlap. [Open issue]
+- [x] **[int]** The case-overlap matching rule is implemented exactly as specified and unit-tested at its boundaries. [FR-7.3]
+- [x] **[int]** D4 vendor-level cases are matched by the rule appropriate to vendor-level cases, not by row overlap. [Open issue]
 - [ ] **[int]** Citation validity is reported split into deterministic and semantic. [FR-7.5]
 - [ ] **[int]** Triage accuracy is computed only over investigated cases, and the report states that this sample is severity-biased. [FR-7.6]
 - [ ] **[int]** Efficiency metrics — tool calls, tokens, latency — are recorded per case. [FR-7.7]
 - [ ] **[int]** The Verifier-off ablation runs and produces a comparison table. [FR-7.8]
 - [ ] **[int]** The template-notes ablation runs and produces a comparison table. [FR-7.9]
-- [ ] **[int]** Every run is logged to the experiment tracker with its parameters, seeds and results. [FR-7.10]
+- [ ] **[int]** Every run is logged to the experiment tracker with its parameters, seeds and results. [FR-7.10] *(logged to DuckDB `eval_results` + JSON/Markdown reports now; MLflow wiring in Phase 10)*
 - [ ] **[int]** Re-running an evaluation with the same seed reproduces the same numbers. [NFR-4]
 - [ ] **[man]** Results are reported across multiple seeds with variation stated. [FR-7.11]
 - [ ] **[man]** Top-k unlabeled flags are manually reviewed so precision can be reported raw and adjusted. [FR-7.12]

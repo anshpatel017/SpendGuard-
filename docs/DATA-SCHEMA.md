@@ -35,6 +35,10 @@ Indexes on `vendor_key`, `txn_date`, and `(vendor_key, txn_date)`.
 
 **Injection columns live in the same table** so that detectors see exactly the data an auditor would see. Detectors must never read `is_injected`, `injection_group_id` or `injection_type` — only the evaluation harness does. This is enforced by a test.
 
+### 1.1a `audit_transactions` (view)
+
+What detectors read. Every `transactions` column **except** `is_injected`, `injection_group_id`, `injection_type`, `source_row_ref` and `source_dataset`. Injected rows have no `source_row_ref`, so exposing it would leak the answer key through its absence. Rebuilt whenever `transactions` is written.
+
 ### 1.2 `ground_truth`
 
 Written by the injection harness.
@@ -48,6 +52,11 @@ Written by the injection harness.
 | `seed` | INTEGER | Seed used |
 | `params` | JSON | Parameters used, e.g. inflation multiplier, date shift |
 | `amount_at_risk` | DOUBLE | Value implicated by this anomaly |
+| `vendor_key` | VARCHAR | The anomaly's supplier — vendor-flag cases are matched on this, not on rows (D-03) |
+
+### 1.2a `injection_runs`
+
+One row per injected database: seed, full configuration, and a summary of what was placed. The injected database is always a **separate file** (`spendguard_injected_seed<N>.duckdb`); the clean database is never modified.
 
 ### 1.3 `detector_output`
 
@@ -68,11 +77,15 @@ Raw scores before case grouping. Kept so PR curves can be recomputed without re-
 |---|---|---|
 | `run_id` | VARCHAR | Evaluation run |
 | `detector` | VARCHAR | Detector or baseline |
+| `anomaly_type` | VARCHAR | An anomaly type, or `all` for the pooled row |
 | `granularity` | VARCHAR | `case` or `row` |
-| `precision`, `recall`, `f1`, `pr_auc` | DOUBLE | Metrics |
+| `precision`, `recall`, `f1` | DOUBLE | Metrics |
+| `pr_auc` | DOUBLE | Average precision; per-case rows only, null for per-row |
 | `tp`, `fp`, `fn` | INTEGER | Counts |
-| `seed` | INTEGER | Seed |
-| `config` | JSON | Full configuration snapshot |
+| `seed` | INTEGER | Injection seed of the evaluated database |
+| `created_at` | TIMESTAMP | |
+
+The injection configuration is stored once in `injection_runs`, not repeated per metric row. Each evaluation also writes a JSON and Markdown report to `data/processed/eval/`.
 
 ---
 

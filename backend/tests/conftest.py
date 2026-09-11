@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from spendguard.eval.injection import InjectionConfig, InjectionResult, inject
 from spendguard.pipeline.ingest import IngestResult, ingest
 from spendguard.pipeline.mapping import DatasetMapping, load_mapping
 from spendguard.pipeline.synthetic import GeneratorConfig, SyntheticDataset, generate, write
@@ -35,3 +36,13 @@ def ingested(
 ) -> IngestResult:
     out = tmp_path_factory.mktemp("db")
     return ingest(small_csv, synthetic_mapping, db_path=out / "t.duckdb", card_dir=out)
+
+
+# A higher rate than the default so a 3,000-row dataset still gets every anomaly type.
+INJECTION = InjectionConfig(seed=11, rate=0.02)
+
+
+@pytest.fixture(scope="session")
+def injected(tmp_path_factory: pytest.TempPathFactory, ingested: IngestResult) -> InjectionResult:
+    out = tmp_path_factory.mktemp("injected") / "injected.duckdb"
+    return inject(ingested.db_path, out, INJECTION)

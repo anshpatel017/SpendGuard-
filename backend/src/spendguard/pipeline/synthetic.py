@@ -14,7 +14,9 @@ nothing:
 * **seasonality** - the March year-end rush and month-end clustering that
   government spending genuinely shows, which a naive vendor-flag detector will
   wrongly flag
-* **price drift and bulk discounts** - so unit prices vary for real reasons
+* **price drift, bulk discounts, spec tiers and urgent purchases** - so unit
+  prices within one category legitimately span 0.7x to beyond 2x, and an honest
+  premium purchase can look like inflation, as it does in real data
 * **dirty formatting** and a few **malformed rows** - so ingestion is exercised
 
 It contains **no anomalies**. Frauds are added later by the injection harness,
@@ -103,13 +105,20 @@ class GeneratorConfig:
     malformed_rate: float = 0.002
     preferred_vendor_rate: float = 0.60
     annual_price_drift: float = 0.06
+    urgent_rate: float = 0.02  # emergency purchases at a legitimate premium
 
     def __post_init__(self) -> None:
         if self.n_transactions < 500:
             raise ValueError("n_transactions must be at least 500 for realistic structure")
         if self.end_date <= self.start_date:
             raise ValueError("end_date must be after start_date")
-        for name in ("legit_variant_rate", "dirt_rate", "malformed_rate", "preferred_vendor_rate"):
+        for name in (
+            "legit_variant_rate",
+            "dirt_rate",
+            "malformed_rate",
+            "preferred_vendor_rate",
+            "urgent_rate",
+        ):
             value = getattr(self, name)
             if not 0 <= value < 1:
                 raise ValueError(f"{name} must be in [0, 1), got {value}")
@@ -167,7 +176,8 @@ class _Row:
     vendor: _Vendor
     officer: _Officer
     category: Category
-    item_desc: str
+    item_name: str  # the commodity - what the category label is built from
+    item_desc: str  # what the invoice says, which may add a grade or urgency
     quantity: int
     unit_price: float
     amount: float
@@ -370,6 +380,7 @@ def _recurring_rows(
                     vendor=vendor,
                     officer=officer,
                     category=category,
+                    item_name=item.name,
                     item_desc=f"{item.name} for {service_month}",
                     quantity=1,
                     unit_price=monthly,
@@ -423,9 +434,18 @@ def _regular_rows(
         span = item.qty_max - item.qty_min + 1
         quantity = min(item.qty_max, item.qty_min + int(span * rng.random() ** 2))
 
+        # Legitimate reasons one category's unit prices spread far apart. Without
+        # them no honest purchase ever looks expensive, and any price detector -
+        # even a naive one - scores a meaningless perfect precision.
+        tier, tier_factor = _spec_tier(rng)
+        urgent = rng.random() < cfg.urgent_rate
+        if urgent:
+            tier_factor *= float(rng.uniform(1.3, 2.0))
+
         years = (day - cfg.start_date).days / 365.25
         price = (
             item.base_price
+            * tier_factor
             * vendor.price_level
             * float(rng.lognormal(0.0, category.price_sigma))
             * (1 + cfg.annual_price_drift * years)
@@ -433,12 +453,20 @@ def _regular_rows(
         )
         unit_price = _round_price(price, category.round_to)
 
+        # Half the time the invoice says why it cost what it did; half it does not.
+        desc = item.name
+        if tier and rng.random() < 0.5:
+            desc = f"{desc} - {tier} Grade"
+        if urgent and rng.random() < 0.5:
+            desc = f"{desc} (Urgent Supply)"
+
         rows.append(
             _Row(
                 vendor=vendor,
                 officer=officer,
                 category=category,
-                item_desc=item.name,
+                item_name=item.name,
+                item_desc=desc,
                 quantity=quantity,
                 unit_price=unit_price,
                 amount=round(quantity * unit_price, 2),
@@ -447,6 +475,16 @@ def _regular_rows(
             )
         )
     return rows
+
+
+def _spec_tier(rng: np.random.Generator) -> tuple[str, float]:
+    """Economy, standard or premium specification of the same commodity."""
+    draw = rng.random()
+    if draw < 0.10:
+        return "Economy", float(rng.uniform(0.70, 0.85))
+    if draw < 0.30:
+        return "Premium", float(rng.uniform(1.35, 1.70))
+    return "", 1.0
 
 
 def _assign_invoice_numbers(rows: list[_Row]) -> None:
@@ -507,7 +545,7 @@ def _render(
             "invoice_no": row.invoice_no,
             "department": row.officer.department.name,
             "officer_id": row.officer.officer_id,
-            "item_category": f"{row.category.name} / {row.item_desc.split(' for ')[0]}",
+            "item_category": f"{row.category.name} / {row.item_name}",
             "item_desc": row.item_desc,
             "quantity": str(row.quantity),
             "unit_price": f"{row.unit_price:.2f}",
