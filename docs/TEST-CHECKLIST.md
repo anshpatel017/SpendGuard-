@@ -8,17 +8,17 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 ## 1. Data pipeline
 
-- [ ] **[unit]** `normalize_vendor` collapses known variants to one key — "Sharma Enterprises", "SHARMA ENTERPRISES PVT LTD", "Sharma  Enterprise" all produce the same key. [FR-1.5]
-- [ ] **[unit]** `normalize_vendor` handles empty string, `None`, digits-only, and unicode names without raising. [FR-1.5]
-- [ ] **[unit]** Vendor normalization is order-independent — token reordering produces the same key. [FR-1.5]
-- [ ] **[unit]** Two genuinely different vendors sharing a stem are recorded as a known collision case, and the raw-name similarity check separates them. [FR-2.4]
-- [ ] **[unit]** Column mapping is read from configuration; renaming a source column changes only the config, not the code. [FR-1.3]
-- [ ] **[unit]** Malformed dates and non-numeric amounts are coerced or dropped, and the count is reported, not silently swallowed. [FR-1.4]
-- [ ] **[int]** Ingesting the same CSV twice produces identical `row_id` assignments. [FR-1.2]
-- [ ] **[int]** `row_id` is unique across the whole table. [FR-1.2]
-- [ ] **[int]** A dataset missing `officer_id` ingests successfully and D2 degrades rather than crashing. [FR-1.6]
-- [ ] **[int]** A dataset card is written with source, row count, date range, and per-column null rates. [FR-1.7]
-- [ ] **[unit]** A non-INR dataset converts using the rate pinned in its configuration, and the rate and date appear in the dataset card. [FR-1.8]
+- [x] **[unit]** `normalize_vendor` collapses known variants to one key — "Sharma Enterprises", "SHARMA ENTERPRISES PVT LTD", "Sharma  Enterprise" all produce the same key. [FR-1.5]
+- [x] **[unit]** `normalize_vendor` handles empty string, `None`, digits-only, and unicode names without raising. [FR-1.5]
+- [x] **[unit]** Vendor normalization is order-independent — token reordering produces the same key. [FR-1.5]
+- [x] **[unit]** Two genuinely different vendors sharing a stem are recorded as a known collision case, and the raw-name similarity check separates them. [FR-2.4]
+- [x] **[unit]** Column mapping is read from configuration; renaming a source column changes only the config, not the code. [FR-1.3]
+- [x] **[unit]** Malformed dates and non-numeric amounts are coerced or dropped, and the count is reported, not silently swallowed. [FR-1.4]
+- [x] **[int]** Ingesting the same CSV twice produces identical `row_id` assignments. [FR-1.2]
+- [x] **[int]** `row_id` is unique across the whole table. [FR-1.2]
+- [ ] **[int]** A dataset missing `officer_id` ingests successfully and D2 degrades rather than crashing. [FR-1.6] *(ingestion half done in Phase 1; D2 half pending Phase 3)*
+- [x] **[int]** A dataset card is written with source, row count, date range, and per-column null rates. [FR-1.7]
+- [x] **[unit]** A non-INR dataset converts using the rate pinned in its configuration, and the rate and date appear in the dataset card. [FR-1.8]
 - [ ] **[unit]** Ingestion makes no network call to fetch an exchange rate — verified, not assumed. [FR-1.8]
 - [ ] **[int]** Re-ingesting a converted dataset produces identical amounts, proving the rate is pinned and not live. [FR-1.8] [NFR-4]
 - [ ] **[man]** Spot-check twenty random rows against the source CSV for field-level correctness.
@@ -53,8 +53,8 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [ ] **[unit]** A group containing one transaction already above threshold is not detected — that is not a split. [FR-2.5]
 - [ ] **[unit]** Transactions spread outside the window are not grouped. [FR-2.5]
 - [ ] **[unit]** Changing the configured threshold changes the results, proving it is not hardcoded. [FR-2.6]
-- [ ] **[unit]** An automated check asserts `APPROVAL_THRESHOLD` equals the figure in the policy threshold summary, and fails on a deliberate mismatch. [FR-2.14]
-- [ ] **[unit]** The same check covers the D1 amount tolerance, the D1 and D2 date windows, and the D4 new-vendor period. [FR-2.14]
+- [x] **[unit]** An automated check asserts `APPROVAL_THRESHOLD` equals the figure in the policy threshold summary, and fails on a deliberate mismatch. [FR-2.14]
+- [x] **[unit]** The same check covers the D1 amount tolerance, the D1 and D2 date windows, and the D4 new-vendor period. [FR-2.14]
 - [ ] **[unit]** Amounts at exactly ₹2,50,000 are handled per the policy wording — "at or above" the threshold is not a split. [FR-2.5]
 
 ### D3 price inflation

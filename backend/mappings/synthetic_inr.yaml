@@ -1,0 +1,29 @@
+# Column mapping for the seeded synthetic INR dataset (spendguard generate).
+#
+# The generator deliberately writes non-canonical headers so this mapping is
+# genuinely exercised. The "Department" column is present in the file but not
+# mapped - ingestion must ignore unmapped columns.
+
+dataset: synthetic_inr
+description: >-
+  Seeded synthetic Indian public-sector procurement, INR-native. Clean baseline
+  with legitimate name variants, recurring contracts, seasonality and dirty
+  formatting. Contains no anomalies until the injection harness adds them.
+
+source_currency: INR
+
+date_formats:
+  - "%d-%m-%Y"
+
+source_row_ref: "Voucher No"
+
+columns:
+  vendor_name: "Supplier Name"
+  invoice_no: "Invoice Number"
+  amount: "Invoice Amount (INR)"
+  txn_date: "Invoice Date"
+  officer_id: "Requesting Officer"
+  item_desc: "Item Description"
+  item_category: "Commodity Category"
+  quantity: "Qty"
+  unit_price: "Rate (INR)"

@@ -132,6 +132,23 @@ Bands: High >= 66, Medium 33-65, Low < 33.
 
 **Rationale.** Normalization is deliberately aggressive — suffixes stripped, tokens sorted — so genuinely different vendors sharing a stem can collapse to the same key. Treating the key as proof of identity would inflate D1's false positives.
 
+**Measured (Phase 1, 50,000-row synthetic dataset, seed 42).** Against generator ground truth:
+
+| | Result |
+|---|---|
+| Raw spellings → vendor keys | 2,063 → 382 |
+| Suppliers split across more than one key (under-merging) | **0** |
+| Keys merging two genuinely different suppliers (over-merging) | **10 of 382**, covering 2.2% of rows |
+
+Every over-merge is the same shape: `Kaveri Traders` and `Kaveri Enterprises LLP` are distinct firms that both reduce to `kaveri`, because the spec strips "traders" and "enterprises" from the key. This is left in the synthetic data deliberately — real vendor masters contain exactly these pairs, and data without them would flatter D1.
+
+**Refinements made during Phase 1**, beyond the CLAUDE.md suffix list:
+
+- The Indian firm honorific `M/s` / `Messrs` is stripped as a prefix.
+- `Co-operative` is kept as one token so the `co` stopword does not break it.
+- Stopwords of five or more letters match within one keystroke (OSA distance, so an adjacent swap counts as one edit). Without this, `Private Limitd` produced a different blocking key from `Private Limited`, and a duplicate disguised with a suffix typo would never be compared. Short stopwords stay exact-only: one edit from `pvt` is `pvc`, a real trade word.
+- `name_similarity` takes the better of plain ratio and token-sort ratio. Token-sort alone collapses when a typo hits a word's first letter — `raders` sorts before `sharma` while `traders` sorts after — scoring a one-letter typo at 44/100.
+
 ---
 
 ## D-13 — Citation validity is reported as two numbers
@@ -189,4 +206,5 @@ Bands: High >= 66, Medium 33-65, Low < 33.
 | ~~O-02~~ | ~~Approval threshold figure~~ | **Resolved — see D-16. ₹2,50,000.** |
 | **O-03** | **`reference_amount` in `amount_weight`.** Defining it as the maximum amount in the run makes severity non-comparable across runs — a single unusually large transaction rescales every other case, and the same case receives a different severity on a different subset. A fixed constant or a high percentile of the amount distribution would keep severity stable across the demo run, the evaluation run, and the ablations. | Recommend a fixed reference; awaiting decision |
 | **O-04** | **`severity_final` semantics.** When the agent drops a false positive "to Low", does `severity_final` become an actual number below 33, or does only the band move while the number stays? Both fields exist in the contract; one line settles it. | Undecided |
+| **O-06** | **D1 must not block on exact `vendor_key` alone.** A typo in the *distinctive* part of a name (`Shrama Traders`) changes the key, so a duplicate disguised that way lands in a different block and is never compared — exact-key blocking is structurally blind to it. Fuzzy stopword matching (D-12) only protects suffixes. Duplicates keep the same amount by construction, so D1 stage 2 should block on **amount within tolerance plus date window**, and use `name_similarity` to confirm identity. Settle before building D1. | Open — decide in Phase 3 |
 | **O-05** | **Item category source.** Where the dataset lacks a usable category, D3 needs pseudo-categories from description clustering. Whether this is in the core build or deferred is not yet fixed. | Undecided |
