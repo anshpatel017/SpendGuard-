@@ -100,11 +100,16 @@ class Settings(BaseSettings):
     # D2: minimum run score to raise a case. Chosen to maximize F1 on the
     # development seed (42) only; reported on held-out seeds (decision D-21).
     split_score_threshold: float = 0.85
-    inflation_zscore_threshold: float = 3.5
+    # D3: chosen to maximize F1 on the development seed (42) only (decision D-23).
+    inflation_zscore_threshold: float = 5.5
     inflation_min_category_size: int = 20
     benford_min_transactions: int = 30
     benford_pvalue_threshold: float = 0.01
-    round_number_ratio_threshold: float = 0.40
+    # D4: minimum observations for each vendor-level test (decision D-24)
+    vendor_min_distinct_amounts: int = 20
+    vendor_min_transactions: int = 20
+    vendor_fdr_alpha: float = 0.05
+    round_number_unit: float = 1_000.0
     isolation_forest_contamination: float = 0.02
 
     # -------------------------------------------------------- severity model

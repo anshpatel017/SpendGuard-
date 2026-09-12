@@ -134,6 +134,25 @@ Three injection seeds, 50k-row development dataset, per case, **mean ± standard
 
 **What D1 misses.** Almost exclusively duplicates paid under an unrelated reference (D-22). Duplicates disguised with a supplier-name typo are all found — the reason blocking is on amount rather than vendor key (D-19).
 
+### 4.0b Phase 4 results — all four detectors
+
+Three injection seeds, 50k-row development dataset, per case, **mean ± standard deviation**. Seed 42 was used during design; **7 and 2026 are held out**.
+
+| Anomaly | Detector | Precision | Recall | F1 | PR-AUC |
+|---|---|---:|---:|---:|---:|
+| duplicate | baseline | 1.000 ± 0.000 | 0.215 ± 0.015 | 0.354 ± 0.020 | 0.215 ± 0.015 |
+| duplicate | **D1** | **1.000 ± 0.000** | **0.903 ± 0.013** | **0.949 ± 0.007** | **0.903 ± 0.013** |
+| split | baseline | 0.017 ± 0.003 | 0.096 ± 0.017 | 0.029 ± 0.005 | 0.002 ± 0.001 |
+| split | **D2** | **0.828 ± 0.006** | **0.643 ± 0.014** | **0.724 ± 0.011** | **0.583 ± 0.011** |
+| inflation | baseline | 0.353 ± 0.005 | 0.556 ± 0.003 | **0.432 ± 0.004** | 0.196 ± 0.003 |
+| inflation | **D3** | 0.369 ± 0.007 | 0.484 ± 0.007 | 0.419 ± 0.007 | **0.280 ± 0.008** |
+| vendor_flag | baseline | 0.414 ± 0.040 | 0.625 ± 0.102 | 0.497 ± 0.061 | 0.263 ± 0.067 |
+| vendor_flag | **D4** | **1.000 ± 0.000** | **0.750 ± 0.102** | **0.853 ± 0.067** | **0.750 ± 0.102** |
+
+**D3 does not beat the baseline on F1, and the report must say so.** It finishes marginally below (0.419 vs 0.432) while ranking substantially better (PR-AUC +43%). Legitimate premium and urgent purchases occupy the same price band as the injected markups, so no price statistic separates them — the reason the investigation layer exists (decision D-23).
+
+**Clean-data check.** On the same dataset with no planted anomalies: D1, D2 and D4 raise **0** cases. D3 raises 154 of 49,900 rows (0.3%), the honest premium and urgent purchases.
+
 ### 4.1 The unlabeled-flag problem
 
 Real procurement data already contains genuine duplicates, splits and inflated prices that nobody injected. When a detector correctly finds one, it scores as a false positive, because it is not in the ground-truth set. **Every detector's precision is therefore systematically understated.**
