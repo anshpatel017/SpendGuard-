@@ -327,6 +327,48 @@ This is the same correction applied to duplicates in D-22, for the same reason: 
 
 ---
 
+## D-26 — Development model: `qwen/qwen3.8-27b` on Groq
+
+**Decision.** Groq for development, model **`qwen/qwen3.8-27b`**. Tool calling verified live before building on it.
+
+**Why not the planned model.** Groq has retired `llama-3.3-70b-versatile`; the account's model list is now gpt-oss, Qwen 3.x and a few speech models. The plan in CLAUDE.md named a model that no longer exists, which is a reminder that a hosted model list is not a stable dependency — `spendguard check-llm` exists so this fails loudly and early rather than mid-investigation.
+
+**Why Qwen over gpt-oss-120b.** Both answered and both called tools correctly (~0.4-0.6 s). The local target is **Qwen2.5-3B**, so prompts developed against a Qwen model are more likely to survive the port to Ollama. Prompt transfer matters more here than raw capability, because the fully-local run is the claim being defended.
+
+---
+
+## D-27 — Policy retrieval is dense embeddings, measured against the alternatives
+
+**Decision.** Clause-boundary chunking of `policy/policy.md` (41 clauses), `bge-small-en-v1.5` embeddings, FAISS inner-product search over normalized vectors. Hybrid and lexical modes stay behind `search(mode=...)` for the ablation.
+
+**Measured on 10 colloquial paraphrases**, none of which reuses its clause's wording:
+
+| Retrieval | top-1 | top-3 |
+|---|---:|---:|
+| **dense only** | **5/10** | **7/10** |
+| BM25 only | 2/10 | 3/10 |
+| hybrid RRF (top 5) | 4/10 | 7/10 |
+| hybrid RRF (full) | 3/10 | 7/10 |
+
+Hybrid retrieval is the standard remedy when queries turn on exact terms, so it was built and tested rather than assumed. It never won: with 41 short clauses of formal prose against plain-language questions there is little lexical overlap for BM25 to exploit, so it mostly adds noise. The benchmark is small and hand-labelled — it is a regression guard, not a claim of general accuracy.
+
+**Two implementation notes worth keeping.**
+
+- **The cache key must cover the embedded text, not the policy file.** Keying on the file alone meant a change to how clauses are flattened left stale vectors in place and silently won; the first measurement after the change was identical to the one before it, which is how the bug surfaced. The key is now a hash of the exact strings that get embedded, plus the model name.
+- **Markdown is flattened to prose before embedding.** Clause SG-PP-2.1 is mostly a table of value bands; as pipes and dashes it embedded poorly.
+
+---
+
+## D-28 — Tool safety: a read-only view, a validated statement, and errors as data
+
+**Decision.** Every tool reads `audit_transactions` through a read-only connection. `query_transactions` additionally validates that the statement is a single `SELECT`/`WITH`, contains no write or attach keywords, and references no table but the audit view or its own CTEs. Results are capped at 50 rows and 8,000 characters.
+
+**Rationale.** Three independent layers, because any one can be circumvented: the connection cannot write, the view does not contain the answer key or `source_row_ref`, and the validator refuses anything that is not a plain read — with a *legible reason*, so the model corrects itself instead of retrying blindly.
+
+**Tools never raise into the agent loop.** A failure returns `{"error": ...}`. An exception would end an investigation that the model could have recovered from by fixing its own query; an error message is something it can read and act on.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |
