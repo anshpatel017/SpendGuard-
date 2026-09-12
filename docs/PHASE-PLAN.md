@@ -1,5 +1,9 @@
 # Build Plan
 
+> **Status lives in [PROGRESS.md](../PROGRESS.md)**, which is the running log and the
+> authoritative phase list (10 phases, 0-9: this document's Phase 8+9 are merged into
+> Phase 8, and Phase 10+11 into Phase 9). This file keeps the detail behind each phase.
+
 Phases, not weeks. Each phase ends with something that runs and something that is committed.
 
 A phase is **done** when its exit criterion is demonstrably true — not when the code exists.

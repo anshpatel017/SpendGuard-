@@ -216,7 +216,7 @@ def test_inflation_respects_the_per_category_cap(injected: InjectionResult) -> N
 # ---------------------------------------------------------------- vendor flags
 
 
-def test_synthetic_vendors_are_new_round_heavy_and_benford_testable(
+def test_synthetic_vendors_are_new_and_testable(
     ingested: IngestResult, injected: InjectionResult
 ) -> None:
     clean_keys = set(_frame(ingested.db_path)["vendor_key"])
@@ -224,9 +224,30 @@ def test_synthetic_vendors_are_new_round_heavy_and_benford_testable(
         assert r.vendor_key not in clean_keys
         rows = _rows(injected, r.row_ids)
         assert rows.height >= settings.benford_min_transactions
-        assert (rows["amount"] % 5_000 == 0).mean() >= 0.6  # type: ignore[operator]
         onboarded = date.fromisoformat(str(r.params["onboarded"]))
         assert rows["txn_date"].min() >= onboarded  # type: ignore[operator]
+
+
+def test_synthetic_vendors_vary_in_how_obvious_they_are(injected: InjectionResult) -> None:
+    """Decision D-25: one fixed round-number share made every planted vendor
+    blatant and D4 score a meaningless 1.000."""
+    records = _records(injected, AnomalyType.VENDOR_FLAG)
+    assert len(records) >= 4
+
+    for r in records:
+        rows = _rows(injected, r.row_ids)
+        observed = float((rows["amount"] % 5_000 == 0).mean())  # type: ignore[arg-type]
+        target = float(r.params["target_round_share"])  # type: ignore[arg-type]
+        assert (
+            INJECTION.vendor_flag_round_share[0] <= target <= INJECTION.vendor_flag_round_share[1]
+        )
+        assert observed == pytest.approx(target, abs=0.25)
+
+    # Difficulty is drawn per vendor rather than fixed. How far apart four draws
+    # happen to land is the RNG's business, not this detector's contract.
+    spread = [float(r.params["target_round_share"]) for r in records]  # type: ignore[arg-type]
+    assert len(set(spread)) > 1, "each planted vendor should draw its own difficulty"
+    assert INJECTION.vendor_flag_round_share[1] - INJECTION.vendor_flag_round_share[0] >= 0.2
 
 
 # ---------------------------------------------------------------- isolation
