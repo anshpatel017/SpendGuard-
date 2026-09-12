@@ -91,7 +91,7 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ---
 
-### Phase 4 — D3 + D4 ✅
+### Phase 4 — D3 + D4 ✅ (`ff311b3`)
 
 **Built:** **D3** (robust z-score on log unit price against a per-category median, adjusted for bulk discount and annual drift, with an Isolation Forest as a recorded second opinion) and **D4** (vendor red flags as statistical tests against peer behaviour, combined by Fisher's method, FDR-controlled across all suppliers). Both registered and running in `spendguard detect`.
 
@@ -119,16 +119,34 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ---
 
+### Phase 5 — Agent tools and policy RAG ✅
+
+**Built:** the provider-switchable LLM client, the six agent tools, and semantic retrieval over the procurement policy. Plus `spendguard check-llm`, which verifies the endpoint answers *and* that tool calling works.
+
+**Files:** `agent/llm.py`, `agent/tools.py`, `agent/policy.py`, `tests/test_llm.py`, `tests/test_agent_tools.py`, `tests/test_policy_rag.py`, `tests/test_agent_live.py`, `cli.py`.
+
+**Decisions and gotchas:**
+
+- **The planned model no longer exists (D-26).** Groq retired `llama-3.3-70b-versatile`. Chose **`qwen/qwen3.8-27b`** from the current list: the local target is Qwen2.5-3B, so prompts are more likely to survive the port to Ollama. Tool calling verified live before anything was built on it.
+- **Retrieval is dense embeddings, and the alternatives were measured, not assumed (D-27).** Hybrid (dense + BM25 via Reciprocal Rank Fusion) is the standard remedy for keyword-ish queries, so it was built and compared: dense 5/10 top-1, BM25 2/10, hybrid 4/10. Hybrid never won — 41 short clauses of formal prose give BM25 almost no lexical overlap to exploit. Other modes stay available for the ablation.
+- **A cache bug that hid its own fix.** The embedding cache was keyed on the policy file, so changing how clauses are flattened left stale vectors in place: the measurement after the change came back byte-identical to the one before. The key now hashes the exact text that gets embedded.
+- **Three layers keep the tools safe (D-28):** a read-only connection, a view without the answer key, and a validator that refuses anything but a single SELECT over that view. Tools never raise into the loop — a failure returns `{"error": ...}` the model can read and recover from.
+- **`vendor_profile` reports fixed monthly contracts.** This is the evidence the Investigator needs to dismiss a "duplicate" as routine billing, which is the false-positive filtering the project claims (D-04).
+- Live test: given the six tools, the model chose `vendor_profile` and the toolbox executed it. Skipped automatically when no key is set, so CI stays green.
+
+**528 tests passing.**
+
+---
+
 ## Current Phase
 
-### Phase 5 — Agent tools and policy RAG 🚧 not started
+### Phase 6 — Investigator 🚧 not started
 
-- The six tools: `query_transactions` (read-only, row-capped), `vendor_profile`, `find_similar_invoices`, `policy_lookup`, `benford_stats`, `calculator`. Each with a JSON schema and its own tests.
-- Policy RAG over `policy/policy.md`: chunk on clause boundaries so a retrieved clause is complete, embed with `bge-small-en-v1.5`, index with FAISS.
-- LLM client behind the `LLM_PROVIDER` switch so the same code runs against Groq now and Ollama later.
-- Exit criterion: every tool callable and unit-tested standalone, and `policy_lookup` returns the right clause for a paraphrased query that shares no keywords with the clause text.
-
-**This is the first phase that needs an LLM.** See Next Steps.
+- The bounded tool-calling loop: prompt with the case and the tool schemas, parse the tool call, execute it, feed the result back, repeat to `AGENT_MAX_STEPS`, then emit a structured audit note.
+- Strict JSON schema for the note, with few-shot examples per anomaly type.
+- Every claim must cite `row_id`s; the verdict is one of `likely_true_positive`, `likely_false_positive`, `inconclusive` (D-04).
+- Every step logged as a trace: tool, arguments, result, latency, tokens.
+- Exit criterion: a case goes in, a schema-valid cited audit note comes out, with a full trace stored, on all four anomaly types.
 
 ## Next Steps
 

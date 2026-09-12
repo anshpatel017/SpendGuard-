@@ -94,16 +94,16 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 ## 4. Agent tools
 
-- [ ] **[unit]** Every tool exposes a valid JSON schema. [FR-3.4]
-- [ ] **[unit]** `query_transactions` rejects any statement that is not a read. [FR-3.3]
-- [ ] **[unit]** `query_transactions` on a malformed query returns a structured error rather than raising. [FR-3.3]
-- [ ] **[unit]** `query_transactions` caps returned rows so a broad query cannot flood the context window. [FR-3.3]
-- [ ] **[unit]** `vendor_profile` on an unknown vendor returns an explicit empty result. [FR-3.3]
-- [ ] **[unit]** `find_similar_invoices` on an invalid row_id returns an explicit error. [FR-3.3]
-- [ ] **[unit]** `calculator` rejects anything that is not arithmetic. [FR-3.3]
-- [ ] **[unit]** `benford_stats` on a vendor below the minimum transaction count returns a clear insufficient-data result. [FR-3.3]
-- [ ] **[int]** `policy_lookup` returns the correct clause for a paraphrased query that shares no keywords with the clause text. [FR-3.10]
-- [ ] **[int]** `policy_lookup` returns a clause identifier the agent can cite, not just raw text. [FR-3.10]
+- [x] **[unit]** Every tool exposes a valid JSON schema. [FR-3.4]
+- [x] **[unit]** `query_transactions` rejects any statement that is not a read. [FR-3.3]
+- [x] **[unit]** `query_transactions` on a malformed query returns a structured error rather than raising. [FR-3.3]
+- [x] **[unit]** `query_transactions` caps returned rows so a broad query cannot flood the context window. [FR-3.3]
+- [x] **[unit]** `vendor_profile` on an unknown vendor returns an explicit empty result. [FR-3.3]
+- [x] **[unit]** `find_similar_invoices` on an invalid row_id returns an explicit error. [FR-3.3]
+- [x] **[unit]** `calculator` rejects anything that is not arithmetic. [FR-3.3]
+- [x] **[unit]** `benford_stats` on a vendor below the minimum transaction count returns a clear insufficient-data result. [FR-3.3]
+- [x] **[int]** `policy_lookup` returns the correct clause for a paraphrased query that shares no keywords with the clause text. [FR-3.10]
+- [x] **[int]** `policy_lookup` returns a clause identifier the agent can cite, not just raw text. [FR-3.10]
 
 ---
 
