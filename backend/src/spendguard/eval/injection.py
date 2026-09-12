@@ -105,7 +105,11 @@ class InjectionConfig:
     # vendor flag
     vendor_flag_min_rows: int = 35
     vendor_flag_max_rows: int = 60
-    vendor_flag_round_share: float = 0.80
+    # How obvious each synthetic vendor is, drawn per vendor. A single high value
+    # makes every planted vendor blatant and any detector score 1.000; real shell
+    # vendors vary, and the spread is what makes recall meaningful (decision D-25).
+    vendor_flag_round_share: tuple[float, float] = (0.35, 0.75)
+    vendor_flag_period_end_share: tuple[float, float] = (0.30, 0.60)
 
     def __post_init__(self) -> None:
         if not 0 < self.rate <= 0.05:
@@ -124,7 +128,11 @@ class InjectionConfig:
         if not 2 <= self.split_min_parts <= self.split_max_parts:
             raise ValueError("split parts must satisfy 2 <= min <= max")
         if self.vendor_flag_min_rows < settings.benford_min_transactions:
-            raise ValueError("synthetic vendors need enough invoices for a Benford test")
+            raise ValueError("synthetic vendors need enough invoices for a first-digit test")
+        for name in ("vendor_flag_round_share", "vendor_flag_period_end_share"):
+            low, high = getattr(self, name)
+            if not 0 < low <= high < 1:
+                raise ValueError(f"{name} must be a range inside (0, 1), got {(low, high)}")
 
 
 @dataclass
@@ -597,11 +605,17 @@ class _Injector:
                 else [None]
             )
 
+            # How obvious this particular vendor is (D-25).
+            round_share = float(self.rng.uniform(*self.cfg.vendor_flag_round_share))
+            period_end_share = float(self.rng.uniform(*self.cfg.vendor_flag_period_end_share))
+
             ids: list[int] = []
-            round_count = 0
+            round_count = period_end_count = 0
             prefix = "".join(w[0] for w in name.split()[:3]).upper()
             for seq in range(count):
-                pool = end_heavy if (end_heavy and self.rng.random() < 0.6) else days
+                at_period_end = bool(end_heavy) and self.rng.random() < period_end_share
+                pool = end_heavy if at_period_end else days
+                period_end_count += at_period_end
                 when = pool[int(self.rng.integers(len(pool)))]
                 service = services[int(self.rng.integers(len(services)))] if services else None
 
@@ -609,7 +623,7 @@ class _Injector:
                 # vendor-flag detector alone and does not also trip the price one.
                 typical = float(service["median_price"]) if service else 100_000.0
                 raw = typical * float(self.rng.uniform(0.5, 1.4))
-                if self.rng.random() < self.cfg.vendor_flag_round_share:
+                if self.rng.random() < round_share:
                     amount = float(max(5_000, round(raw / 5_000) * 5_000))
                     round_count += 1
                 else:
@@ -648,6 +662,9 @@ class _Injector:
                         "onboarded": onboard.isoformat(),
                         "transactions": count,
                         "round_share": round(round_count / count, 3),
+                        "period_end_share": round(period_end_count / count, 3),
+                        "target_round_share": round(round_share, 3),
+                        "target_period_end_share": round(period_end_share, 3),
                         "officers": billed_to,
                     },
                 )
@@ -681,9 +698,10 @@ def planned_counts(n_rows: int, n_vendors: int, cfg: InjectionConfig) -> dict[An
         AnomalyType.DUPLICATE: round(groups * cfg.duplicate_share),
         AnomalyType.SPLIT: round(groups * cfg.split_share),
         AnomalyType.INFLATION: round(groups * cfg.inflation_share),
+        # Enough synthetic vendors that recall has finer resolution than 25% steps.
         AnomalyType.VENDOR_FLAG: cfg.vendor_flags
         if cfg.vendor_flags is not None
-        else max(2, round(n_vendors * 0.01)),
+        else max(4, round(n_vendors * 0.02)),
     }
 
 

@@ -31,11 +31,11 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 - [x] **[unit]** Every detector implements the shared interface and returns the Case schema. [FR-2.2]
 - [x] **[unit]** Every `detector_score` falls in `[0, 1]`. [FR-2.9]
-- [ ] **[unit]** Every case carries a non-empty `row_ids` list and every id exists in `transactions`. [FR-2.11]
+- [x] **[unit]** Every case carries a non-empty `row_ids` list and every id exists in `transactions`. [FR-2.11]
 - [x] **[unit]** Every case carries `amount_at_risk` and a `severity_prelim` in `[0, 100]`. [FR-2.11]
 - [x] **[unit]** Running a detector twice on identical input with the same seed produces identical cases. [NFR-4]
 - [x] **[int]** An empty input table produces zero cases and no exception. [FR-2.2]
-- [ ] **[int]** Detectors process the full table, not a sample — case row references span the full row_id range where anomalies exist. [FR-2.1]
+- [x] **[int]** Detectors process the full table, not a sample — case row references span the full row_id range where anomalies exist. [FR-2.1]
 
 ### D1 duplicates
 
@@ -59,18 +59,18 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 ### D3 price inflation
 
-- [ ] **[unit]** A unit price far above the category median is flagged. [FR-2.7]
-- [ ] **[unit]** A category with very few rows does not produce spurious flags from an unstable median. [FR-2.7]
-- [ ] **[unit]** MAD of zero (all identical prices) does not raise a division error. [FR-2.7]
-- [ ] **[unit]** Isolation Forest runs with a fixed seed and produces reproducible scores. [NFR-4]
-- [ ] **[unit]** Rows with null unit price or null category are excluded rather than crashing. [FR-1.6]
+- [x] **[unit]** A unit price far above the category median is flagged. [FR-2.7]
+- [x] **[unit]** A category with very few rows does not produce spurious flags from an unstable median. [FR-2.7]
+- [x] **[unit]** MAD of zero (all identical prices) does not raise a division error. [FR-2.7]
+- [x] **[unit]** Isolation Forest runs with a fixed seed and produces reproducible scores. [NFR-4]
+- [x] **[unit]** Rows with null unit price or null category are excluded rather than crashing. [FR-1.6]
 
 ### D4 vendor red flags
 
-- [ ] **[unit]** A synthesized vendor with round-number-heavy invoices scores highly on round-number ratio. [FR-2.8]
-- [ ] **[unit]** A vendor with a natural first-digit distribution does not fail the Benford test. [FR-2.8]
-- [ ] **[unit]** Vendors below a minimum transaction count are excluded from Benford testing. [FR-2.8]
-- [ ] **[unit]** Period-end clustering is detected on a vendor with artificially month-end-concentrated dates. [FR-2.8]
+- [x] **[unit]** A synthesized vendor with round-number-heavy invoices scores highly on round-number ratio. [FR-2.8]
+- [x] **[unit]** A vendor with a natural first-digit distribution does not fail the Benford test. [FR-2.8]
+- [x] **[unit]** Vendors below a minimum transaction count are excluded from Benford testing. [FR-2.8]
+- [x] **[unit]** Period-end clustering is detected on a vendor with artificially month-end-concentrated dates. [FR-2.8]
 
 ### Baseline
 

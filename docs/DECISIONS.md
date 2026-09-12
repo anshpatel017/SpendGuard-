@@ -286,6 +286,47 @@ Every over-merge is the same shape: `Kaveri Traders` and `Kaveri Enterprises LLP
 
 ---
 
+## D-23 — D3: robust z on controlled log price, and an honest negative result
+
+**Decision.** D3 flags a line item when its unit price exceeds, by a robust z-score, the price expected for its category, order size and date. Log space, because prices vary multiplicatively. Median and MAD, because a mean and standard deviation are dragged up by the very inflation being hunted. Two controls fitted from the data — bulk discount and annual drift — and deliberately **no supplier control**, which would raise the bar for exactly the supplier under suspicion. Threshold picked to maximize F1 on dev seed 42 only.
+
+**The item description is not a feature.** Half the legitimate premium purchases say "Premium Grade" or "Urgent Supply" in their description. Using that would mean trusting text written by the same party that set the price — a fraudster need only type the word. It is evidence for the Investigator, not an input to the detector.
+
+**Negative result, reported rather than buried.** Five statistics were compared on the development seed — ratio to median, ratio to mean, robust z, IQR z, and controlled z. All landed within 0.02 F1 of each other and of the rule baseline. Across three seeds D3 finishes marginally **below** the baseline on F1 (**0.419 ± 0.007 vs 0.432 ± 0.004**) while clearly ahead on ranking (**PR-AUC 0.280 ± 0.008 vs 0.196 ± 0.003**, +43%).
+
+The cause is structural, not a tuning failure: legitimate premium and urgent purchases occupy the same price band as the injected markups. 7,508 honest rows sit above 1.4× their category median; only 285 sit above 2.0×. A price statistic alone cannot separate them, and **this is the strongest argument in the project for the investigation layer** — the agent can read the description and the policy, which D3 refuses to trust.
+
+**The Isolation Forest earns its place only as a recorded second opinion.** On its own it scores F1 0.07 — at the configured contamination it flags a percent or two of *every* row. It never raises a case; its agreement is recorded on each one, and the overlap is reported for the ablation table.
+
+**On clean data** D3 raises 154 cases in 49,900 rows (0.3%) — the honest premium and urgent purchases, the same overlap in a different light.
+
+---
+
+## D-24 — D4: statistical tests against peers, combined by Fisher, FDR-controlled
+
+**Decision.** Each vendor red flag is a **statistical test against the population's own behaviour**, not a fixed cut-off. Independent p-values are combined per supplier with **Fisher's method**, and significance across all suppliers is controlled with **Benjamini–Hochberg FDR** at 5% — with ~380 suppliers, testing each at 5% would produce about 19 false accusations by chance.
+
+**Four guards, each added because its absence accused a real supplier:**
+
+1. **Tests run on distinct amounts, not transactions.** A fixed monthly contract is one price decision repeated twelve times, not twelve independent observations. Without this, every legitimate security and housekeeping contract looked overwhelmingly "round".
+2. **Expectations are conditional on what the supplier sells.** A consultancy quoting round figures is normal *for a consultancy*. Indirect standardization against the supplier's own category mix; a single global rate flagged every training and advisory firm.
+3. **Significance is not enough — the effect must be material.** A supplier must also exceed twice its expected rate. With 400+ invoices a three-point deviation is highly significant and means nothing.
+4. **Benford's law is not the null.** Procurement invoices are quantity times a near-fixed price and depart from Benford routinely: testing against the law directly accused **61 of 210** real suppliers. The null used is the **empirical digit distribution of the same categories**; conformity to Benford is still computed and reported as context for the auditor, with Nigrini's MAD criterion as the materiality gate.
+
+**Result**, three seeds: precision **1.000 ± 0.000**, recall 0.750 ± 0.102, F1 **0.853 ± 0.067** against the baseline's 0.497 ± 0.061. Zero false positives on every seed and on clean data.
+
+---
+
+## D-25 — Harness realism: planted vendors vary in how obvious they are
+
+**Decision.** Each synthetic fraud vendor draws its own round-number share (35–75%) and period-end share (30–60%), and the harness plants at least 4 (2% of suppliers) rather than 2.
+
+**Rationale.** With a single fixed 80% round share, every planted vendor was blatant and D4 scored a perfect **F1 = 1.000 on all three seeds** — a number that says more about the test than the detector, and one a panel would rightly distrust. With difficulty varying, F1 falls to 0.853 and the misses are exactly the subtlest vendors (34% round, 32% period-end). More vendors also give recall finer resolution than 25% steps.
+
+This is the same correction applied to duplicates in D-22, for the same reason: an evaluation that cannot fail measures nothing.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |
