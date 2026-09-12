@@ -232,6 +232,55 @@ def evaluate(
         console.print(f"[green]Report[/green] {path_out}")
 
 
+@app.command("check-llm")
+def check_llm() -> None:
+    """Verify the configured LLM endpoint answers, and that tool calling works."""
+    from spendguard.agent.llm import LLMClient, LLMNotConfiguredError
+
+    try:
+        client = LLMClient()
+    except LLMNotConfiguredError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    with console.status(f"Asking {client.model}..."):
+        health = client.health()
+    if not health["ok"]:
+        console.print(f"[red]x[/red] {health['error']}")
+        raise typer.Exit(code=1)
+
+    table = Table(title="LLM", show_header=False)
+    table.add_row("Provider", health["provider"])
+    table.add_row("Model", str(health["model"]))
+    table.add_row("Latency", f"{health['latency_seconds']:.2f}s")
+    console.print(table)
+
+    # Tool calling is what the Investigator depends on; a chat reply alone is not enough.
+    probe = {
+        "type": "function",
+        "function": {
+            "name": "vendor_profile",
+            "description": "Payment history for one supplier.",
+            "parameters": {
+                "type": "object",
+                "properties": {"vendor_key": {"type": "string"}},
+                "required": ["vendor_key"],
+            },
+        },
+    }
+    reply = client.chat(
+        [{"role": "user", "content": "Look up the supplier with key 'sharma'. Use the tool."}],
+        tools=[probe],
+    )
+    if reply.wants_tool:
+        call = reply.tool_calls[0]
+        console.print(f"[green]Tool calling works[/green] — {call.name}({call.arguments})")
+    else:
+        console.print(
+            "[yellow]Warning:[/yellow] the model replied in prose instead of calling the tool."
+        )
+
+
 @app.command("check-policy")
 def check_policy() -> None:
     """Verify policy/policy.md and config.py state the same thresholds."""

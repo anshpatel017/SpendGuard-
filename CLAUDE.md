@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–4 complete · 457 tests passing · currently on Phase 5 (agent tools + policy RAG).
+> **Status:** Phases 0–5 complete · 528 tests passing · currently on Phase 6 (Investigator).
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -23,12 +23,13 @@ SpendGuard audits **100% of an organization's procurement transactions**, detect
 | Operational store | **SQLite** via SQLAlchemy 2.0 — cases, review status, notes, runs. Postgres is a one-line `DATABASE_URL` swap |
 | Data | Polars (primary), pandas, PyArrow |
 | Detection / ML | numpy, scikit-learn, PyOD, scipy, rapidfuzz |
+| Agent | openai SDK (any OpenAI-compatible endpoint), sentence-transformers `bge-small-en-v1.5`, FAISS |
 | Config | Pydantic v2 + pydantic-settings |
 | CLI | Typer + Rich |
-| Planned | FastAPI (Phase 8), React 18 + TypeScript + Vite + TanStack Query (Phase 8), sentence-transformers + FAISS (Phase 5), Ollama / Groq (Phase 5+), MLflow (Phase 9) |
+| Planned | FastAPI + React 18/TypeScript/Vite/TanStack Query (Phase 8), MLflow (Phase 9) |
 | Tooling | pytest, ruff, mypy, GitHub Actions |
 
-**LLM plan (forced by hardware):** the dev machine has a 4 GB RTX 2050, so a 7B model does not fit. Groq free tier for development; **Qwen2.5-3B-Instruct Q4_K_M** via Ollama for the "fully local" proof; 7B on a free Colab T4 for the model-size comparison.
+**LLM plan (forced by hardware):** the dev machine has a 4 GB RTX 2050, so a 7B model does not fit. Groq free tier for development, model **`qwen/qwen3.8-27b`** (Groq retired Llama 3.3; Qwen chosen so prompts transfer — D-26); **Qwen2.5-3B-Instruct Q4_K_M** via Ollama for the "fully local" proof; 7B on a free Colab T4 for the model-size comparison. `spendguard check-llm` verifies both chat and tool calling.
 
 ---
 
@@ -52,9 +53,10 @@ SpendGuard/
 │   │   ├── detectors/          base · baseline · d1_duplicates · d2_splits
 │   │   │                    d3_inflation · d4_vendor
 │   │   ├── eval/               injection harness · matching · metrics · runner
-│   │   ├── agent/              (empty — Phase 5-7, next)
+│   │   ├── agent/              llm (provider switch) · tools (the six) · policy (RAG)
+│   │   │                    investigator + verifier are Phase 6-7, next
 │   │   └── api/                (empty — Phase 8)
-│   └── tests/                  mirrors src; 457 tests
+│   └── tests/                  mirrors src; 528 tests
 ├── docs/                       DESIGN · REQUIREMENTS · ARCHITECTURE · DATA-SCHEMA
 │                               API-CONTRACT · EVALUATION · TEST-CHECKLIST
 │                               DECISIONS (binding) · PHASE-PLAN
@@ -74,6 +76,8 @@ SpendGuard/
 4. **Everything is seeded and deterministic.** Same seed and input → identical output, same order. Sort SQL that feeds output: DuckDB's parallel `GROUP BY` is unordered.
 5. **Evaluate on clean data too.** Metrics on injected data alone hid a bug that flagged 1,732 false duplicates.
 6. **Tune on the dev seed (42) only**; report on held-out seeds (7, 2026).
+7. **Agent tools never raise.** A failure is `{"error": ...}` the model can read and recover from.
+   Tools read `audit_transactions` only, through a read-only connection.
 
 **Style**
 
@@ -100,6 +104,7 @@ spendguard ingest <csv>              # clean, normalize, load DuckDB + dataset c
 spendguard detect                    # D1-D4 over 100% of rows -> case store
 spendguard inject --seed 42          # plant known anomalies in a copy -> ground truth
 spendguard evaluate --seed 42 --detector baseline --detector d1 --detector d2 --detector d3 --detector d4
+spendguard check-llm                 # endpoint answers, and tool calling works
 spendguard check-policy              # policy.md and config.py agree?
 ```
 
@@ -133,7 +138,7 @@ Outstanding manual steps: a **Groq API key** before Phase 5, **Ollama + Qwen2.5-
 
 ## 7. Important decisions
 
-Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-25). The ones that shape day-to-day work:
+Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-28). The ones that shape day-to-day work:
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
@@ -144,4 +149,13 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-25
 - **D-19** D1 blocks on **amount + date**, not vendor key — a typo in a name must not hide a duplicate. Log-bucket join, set-identical to brute force, 300× faster.
 - **D-20** D1 scores pairs with a **Fellegi–Sunter model fitted by MAP-EM**: data-driven, explainable per field, and priors stop EM inventing a duplicate class when there are none.
 - **D-21** D2 takes minimal runs, four equally weighted policy indicators, threshold picked on the dev seed only.
+- **D-23** D3 ties the baseline on F1 and wins on ranking; legitimate premium and urgent purchases
+  share the injected price band, which is why the investigation layer exists. It never reads the
+  item description — a fraudster writes that too.
+- **D-24** D4 tests each supplier against its *peers*, not against Benford (which accused 61 of 210
+  real suppliers), combines tests with Fisher, and controls FDR across suppliers.
+- **D-27** Policy retrieval is dense embeddings; BM25 and hybrid were built, measured and lost.
+  Chunk on clause boundaries — half a clause reads as authoritative and is incomplete.
+- **D-28** Agent tools: read-only connection, a view without the answer key, a validated
+  single-SELECT, and errors returned as data.
 - **O-03/04/05** remain open — see the decision log.

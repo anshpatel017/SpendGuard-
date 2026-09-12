@@ -124,7 +124,7 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------ agent / LLM
     llm_provider: LLMProvider = LLMProvider.GROQ
     llm_base_url: str = "https://api.groq.com/openai/v1"
-    llm_model: str = "llama-3.3-70b-versatile"
+    llm_model: str = "qwen/qwen3.8-27b"
     llm_api_key: str = "not-set"
     llm_temperature: float = 0.1
     llm_max_tokens: int = 2048
