@@ -2,6 +2,16 @@
 
 FastAPI, all bodies defined as Pydantic v2 models, OpenAPI published at `/docs`.
 
+> **As built (Phase 8).** The implementation in `backend/src/spendguard/api/` follows this contract with the differences below. The authoritative, machine-checked version is `frontend/openapi.json`. A backend test fails if it drifts from the API, and CI fails if the frontend's generated types drift from it.
+>
+> - **Additive fields**, for the dashboard: `CaseSummary.verification_status / citations_checked / citations_passed`; `CaseListResponse.currency`; `Citation.claim_index / asserted`; `TraceStep.kind / detail`; `AuditNote.policy_clauses`; `TransactionRow.cited`; `CaseDetailResponse.evidence_total / currency`; `MetricsResponse.dataset / evaluation_seed / converted_from / by_verdict / by_verification_status`; `DetectorMetrics.anomaly_type`; `AgentMetrics.notes`.
+> - **Extra filter:** `GET /cases?verification_status=` (verified, unverified, failed_after_retries).
+> - **Nullable where the contract said bool or number:** citation checks, `semantic_passed` and the agent metrics are `null` when the check did not run or nothing was measured. That follows the contract's own rule: explicit null, never a zero standing in for missing.
+> - **`GET /evaluation`** serves a detector's metrics only for the anomaly types it emits. The report scores D1 on split purchases (F1 0.000), which is true and meaningless, and the first dashboard build misread it.
+> - **`GET /health`:** `postgres` is replaced by `case_store` (the store is SQLite, D-09). `llm_endpoint` is replaced by `llm_configured`: the model is reported as configured but never probed, because probing would spend the free tier's daily quota every time the dashboard checked health. `spendguard check-llm` probes.
+> - **`PATCH /cases/{id}/status`:** a null `reviewer_note` leaves the note unchanged; an empty or blank one clears it to null.
+> - **`POST /demo/inject` is deferred to Phase 9**, with the frozen demo dataset it needs.
+
 Base path: `/api/v1`
 
 The API is **thin**. It reads results produced by batch runs and writes case state. It never runs a detector or an agent inside a request, with the single exception of the bounded live-injection demonstration endpoint.

@@ -188,21 +188,65 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ---
 
+### Phase 8 — API and dashboard ✅
+
+**Built:** the FastAPI backend (`spendguard serve`) and the React dashboard it serves.
+- **API** (`/api/v1`): the case queue with filters, sorting and paging; case detail with the audit note, per-citation check results, evidence and context rows, and the trace; paged evidence; single-transaction lookup; the review action; metrics; evaluation results; run history; health. Errors are structured, never a stack trace. OpenAPI is published at `/docs` and exported by `spendguard openapi`.
+- **Dashboard** (React 18, TypeScript, Vite, TanStack Query):
+  - KPI cards and the honest coverage line;
+  - a filterable, sortable, paged queue whose filters live in the URL;
+  - the case page: the note with clickable citations that highlight their evidence row, the verification badge, the evidence table with case rows shaded, the trace timeline and the review panel;
+  - an evaluation page.
+- **Evaluation view:** `spendguard serve --eval-seed 42` shows an evaluation run's stores under a planted-anomalies banner.
+
+**Files:**
+- Backend: `api/app.py`, `api/schemas.py`, `api/deps.py`, `api/cases.py`, `api/overview.py`, `cli.py` (`serve`, `openapi`), `config.py` (`API_*`, `FRONTEND_DIST`), `db/store.py` (clearing a note), `investigation.py` (every flagged case saved), `tests/test_api.py`.
+- Frontend: `frontend/` — `src/api` (generated `schema.d.ts`, `validate.ts`, `client.ts`, `hooks.ts`, contract fixtures), `src/lib` (format, verification), `src/components`, `src/pages`, three test files, and `openapi.json`.
+- CI and docs: `.github/workflows/ci.yml` (frontend job, API extra), `.env.example`, `docs/API-CONTRACT.md` (as-built differences), `docs/DECISIONS.md` (D-32), `docs/TEST-CHECKLIST.md`.
+
+**Exit criterion met, in the running app:** on the seed-42 evaluation stores (511 flagged cases), the dashboard shows the KPIs and the coverage line.
+- **Queue:** filtering to investigated cases, opening one by URL, and paging (page 2 of 11, sorted by amount) all work.
+- **Case page:** it shows the note with its claims, citations and policy clauses, 2 evidence rows plus 15 context rows, and the 8-step trace.
+- **Citations:** clicking one highlights and scrolls to its row.
+- **Review:** confirming the case with a note persisted it, and the confirmed money at risk rose to ₹2,59,463.41. The case was reset afterwards.
+- **Speed:** warm API calls take 11–40 ms and a cold metrics call 346 ms, inside the ~2 s target.
+
+**Decisions and gotchas:**
+
+- **The contract is enforced at three points (D-32).** A backend test fails if the committed `openapi.json` differs from the API. CI fails if the generated TypeScript types differ from `openapi.json`. Every response is parsed at runtime by Zod schemas typed against those generated types. The first compile caught a real mismatch.
+- **The answer key cannot leak through the API, and a test proves it.** Evidence goes through the audit view, an explicit field list and a closed response schema. Breaking one layer leaked nothing; only breaking all three made the leak test fail.
+- **Money is a string end to end**, formatted with Indian grouping without ever becoming a float.
+- **Two bugs found only by using it in a browser.**
+  - The evaluation table showed D1 for every anomaly type (F1 0.000 on splits) because the report scores every detector against every type. The API now serves only the types a detector declares.
+  - A reviewer could not clear a note, and an empty one was stored as `""`, breaking the null rule. A blank note now clears to null.
+
+  Both have regression tests now.
+- **Health reports the LLM as configured, not reachable.** A probe per health check would spend the daily quota.
+- **Dependencies were audited.** React Router 6 and Vitest 3 carried moderate advisories, so both moved up a major version (7 and 5). `npm audit` reports 0 vulnerabilities.
+- **Deferred to Phase 9:** the live-injection demo endpoint (a SHOULD), which needs the frozen demo dataset.
+- **Browser caveat:** the built-in browser pane stopped painting partway through (the app window was behind another one). The later checks were done by reading the page and its DOM rather than by screenshot.
+
+**Not yet shown in the browser:** a note with a `verified` badge. None exists yet because of the Groq quota. The badge logic is unit-tested for every status.
+
+**662 backend tests** (+7 live, opt-in) **and 29 frontend tests passing.**
+
+---
+
 ## Current Phase
 
-### Phase 8 — API and dashboard 🚧 not started
+### Phase 9 — Evaluation, real data and freeze 🚧 not started
 
-- FastAPI over the two stores, per `docs/API-CONTRACT.md`: case queue (filter by type, band, status, verification), case detail with evidence rows, the audit note with per-citation check results, the trace timeline, the review action (set status and reviewer note, the only write), metrics.
-- React 18 + TypeScript + Vite + TanStack Query: case queue, evidence view (cited rows highlighted), verification badge, trace timeline, review controls. Money in INR with Indian grouping.
-- Investigation stays a batch CLI job (D-10); the API reads results and never runs the LLM inside a request.
-- Exit criterion: from the browser, an auditor can pick a case, read the verified note with its cited rows, walk the trace, and confirm or dismiss the case.
+- Multi-seed investigation evaluation (triage accuracy, citation validity first draft vs released), and the ablations: Verifier off, no tools, lexical vs dense retrieval, model size.
+- The California purchase-order dataset through ingestion and detection, with the unlabeled-flag protocol (adjusted precision from a manual review of top flags).
+- Blinded human grading of ~50 notes.
+- The frozen demo dataset, the live-injection demo endpoint, and the recorded video.
+- Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible command, and the demo runs from a frozen state.
 
 ## Next Steps
 
-1. **Phase 8 next** — needs Node.js on this machine for the React frontend (I'll check and guide you if it's missing).
-2. **Resume the live evaluation when the quota refills** (the next day): `spendguard investigate --eval-seed 42 --per-type 1`. It picks up the four remaining sample cases with the Verifier on.
-3. **Scale for Phase 9 is still open.** You chose to stay on Groq for now (~10 investigations a day). Phase 9 needs hundreds; the options remain Ollama locally or a free Gemini key.
+1. **Resume the live evaluation when the quota refills:** `spendguard investigate --eval-seed 42 --per-type 1` continues the four remaining sample cases with the Verifier on. The first verified note will then appear in the dashboard.
+2. **Decide how to run Phase 9 at scale (your call).** You chose Groq for now (~10 investigations a day); Phase 9 needs hundreds. The options are Ollama locally (fully local, weaker model) or a free Gemini key.
+3. **Download the Kaggle "Large Purchases by the State of California" CSV** into `data/raw/` — needed for the real-data part of Phase 9.
 4. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred).
 5. **Before the local-runtime proof** — install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M`.
-6. **Before Phase 9** — download the Kaggle "Large Purchases by the State of California" CSV into `data/raw/`.
-7. **Housekeeping:** all work sits on `main` and is committed locally but **not pushed**. Say the word and I will push, or set up a branch-and-PR flow.
+6. **Housekeeping:** all work sits on `main` and is committed locally but **not pushed**. Say the word and I will push, or set up a branch-and-PR flow.

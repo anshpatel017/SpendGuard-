@@ -158,6 +158,7 @@ class EvidenceResponse(BaseModel):
 
 class StatusUpdateRequest(BaseModel):
     status: StatusName
+    # null leaves the note unchanged; "" clears it.
     reviewer_note: str | None = Field(default=None, max_length=4000)
 
 

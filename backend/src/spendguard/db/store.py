@@ -288,14 +288,18 @@ def record_run(
 def set_status(
     engine: Engine, case_id: str, status: CaseStatus, note: str | None = None
 ) -> CaseRecord:
-    """The human-in-the-loop action (decision D-07). Only people call this, never the agent."""
+    """The human-in-the-loop action (decision D-07). Only people call this, never the agent.
+
+    ``note=None`` leaves the reviewer's note as it is; an empty or blank note
+    clears it - to null, never to an empty string (API-CONTRACT: explicit nulls).
+    """
     with Session(engine, expire_on_commit=False) as session, session.begin():
         record = session.get(CaseRecord, case_id)
         if record is None:
             raise KeyError(f"No case {case_id}")
         record.status = status.value
         if note is not None:
-            record.reviewer_note = note
+            record.reviewer_note = note.strip() or None
     return record
 
 
