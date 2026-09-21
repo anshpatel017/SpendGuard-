@@ -14,6 +14,7 @@ import type {
   CaseListResponse,
   CaseSummary,
   Citation,
+  DemoInjectResponse,
   DetectorMetrics,
   EvaluationResponse,
   HealthResponse,
@@ -210,6 +211,29 @@ export const evaluationSchema = z.object({
   ),
   generated_at: z.string().nullable(),
 }) satisfies z.ZodType<EvaluationResponse>;
+
+export const demoSchema = z.object({
+  seed: z.number(),
+  dataset_rows: z.number(),
+  window_start: z.string(),
+  window_end: z.string(),
+  requested: z.number(),
+  caught: z.number(),
+  other_cases: z.number(),
+  results: z.array(
+    z.object({
+      injection_group_id: z.string(),
+      anomaly_type: anomalyType,
+      injected_row_ids: z.array(z.number()),
+      amount_at_risk: money,
+      detected: z.boolean(),
+      detected_by: z.string().nullable(),
+      case_id: z.string().nullable(),
+      detector_score: z.number().nullable(),
+    }),
+  ),
+  elapsed_seconds: z.number(),
+}) satisfies z.ZodType<DemoInjectResponse>;
 
 export const healthSchema = z.object({
   status: z.enum(["ok", "degraded"]),

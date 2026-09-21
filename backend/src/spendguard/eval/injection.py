@@ -34,6 +34,7 @@ import json
 import math
 import re
 from collections import Counter
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -709,8 +710,14 @@ def inject(
     source_db: Path | None = None,
     out_db: Path | None = None,
     config: InjectionConfig | None = None,
+    *,
+    counts: Mapping[AnomalyType, int] | None = None,
 ) -> InjectionResult:
-    """Copy the clean database and plant seeded anomalies in the copy."""
+    """Copy the clean database and plant seeded anomalies in the copy.
+
+    ``counts`` plants exactly that many groups of each type instead of the
+    rate-based plan - the live demo asks for "three anomalies", not a rate.
+    """
     cfg = config or InjectionConfig(seed=settings.random_seed)
     source_db = Path(source_db or settings.duckdb_path)
     out_db = Path(out_db or default_injected_path(cfg.seed))
@@ -732,7 +739,11 @@ def inject(
         )
 
     rng = np.random.default_rng(cfg.seed)
-    plan = planned_counts(frame.height, frame["vendor_key"].n_unique(), cfg)
+    plan = (
+        {t: int(counts.get(t, 0)) for t in AnomalyType}
+        if counts is not None
+        else planned_counts(frame.height, frame["vendor_key"].n_unique(), cfg)
+    )
     injector = _Injector(frame, cfg, rng)
     # Splits first: they need scarce above-threshold rows. Duplicates last: any row will do.
     injector.inject_splits(plan[AnomalyType.SPLIT])

@@ -10,7 +10,7 @@ FastAPI, all bodies defined as Pydantic v2 models, OpenAPI published at `/docs`.
 > - **`GET /evaluation`** serves a detector's metrics only for the anomaly types it emits. The report scores D1 on split purchases (F1 0.000), which is true and meaningless, and the first dashboard build misread it.
 > - **`GET /health`:** `postgres` is replaced by `case_store` (the store is SQLite, D-09). `llm_endpoint` is replaced by `llm_configured`: the model is reported as configured but never probed, because probing would spend the free tier's daily quota every time the dashboard checked health. `spendguard check-llm` probes.
 > - **`PATCH /cases/{id}/status`:** a null `reviewer_note` leaves the note unchanged; an empty or blank one clears it to null.
-> - **`POST /demo/inject` is deferred to Phase 9**, with the frozen demo dataset it needs.
+> - **`POST /demo/inject` (Phase 9):** plants anomalies in a temporary copy of the last `DEMO_MONTHS` (3) months of the *clean* dataset, never the data being served, capped at `DEMO_MAX_ANOMALIES` (6). Vendor red flags are excluded: they need a supplier's long history. Additive response fields: `window_start`, `window_end`, `requested`, `caught`, `other_cases` and `amount_at_risk` per result. A second request while one runs gets `409 demo_busy`. About 3–8 s.
 
 Base path: `/api/v1`
 

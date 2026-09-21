@@ -22,6 +22,7 @@ class AppStores:
     duckdb_path: Path
     engine: Engine
     eval_dir: Path
+    demo_source: Path  # clean data the live demo copies from - never the data being served
 
 
 def stores(request: Request) -> AppStores:

@@ -9,6 +9,8 @@ spendguard investigate              the Investigator on the top-N cases (or --ev
 spendguard serve                    the API and dashboard (or --eval-seed for an evaluation run)
 spendguard openapi                  write the API schema the frontend's types are generated from
 spendguard report detection         every seed, clean data, determinism -> docs/results/
+spendguard demo                     plant anomalies in a copy of recent data, watch them get caught
+spendguard freeze                   snapshot an evaluation run for the demo (serve --frozen)
 spendguard check-llm                the LLM endpoint answers and can call tools?
 spendguard check-policy             policy.md and config.py agree?
 """
@@ -395,16 +397,43 @@ def serve(
         int | None,
         typer.Option(help="Show an evaluation run's stores (planted anomalies) instead."),
     ] = None,
+    frozen: Annotated[
+        bool,
+        typer.Option(help="Serve a fresh copy of the frozen demo (see `spendguard freeze`)."),
+    ] = False,
 ) -> None:
     """Serve the API, and the dashboard if it has been built (frontend/dist)."""
     import uvicorn
 
     from spendguard.api import create_app
 
-    db, url = _eval_stores(eval_seed) if eval_seed is not None else (settings.duckdb_path, None)
-    app_ = create_app(duckdb_path=db, database_url=url)
+    if frozen and eval_seed is not None:
+        console.print("[red]Choose one: --frozen or --eval-seed.[/red]")
+        raise typer.Exit(code=1)
+    eval_dir = None
+    if frozen:
+        from spendguard.freeze import FrozenStateError, prepare
+
+        try:
+            paths = prepare()
+        except FrozenStateError as exc:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(code=1) from exc
+        db, url, eval_dir = paths.duckdb_path, paths.database_url, paths.eval_dir
+        m = paths.manifest
+        console.print(
+            f"[green]Frozen demo[/green] (seed {m['seed']}, frozen {m['frozen_at']}, commit "
+            f"{m['commit']}): checked against its manifest, served from a fresh copy."
+        )
+    elif eval_seed is not None:
+        db, url = _eval_stores(eval_seed)
+    else:
+        db, url = settings.duckdb_path, None
+    app_ = create_app(duckdb_path=db, database_url=url, eval_dir=eval_dir)
     built = (settings.frontend_dist / "index.html").exists()
-    console.print(f"Data: {db.name}" + (" (evaluation, planted anomalies)" if eval_seed else ""))
+    console.print(
+        f"Data: {db.name}" + (" (evaluation, planted anomalies)" if eval_seed or frozen else "")
+    )
     console.print(f"API:  http://{host}:{port}/api/v1  ·  docs http://{host}:{port}/docs")
     if built:
         console.print(f"[green]Dashboard[/green] http://{host}:{port}/")
@@ -414,6 +443,36 @@ def serve(
             "`npm run dev` there for the development server."
         )
     uvicorn.run(app_, host=host, port=port, log_level=settings.log_level.lower())
+
+
+@app.command()
+def freeze(
+    seed: Annotated[int, typer.Option(help="Evaluation seed to freeze.")] = settings.random_seed,
+) -> None:
+    """Snapshot an evaluation run for the demo: data, case store, reports and a hash manifest."""
+    from spendguard.eval.injection import default_injected_path
+    from spendguard.eval.report import provenance
+    from spendguard.freeze import FrozenStateError
+    from spendguard.freeze import freeze as run_freeze
+
+    commit = provenance(())
+    label = f"{commit['commit']}{' (dirty)' if commit['dirty'] else ''}"
+    try:
+        manifest = run_freeze(
+            seed,
+            injected_db=default_injected_path(seed),
+            eval_dir=settings.processed_data_dir / "eval",
+            commit=label,
+        )
+    except FrozenStateError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    for name, digest in manifest["files"].items():
+        console.print(f"  {name}  [dim]{digest[:16]}...[/dim]")
+    console.print(
+        f"[green]Frozen[/green] seed {seed} into {settings.frozen_data_dir / 'demo'}. "
+        "`spendguard serve --frozen` serves a fresh copy of it."
+    )
 
 
 @app.command()
@@ -431,6 +490,37 @@ def openapi(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     console.print(f"[green]Wrote[/green] {out} ({len(schema['paths'])} paths)")
+
+
+@app.command()
+def demo(
+    count: Annotated[int, typer.Option(help="Anomalies to plant (capped).")] = 3,
+    seed: Annotated[int | None, typer.Option(help="Seed. Random if omitted.")] = None,
+) -> None:
+    """Plant anomalies in a copy of the last few months and show which the detectors catch."""
+    from spendguard.demo import live_injection_demo
+
+    with console.status("Copying recent months, planting anomalies, detecting..."):
+        run = live_injection_demo(count, seed)
+    table = Table(
+        title=f"Live demo - {run.dataset_rows:,} transactions, {run.window_start} to "
+        f"{run.window_end}, seed {run.seed}"
+    )
+    for col in ("Planted", "Rows", "At risk", "Caught", "By", "Score"):
+        table.add_column(col, justify="left" if col in ("Planted", "Caught", "By") else "right")
+    for r in run.results:
+        table.add_row(
+            r.anomaly_type, str(len(r.injected_row_ids)), settings.money(r.amount_at_risk),
+            "[green]yes[/green]" if r.detected else "[red]missed[/red]",
+            (r.detected_by or "-").upper(),
+            f"{r.detector_score:.2f}" if r.detector_score is not None else "-",
+        )  # fmt: skip
+    console.print(table)
+    console.print(
+        f"Caught {run.caught} of {len(run.results)} in {run.elapsed_seconds:.1f}s. "
+        f"{run.other_cases} other case(s) were raised on the copy's real rows. "
+        "The source data was not touched."
+    )
 
 
 report_app = typer.Typer(help="Regenerate the result tables in docs/results/ (Phase 9).")

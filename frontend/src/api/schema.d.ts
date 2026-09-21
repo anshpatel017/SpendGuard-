@@ -84,6 +84,26 @@ export interface paths {
         patch: operations["update_status_api_v1_cases__case_id__status_patch"];
         trace?: never;
     };
+    "/api/v1/demo/inject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Inject Demo
+         * @description Plant anomalies in a bounded copy of the clean data, detect, report what was caught.
+         */
+        post: operations["inject_demo_api_v1_demo_inject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/evaluation": {
         parameters: {
             query?: never;
@@ -462,6 +482,65 @@ export interface components {
             supports_claim: boolean | null;
             /** Values Match */
             values_match: boolean | null;
+        };
+        /** DemoInjectRequest */
+        DemoInjectRequest: {
+            /**
+             * Anomaly Count
+             * @default 3
+             */
+            anomaly_count: number;
+            /** Seed */
+            seed?: number | null;
+        };
+        /** DemoInjectResponse */
+        DemoInjectResponse: {
+            /** Caught */
+            caught: number;
+            /** Dataset Rows */
+            dataset_rows: number;
+            /** Elapsed Seconds */
+            elapsed_seconds: number;
+            /** Other Cases */
+            other_cases: number;
+            /** Requested */
+            requested: number;
+            /** Results */
+            results: components["schemas"]["DemoInjectResult"][];
+            /** Seed */
+            seed: number;
+            /**
+             * Window End
+             * Format: date
+             */
+            window_end: string;
+            /**
+             * Window Start
+             * Format: date
+             */
+            window_start: string;
+        };
+        /** DemoInjectResult */
+        DemoInjectResult: {
+            /** Amount At Risk */
+            amount_at_risk: string;
+            /**
+             * Anomaly Type
+             * @enum {string}
+             */
+            anomaly_type: "duplicate" | "split" | "inflation" | "vendor_flag";
+            /** Case Id */
+            case_id: string | null;
+            /** Detected */
+            detected: boolean;
+            /** Detected By */
+            detected_by: string | null;
+            /** Detector Score */
+            detector_score: number | null;
+            /** Injected Row Ids */
+            injected_row_ids: number[];
+            /** Injection Group Id */
+            injection_group_id: string;
         };
         /** DetectorMetrics */
         DetectorMetrics: {
@@ -862,6 +941,55 @@ export interface operations {
             };
             /** @description Unknown case */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    inject_demo_api_v1_demo_inject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DemoInjectRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoInjectResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description A demo is already running, or no clean data to copy */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

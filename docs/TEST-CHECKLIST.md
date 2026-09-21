@@ -216,7 +216,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [ ] Every screen in the demo sequence has been walked through at least three times end to end.
 - [ ] A pre-computed run exists so nothing has to be generated live.
 - [ ] The live injection demonstration completes within the time allowed, rehearsed with a stopwatch.
-- [ ] The live injection demonstration catches exactly the injected anomalies, verified on a rehearsal run.
+- [ ] The live injection demonstration reports every planted anomaly as caught or missed, and the misses are explained (they follow the measured recall: small price markups are the hardest), verified on a rehearsal run. *(Changed in Phase 9: an honest demo will sometimes miss; promising otherwise would set up a failure in front of the panel.)*
 - [ ] A recorded video fallback exists and has been played back in full.
 - [ ] The machine is tested on the actual projector and resolution.
 - [ ] The system starts from cold — model loaded, database up, API up, frontend up — within the setup time available.
