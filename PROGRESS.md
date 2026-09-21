@@ -245,7 +245,7 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 ## Next Steps
 
 1. **Resume the live evaluation when the quota refills:** `spendguard investigate --eval-seed 42 --per-type 1` continues the sample with the Verifier on; 4 cases remain (real inflation, split and vendor flag, plus one spurious inflation). The first live run (2026-09-22) did one case before the quota ran out, and exposed two bugs, now fixed (D-31): the judge was shown tool results cut mid-text, and a planted duplicate flagged as a split was scored as a false alarm.
-2. **Decide how to run Phase 9 at scale (your call).** You chose Groq for now (~10 investigations a day); Phase 9 needs hundreds. The options are Ollama locally (fully local, weaker model) or a free Gemini key.
+2. **Get a free Gemini API key (you, ~2 minutes)** — decided 2026-09-22 (D-33): Gemini for the evaluation runs, Ollama later when there is disk space. Create the key at https://aistudio.google.com/apikey, paste it into `.env` after `GEMINI_API_KEY=` (never into chat), set `LLM_PROVIDER=gemini`, then run `spendguard check-llm`. `LLM_PROVIDER=groq` switches back. Your `.env` Groq entries were renamed to `GROQ_*`; the key itself was not touched.
 3. **Download the Kaggle "Large Purchases by the State of California" CSV** into `data/raw/` — needed for the real-data part of Phase 9.
 4. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred).
 5. **Before the local-runtime proof** — install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M`.

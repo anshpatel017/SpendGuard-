@@ -15,7 +15,7 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/src/spendguard/config.py -> backend/src -> backend -> project root
@@ -122,10 +122,26 @@ class Settings(BaseSettings):
     severity_reference_amount: float = 10_000_000.0  # Rs 1 crore
 
     # ------------------------------------------------------------ agent / LLM
+    # Switching provider is one line, LLM_PROVIDER: each provider keeps its own
+    # key, endpoint and model below (decision D-33). LLM_BASE_URL, LLM_MODEL and
+    # LLM_API_KEY, when set, override whichever provider is active.
     llm_provider: LLMProvider = LLMProvider.GROQ
-    llm_base_url: str = "https://api.groq.com/openai/v1"
-    llm_model: str = "qwen/qwen3.8-27b"
-    llm_api_key: str = "not-set"
+
+    groq_api_key: str = "not-set"
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_model: str = "qwen/qwen3.8-27b"
+
+    gemini_api_key: str = "not-set"
+    gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
+    gemini_model: str = "gemini-2.5-flash"
+
+    ollama_base_url: str = "http://localhost:11434/v1"
+    ollama_model: str = "qwen2.5:3b-instruct-q4_K_M"
+
+    # Resolved from the provider unless set explicitly (see _resolve_llm below).
+    llm_base_url: str = ""
+    llm_model: str = ""
+    llm_api_key: str = ""
     llm_temperature: float = 0.1
     llm_max_tokens: int = 2048
     llm_timeout_seconds: int = 120
@@ -170,6 +186,33 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # ------------------------------------------------------------- helpers
+    @model_validator(mode="after")
+    def _resolve_llm(self) -> Settings:
+        """Fill the active provider's endpoint, model and key into the llm_* fields.
+
+        Everything downstream reads ``llm_base_url`` / ``llm_model`` /
+        ``llm_api_key`` and never needs to know which provider is active. An
+        explicit LLM_* value still wins, so one-off experiments need no new field.
+        """
+        base_url, model, key = self._preset(self.llm_provider)
+        self.llm_base_url = self.llm_base_url or base_url
+        self.llm_model = self.llm_model or model
+        self.llm_api_key = self.llm_api_key or key
+        return self
+
+    def _preset(self, provider: LLMProvider) -> tuple[str, str, str]:
+        return {
+            LLMProvider.GROQ: (self.groq_base_url, self.groq_model, self.groq_api_key),
+            LLMProvider.GEMINI: (self.gemini_base_url, self.gemini_model, self.gemini_api_key),
+            LLMProvider.OLLAMA: (self.ollama_base_url, self.ollama_model, "ollama"),
+        }[provider]
+
+    def endpoint_for(self, provider: LLMProvider) -> tuple[str, str, str]:
+        """(base_url, model, api_key) for any provider; the active one includes LLM_* overrides."""
+        if provider is self.llm_provider:
+            return self.llm_base_url, self.llm_model, self.llm_api_key
+        return self._preset(provider)
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def split_windows_all(self) -> list[int]:

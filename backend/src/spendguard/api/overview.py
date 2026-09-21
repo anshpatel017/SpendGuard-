@@ -27,7 +27,7 @@ from spendguard.api.schemas import (
     RunSummary,
     TransactionRow,
 )
-from spendguard.config import LLMProvider, settings
+from spendguard.config import settings
 from spendguard.db.duck import AUDIT_VIEW, table_exists
 from spendguard.db.store import (
     AuditNoteRecord,
@@ -323,10 +323,7 @@ def health(store: Stores) -> HealthResponse:
         store_ok = True
     except Exception:  # any store failure is "not ok", reported, never raised
         pass
-    configured = settings.llm_provider is LLMProvider.OLLAMA or settings.llm_api_key not in (
-        "",
-        "not-set",
-    )
+    configured = settings.llm_api_key not in ("", "not-set")
     return HealthResponse(
         status="ok" if duck_ok and store_ok else "degraded",
         duckdb=duck_ok,
