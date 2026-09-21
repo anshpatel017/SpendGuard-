@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–6 complete · 595 tests passing · currently on Phase 7 (Verifier).
+> **Status:** Phases 0–7 complete · 633 tests passing · currently on Phase 8 (API and dashboard).
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -57,9 +57,9 @@ SpendGuard/
 │   │   ├── eval/               injection harness · matching · metrics · runner · triage
 │   │   ├── agent/              llm (provider switch) · tools (the six) · policy (RAG)
 │   │   │                    note (schema) · prompts · investigator (the loop)
-│   │   │                    verifier is Phase 7, next
+│   │   │                    checks (deterministic) · verifier (judge + revise loop)
 │   │   └── api/                (empty — Phase 8)
-│   └── tests/                  mirrors src; 595 tests (+6 live, opt-in)
+│   └── tests/                  mirrors src; 633 tests (+7 live, opt-in)
 ├── docs/                       DESIGN · REQUIREMENTS · ARCHITECTURE · DATA-SCHEMA
 │                               API-CONTRACT · EVALUATION · TEST-CHECKLIST
 │                               DECISIONS (binding) · PHASE-PLAN
@@ -84,6 +84,9 @@ SpendGuard/
 8. **The agent never changes review status.** It writes a note, a verdict and `severity_final`;
    only a person moves a case (D-04). Every request fits `AGENT_CONTEXT_TOKENS` (D-30).
 9. **Live LLM tests are opt-in** (`-m llm`). The default suite and CI never call a rate-limited API.
+10. **No note is released as `verified` unless both checks ran and passed.** Deterministic citation
+    validity is the headline number; the model-judged semantic number is always reported beside
+    it, never blended into it (D-13, D-31).
 
 **Style**
 
@@ -110,8 +113,9 @@ spendguard ingest <csv>              # clean, normalize, load DuckDB + dataset c
 spendguard detect                    # D1-D4 over 100% of rows -> case store
 spendguard inject --seed 42          # plant known anomalies in a copy -> ground truth
 spendguard evaluate --seed 42 --detector baseline --detector d1 --detector d2 --detector d3 --detector d4
-spendguard investigate --top 10      # Investigator on the 10 highest-severity open cases
-spendguard investigate --eval-seed 42 --per-type 2   # triage accuracy on planted anomalies
+spendguard investigate --top 10      # investigate + verify the 10 highest-severity open cases
+spendguard investigate --eval-seed 42 --per-type 2   # triage + citation validity on planted anomalies
+spendguard investigate --no-verify   # the Verifier-off ablation (FR-7.8)
 spendguard check-llm                 # endpoint answers, and tool calling works
 spendguard check-policy              # policy.md and config.py agree?
 ```
@@ -138,7 +142,7 @@ Copy `.env.example` to `.env` (gitignored). Names only, no secrets in the repo:
 - **Reproducibility:** `RANDOM_SEED`
 - **Currency:** `CURRENCY` (INR)
 - **Policy thresholds:** `APPROVAL_THRESHOLD`, `DIRECT_PURCHASE_CEILING`, `LIMITED_TENDER_CEILING`, `DUPLICATE_AMOUNT_TOLERANCE`, `DUPLICATE_DATE_WINDOW_DAYS`, `SPLIT_WINDOW_DAYS`, `PREPAYMENT_LOOKBACK_DAYS`, `NEW_VENDOR_DAYS`, `PRICE_HISTORY_MONTHS`
-- **LLM (Phase 5+):** `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TEMPERATURE`, `AGENT_MAX_STEPS`, `AGENT_CONTEXT_TOKENS`, `VERIFIER_MAX_RETRIES`, `INVESTIGATE_TOP_N`
+- **LLM (Phase 5+):** `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TEMPERATURE`, `AGENT_MAX_STEPS`, `AGENT_CONTEXT_TOKENS`, `VERIFIER_ENABLED`, `VERIFIER_SEMANTIC_CHECK`, `VERIFIER_MAX_RETRIES`, `INVESTIGATE_TOP_N`
 - **Stores:** `DATABASE_URL` (defaults to SQLite under `data/processed/`)
 
 The Groq key is set and verified (`spendguard check-llm`). Outstanding manual steps: **Ollama + Qwen2.5-3B** before the local-runtime proof, and the **Kaggle California PO dataset** into `data/raw/` before Phase 9.
@@ -149,7 +153,7 @@ The `agent` extra pulls PyTorch (via sentence-transformers) and is a large downl
 
 ## 7. Important decisions
 
-Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-30). The ones that shape day-to-day work:
+Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-31). The ones that shape day-to-day work:
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
@@ -176,5 +180,8 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-30
 - **D-30** Groq free tier: ~8k input tokens/min and **200k tokens/day (~10 investigations)**.
   The client waits as long as a 429 asks; the loop trims the bulkiest old tool results to fit
   the token budget; a spent daily quota stops the run, and the next run resumes.
+- **D-31** Verifier: deterministic checks (row exists, stated values match at the precision stated,
+  clause exists, no "duplicate payment"), then a fresh-context LLM judge per claim. Failures go
+  back into the Investigator's own conversation for revision; the best draft is released.
 - **O-04** implemented as recommended (the number moves with the band), awaiting confirmation.
   **O-05** open.

@@ -138,7 +138,16 @@ class Settings(BaseSettings):
     # anything over ~7,000 (HTTP 413) and Ollama silently truncates past num_ctx, so
     # the oldest tool results are trimmed to stay under this. Keep it below both.
     agent_context_tokens: int = 5_500
+    # Verifier (Phase 7, decision D-31). Off releases notes unchecked by a model and
+    # never regenerates - the FR-7.8 ablation. The deterministic check still runs
+    # and is recorded either way, because it is free and it is the measurement.
+    verifier_enabled: bool = True
+    verifier_semantic_check: bool = True  # the LLM judge; off saves one call per note
     verifier_max_retries: int = 2
+    verifier_temperature: float = 0.0
+    # Evidence shown to the judge: cited rows, then the investigator's tool results.
+    verifier_max_rows: int = 25
+    verifier_context_chars: int = 2_500
     investigate_top_n: int = 50
 
     embedding_model: str = "BAAI/bge-small-en-v1.5"

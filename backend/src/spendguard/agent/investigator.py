@@ -28,7 +28,7 @@ import contextlib
 import json
 import time
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 import duckdb
 
@@ -45,6 +45,9 @@ from spendguard.agent.tools import ToolBox
 from spendguard.cases import Case
 from spendguard.config import SeverityBand, settings
 from spendguard.db.duck import AUDIT_FIELDS, AUDIT_VIEW
+
+if TYPE_CHECKING:
+    from spendguard.agent.checks import VerificationReport
 
 # How many times a malformed note is sent back for correction before giving up.
 MAX_PARSE_RETRIES = 2
@@ -79,7 +82,8 @@ class TraceStep:
     """One entry in the investigation trace (docs/DATA-SCHEMA.md 2.4)."""
 
     step_index: int
-    kind: str  # "model", "tool", "parse_error", "context_trim", "forced_final", "failed"
+    kind: str  # "model", "tool", "parse_error", "context_trim", "forced_final", "failed",
+    #            and for the Verifier: "check", "judge"
     latency_ms: int = 0
     tool_name: str | None = None
     tool_args: dict[str, Any] | None = None
@@ -88,6 +92,7 @@ class TraceStep:
     completion_tokens: int = 0
     note: str | None = None
     error: str | None = None
+    role: str = "investigator"  # or "verifier"
 
 
 @dataclass
@@ -104,6 +109,14 @@ class InvestigationResult:
     error: str | None = None
     seconds: float = 0.0
     quota_exhausted: bool = False  # stopped by the provider's quota, not by the case
+    # The conversation so far, kept so the Verifier's objections can continue it.
+    # Not persisted: the trace is the durable record.
+    messages: list[dict[str, Any]] = field(default_factory=list, repr=False)
+    # Set by the Verifier (Phase 7). "unverified" until a check has run to completion.
+    verification: VerificationReport | None = None
+    first_check: VerificationReport | None = None  # the first draft's report, for reporting
+    verification_status: str = "unverified"
+    retry_count: int = 0
 
     @property
     def verdict(self) -> Verdict | None:
@@ -157,6 +170,10 @@ def final_severity(prelim: float, verdict: Verdict) -> tuple[float, SeverityBand
         value = prelim
     value = round(max(value, 0.0), 2)
     return value, settings.band_for(value)
+
+
+def _record(result: InvestigationResult, **kwargs: Any) -> None:
+    result.trace.append(TraceStep(step_index=len(result.trace), **kwargs))
 
 
 def _row_ids_in(value: Any, found: set[int]) -> None:
@@ -350,7 +367,6 @@ class Investigator:
 
     def investigate(self, case: Case) -> InvestigationResult:
         started = time.perf_counter()
-        box = ToolBox(self.con, policy_index=self.policy_index)
         rows = self.evidence(case)
         result = InvestigationResult(
             case_id=case.case_id,
@@ -359,72 +375,110 @@ class Investigator:
             model=self.model_name,
             seen_row_ids={int(r["row_id"]) for r in rows},
         )
-        messages: list[dict[str, Any]] = [
+        result.messages = [
             {"role": "system", "content": system_prompt(case.anomaly_type)},
             {"role": "user", "content": case_brief(case, rows)},
         ]
-        tools = box.schemas()
-        parse_failures = 0
-        step = 0
-
-        def record(**kwargs: Any) -> None:
-            result.trace.append(TraceStep(step_index=len(result.trace), **kwargs))
-
         try:
-            while step < self.max_steps:
-                step += 1
-                try:
-                    reply = self._turn(messages, tools, record)
-                except ContextFullError:
-                    record(kind="context_trim", note="context budget reached; writing the note")
-                    break
-                record(
-                    kind="model",
-                    latency_ms=int(reply.latency_seconds * 1000),
-                    prompt_tokens=reply.prompt_tokens,
-                    completion_tokens=reply.completion_tokens,
-                    note=(
-                        f"requested {', '.join(c.name for c in reply.tool_calls)}"
-                        if reply.wants_tool
-                        else "replied with a note"
-                    ),
-                )
-
-                if reply.wants_tool:
-                    messages.append(_assistant_message(reply))
-                    for call in reply.tool_calls:
-                        self._run_tool(call, box, messages, record, result)
-                    continue
-
-                try:
-                    result.note = parse_note(reply.content)
-                    break
-                except NoteParseError as exc:
-                    parse_failures += 1
-                    record(kind="parse_error", error=str(exc))
-                    if parse_failures > MAX_PARSE_RETRIES:
-                        result.error = f"Gave up after {parse_failures} malformed notes: {exc}"
-                        break
-                    messages.append({"role": "assistant", "content": reply.content})
-                    messages.append({"role": "user", "content": f"{exc} Fix it and reply again."})
-
-            if result.note is None and result.error is None:
-                result.note = self._forced_final(messages, tools, record)
-                if result.note is None:
-                    result.error = "No valid note within the step limit."
+            result.note, result.error = self._gather(result)
         except LLMCallError as exc:
-            result.error = str(exc)
-            result.quota_exhausted = isinstance(exc, LLMQuotaExhaustedError)
-            record(kind="failed", error=result.error)  # persisted with the trace
+            self._fail(result, exc)
         if result.note is None and result.error and result.trace[-1].kind != "failed":
-            record(kind="failed", error=result.error)
+            _record(result, kind="failed", error=result.error)
 
-        if result.note is not None:
-            result.status = "completed"
-            result.severity_final, band = final_severity(case.severity_prelim, result.note.verdict)
-            result.severity_band = band.value
+        self.finalize(case, result)
         result.seconds = round(time.perf_counter() - started, 2)
         return result
+
+    def revise(
+        self, case: Case, result: InvestigationResult, feedback: str
+    ) -> InvestigatorNote | None:
+        """Continue the same conversation with the Verifier's objections (FR-4.5).
+
+        Cheaper than investigating again - the evidence is already in the
+        conversation - and the model can still call tools if the objection means
+        it needs more. Returns the corrected note, or None if none came back; the
+        caller keeps the previous note in that case, so a failed revision never
+        loses a note that existed.
+        """
+        started = time.perf_counter()
+        result.messages.append({"role": "user", "content": feedback})
+        try:
+            note, error = self._gather(result)
+        except LLMCallError as exc:
+            self._fail(result, exc)
+            note, error = None, None
+        if note is None and error:
+            _record(result, kind="failed", error=f"revision: {error}")
+        result.seconds = round(result.seconds + time.perf_counter() - started, 2)
+        return note
+
+    def finalize(self, case: Case, result: InvestigationResult) -> None:
+        """Status and final severity follow whichever note stands."""
+        if result.note is None:
+            result.status = "failed"
+            return
+        result.status = "completed"
+        result.error = None
+        result.severity_final, band = final_severity(case.severity_prelim, result.note.verdict)
+        result.severity_band = band.value
+
+    @staticmethod
+    def _fail(result: InvestigationResult, exc: LLMCallError) -> None:
+        result.error = str(exc)
+        result.quota_exhausted = isinstance(exc, LLMQuotaExhaustedError)
+        _record(result, kind="failed", error=result.error)  # persisted with the trace
+
+    def _gather(self, result: InvestigationResult) -> tuple[InvestigatorNote | None, str | None]:
+        """The loop: tool calls until a valid note. Returns (note, reason if none).
+
+        Provider failures propagate as LLMCallError; everything else - malformed
+        notes, running out of steps or context - ends here with a reason.
+        """
+        messages = result.messages
+        box = ToolBox(self.con, policy_index=self.policy_index)
+        tools = box.schemas()
+        parse_failures = 0
+
+        def record(**kwargs: Any) -> None:
+            _record(result, **kwargs)
+
+        for _ in range(self.max_steps):
+            try:
+                reply = self._turn(messages, tools, record)
+            except ContextFullError:
+                record(kind="context_trim", note="context budget reached; writing the note")
+                break
+            record(
+                kind="model",
+                latency_ms=int(reply.latency_seconds * 1000),
+                prompt_tokens=reply.prompt_tokens,
+                completion_tokens=reply.completion_tokens,
+                note=(
+                    f"requested {', '.join(c.name for c in reply.tool_calls)}"
+                    if reply.wants_tool
+                    else "replied with a note"
+                ),
+            )
+
+            if reply.wants_tool:
+                messages.append(_assistant_message(reply))
+                for call in reply.tool_calls:
+                    self._run_tool(call, box, messages, record, result)
+                continue
+
+            messages.append({"role": "assistant", "content": reply.content})
+            try:
+                return parse_note(reply.content), None
+            except NoteParseError as exc:
+                parse_failures += 1
+                record(kind="parse_error", error=str(exc))
+                if parse_failures > MAX_PARSE_RETRIES:
+                    return None, f"Gave up after {parse_failures} malformed notes: {exc}"
+                messages.append({"role": "user", "content": f"{exc} Fix it and reply again."})
+
+        note = self._forced_final(messages, tools, record)
+        return (note, None) if note else (None, "No valid note within the step limit.")
 
     def _run_tool(
         self,
@@ -468,6 +522,7 @@ class Investigator:
             "prompt_tokens": reply.prompt_tokens,
             "completion_tokens": reply.completion_tokens,
         }
+        messages.append({"role": "assistant", "content": reply.content})
         try:
             note = parse_note(reply.content)
         except NoteParseError as exc:

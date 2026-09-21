@@ -252,8 +252,15 @@ def investigate(
     per_type: Annotated[
         int, typer.Option(help="Evaluation mode: real and spurious cases per type.")
     ] = 2,
+    verify: Annotated[
+        bool | None,
+        typer.Option(
+            "--verify/--no-verify",
+            help="Check every citation and regenerate failures. Default: VERIFIER_ENABLED.",
+        ),
+    ] = None,
 ) -> None:
-    """Investigate prioritized cases and write cited audit notes. Never closes a case."""
+    """Investigate prioritized cases and write verified, cited audit notes. Never closes a case."""
     from spendguard.agent.investigator import InvestigationResult
     from spendguard.agent.llm import LLMClient, LLMNotConfiguredError
     from spendguard.cases import Case
@@ -265,6 +272,11 @@ def investigate(
         console.print(f"[red]{exc}[/red]")
         raise typer.Exit(code=1) from exc
 
+    badge = {
+        "verified": "[green]verified[/green]",
+        "failed_after_retries": "[red]failed checks[/red]",
+    }
+
     def progress(i: int, n: int, c: Case, r: InvestigationResult) -> None:
         verdict = r.verdict.value if r.verdict else f"[red]failed[/red] {(r.error or '')[:80]}"
         severity = (
@@ -272,9 +284,17 @@ def investigate(
             if r.severity_final is not None
             else f"{c.severity_prelim:.1f}"
         )
+        checked = ""
+        if r.verification:
+            v = r.verification
+            checked = (
+                f"  {badge.get(r.verification_status, r.verification_status)} "
+                f"{v.deterministic_passed}/{v.checked} cited"
+                + (f", {r.retry_count} retry" if r.retry_count else "")
+            )
         console.print(
             f"[{i}/{n}] {c.anomaly_type.value:<11} {c.case_id[:8]}  {verdict:<22} "
-            f"severity {severity}  {r.tool_calls} tools  {r.seconds:.0f}s"
+            f"severity {severity}  {r.tool_calls} tools  {r.seconds:.0f}s{checked}"
         )
 
     console.print(f"Model: {llm.model} ({llm.provider.value})")
@@ -290,6 +310,7 @@ def investigate(
             include_investigated=again,
             llm=llm,
             on_result=progress,
+            verify=verify,
         )
     else:
         run = run_investigation(
@@ -299,6 +320,7 @@ def investigate(
             include_investigated=again,
             llm=llm,
             on_result=progress,
+            verify=verify,
         )
 
     s = run.summary()
@@ -310,6 +332,18 @@ def investigate(
         f"{s['tool_calls']} tool calls, {s['prompt_tokens']:,} prompt tokens, "
         f"{s['seconds']:.0f}s ({s['rate_limit_wait_seconds']:.0f}s waiting on rate limits)"
     )
+
+    def pct(value: object) -> str:
+        return "-" if value is None else f"{value:.0%}"
+
+    v = s["verification"]
+    if v["citations_checked"]:
+        console.print(
+            f"Citations: {pct(v['deterministic_valid'])} exist and match "
+            f"(first drafts {pct(v['first_draft_deterministic_valid'])}), "
+            f"{pct(v['semantic_supported_model_judged'])} supported (model-judged) - "
+            f"status {v['status']}, {v['regenerated']} regenerated"
+        )
     if run.quota_stopped:
         console.print(
             f"[yellow]Stopped: the provider's daily quota ran out.[/yellow] {run.not_attempted} "
@@ -321,10 +355,6 @@ def investigate(
         table = Table(title=f"Triage - {run.run_id}")
         for col in ("Type", "Cases", "Real", "Real kept", "Wrongly dismissed", "Spurious filtered"):
             table.add_column(col, justify="left" if col == "Type" else "right")
-
-        def pct(value: object) -> str:
-            return "-" if value is None else f"{value:.0%}"
-
         for kind, m in run.triage.items():
             table.add_row(
                 kind,
