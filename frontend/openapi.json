@@ -1,0 +1,2283 @@
+{
+  "components": {
+    "schemas": {
+      "AblationRow": {
+        "properties": {
+          "ablation_name": {
+            "title": "Ablation Name",
+            "type": "string"
+          },
+          "citation_validity_deterministic": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citation Validity Deterministic"
+          },
+          "citation_validity_semantic": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citation Validity Semantic"
+          },
+          "configuration": {
+            "title": "Configuration",
+            "type": "string"
+          },
+          "note_quality_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note Quality Score"
+          },
+          "triage_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triage Accuracy"
+          }
+        },
+        "required": [
+          "ablation_name",
+          "configuration",
+          "citation_validity_deterministic",
+          "citation_validity_semantic",
+          "triage_accuracy",
+          "note_quality_score"
+        ],
+        "title": "AblationRow",
+        "type": "object"
+      },
+      "AgentMetrics": {
+        "description": "Null where nothing has been measured yet - never a zero standing in for missing.",
+        "properties": {
+          "avg_latency_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Latency Seconds"
+          },
+          "avg_tokens": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Tokens"
+          },
+          "avg_tool_calls": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Tool Calls"
+          },
+          "citation_validity_deterministic": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citation Validity Deterministic"
+          },
+          "citation_validity_semantic": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citation Validity Semantic"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "integer"
+          },
+          "notes_failed_after_retries": {
+            "title": "Notes Failed After Retries",
+            "type": "integer"
+          },
+          "notes_regenerated": {
+            "title": "Notes Regenerated",
+            "type": "integer"
+          },
+          "triage_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Triage Accuracy"
+          }
+        },
+        "required": [
+          "notes",
+          "citation_validity_deterministic",
+          "citation_validity_semantic",
+          "triage_accuracy",
+          "avg_tool_calls",
+          "avg_tokens",
+          "avg_latency_seconds",
+          "notes_regenerated",
+          "notes_failed_after_retries"
+        ],
+        "title": "AgentMetrics",
+        "type": "object"
+      },
+      "AnomalyBreakdown": {
+        "properties": {
+          "amount_at_risk": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount At Risk",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "amount_at_risk"
+        ],
+        "title": "AnomalyBreakdown",
+        "type": "object"
+      },
+      "AuditNote": {
+        "properties": {
+          "case_id": {
+            "format": "uuid",
+            "title": "Case Id",
+            "type": "string"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/Citation"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "citations_checked": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citations Checked"
+          },
+          "citations_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citations Passed"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deterministic_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deterministic Passed"
+          },
+          "finding": {
+            "title": "Finding",
+            "type": "string"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "note_id": {
+            "format": "uuid",
+            "title": "Note Id",
+            "type": "string"
+          },
+          "policy_clauses": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Policy Clauses",
+            "type": "array"
+          },
+          "recommended_action": {
+            "title": "Recommended Action",
+            "type": "string"
+          },
+          "retry_count": {
+            "title": "Retry Count",
+            "type": "integer"
+          },
+          "semantic_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Semantic Passed"
+          },
+          "verdict": {
+            "enum": [
+              "likely_true_positive",
+              "likely_false_positive",
+              "inconclusive"
+            ],
+            "title": "Verdict",
+            "type": "string"
+          },
+          "verification_status": {
+            "enum": [
+              "verified",
+              "unverified",
+              "failed_after_retries"
+            ],
+            "title": "Verification Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note_id",
+          "case_id",
+          "finding",
+          "recommended_action",
+          "verdict",
+          "policy_clauses",
+          "verification_status",
+          "citations",
+          "citations_checked",
+          "citations_passed",
+          "deterministic_passed",
+          "semantic_passed",
+          "retry_count",
+          "model_name",
+          "created_at"
+        ],
+        "title": "AuditNote",
+        "type": "object"
+      },
+      "Case": {
+        "properties": {
+          "amount_at_risk": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount At Risk",
+            "type": "string"
+          },
+          "anomaly_type": {
+            "enum": [
+              "duplicate",
+              "split",
+              "inflation",
+              "vendor_flag"
+            ],
+            "title": "Anomaly Type",
+            "type": "string"
+          },
+          "case_id": {
+            "format": "uuid",
+            "title": "Case Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detector": {
+            "title": "Detector",
+            "type": "string"
+          },
+          "detector_score": {
+            "title": "Detector Score",
+            "type": "number"
+          },
+          "dismissed_by_agent": {
+            "title": "Dismissed By Agent",
+            "type": "boolean"
+          },
+          "investigated": {
+            "title": "Investigated",
+            "type": "boolean"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "reviewer_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Note"
+          },
+          "row_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Row Ids",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "severity_band": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity Band",
+            "type": "string"
+          },
+          "severity_final": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Final"
+          },
+          "severity_prelim": {
+            "title": "Severity Prelim",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "under_review",
+              "confirmed",
+              "dismissed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "vendor_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Key"
+          }
+        },
+        "required": [
+          "case_id",
+          "run_id",
+          "anomaly_type",
+          "detector",
+          "row_ids",
+          "vendor_key",
+          "detector_score",
+          "amount_at_risk",
+          "severity_prelim",
+          "severity_final",
+          "severity_band",
+          "status",
+          "investigated",
+          "dismissed_by_agent",
+          "reviewer_note",
+          "created_at",
+          "updated_at",
+          "metadata"
+        ],
+        "title": "Case",
+        "type": "object"
+      },
+      "CaseDetailResponse": {
+        "properties": {
+          "audit_note": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuditNote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "case": {
+            "$ref": "#/components/schemas/Case"
+          },
+          "context_rows": {
+            "items": {
+              "$ref": "#/components/schemas/TransactionRow"
+            },
+            "title": "Context Rows",
+            "type": "array"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "evidence_rows": {
+            "items": {
+              "$ref": "#/components/schemas/TransactionRow"
+            },
+            "title": "Evidence Rows",
+            "type": "array"
+          },
+          "evidence_total": {
+            "title": "Evidence Total",
+            "type": "integer"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/TraceStep"
+            },
+            "title": "Trace",
+            "type": "array"
+          }
+        },
+        "required": [
+          "case",
+          "audit_note",
+          "evidence_rows",
+          "evidence_total",
+          "context_rows",
+          "trace",
+          "currency"
+        ],
+        "title": "CaseDetailResponse",
+        "type": "object"
+      },
+      "CaseListResponse": {
+        "properties": {
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CaseSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size",
+          "currency"
+        ],
+        "title": "CaseListResponse",
+        "type": "object"
+      },
+      "CaseSummary": {
+        "description": "A queue row: the case, plus enough of its note to triage from the list.",
+        "properties": {
+          "amount_at_risk": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount At Risk",
+            "type": "string"
+          },
+          "anomaly_type": {
+            "enum": [
+              "duplicate",
+              "split",
+              "inflation",
+              "vendor_flag"
+            ],
+            "title": "Anomaly Type",
+            "type": "string"
+          },
+          "case_id": {
+            "format": "uuid",
+            "title": "Case Id",
+            "type": "string"
+          },
+          "citations_checked": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citations Checked"
+          },
+          "citations_passed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Citations Passed"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detector": {
+            "title": "Detector",
+            "type": "string"
+          },
+          "detector_score": {
+            "title": "Detector Score",
+            "type": "number"
+          },
+          "dismissed_by_agent": {
+            "title": "Dismissed By Agent",
+            "type": "boolean"
+          },
+          "finding_excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finding Excerpt"
+          },
+          "investigated": {
+            "title": "Investigated",
+            "type": "boolean"
+          },
+          "reviewer_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Note"
+          },
+          "row_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Row Ids",
+            "type": "array"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "severity_band": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ],
+            "title": "Severity Band",
+            "type": "string"
+          },
+          "severity_final": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Final"
+          },
+          "severity_prelim": {
+            "title": "Severity Prelim",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "under_review",
+              "confirmed",
+              "dismissed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "vendor_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Key"
+          },
+          "verdict": {
+            "anyOf": [
+              {
+                "enum": [
+                  "likely_true_positive",
+                  "likely_false_positive",
+                  "inconclusive"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verdict"
+          },
+          "verification_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "verified",
+                  "unverified",
+                  "failed_after_retries"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Status"
+          }
+        },
+        "required": [
+          "case_id",
+          "run_id",
+          "anomaly_type",
+          "detector",
+          "row_ids",
+          "vendor_key",
+          "detector_score",
+          "amount_at_risk",
+          "severity_prelim",
+          "severity_final",
+          "severity_band",
+          "status",
+          "investigated",
+          "dismissed_by_agent",
+          "reviewer_note",
+          "created_at",
+          "updated_at",
+          "verdict",
+          "verification_status",
+          "citations_checked",
+          "citations_passed",
+          "finding_excerpt"
+        ],
+        "title": "CaseSummary",
+        "type": "object"
+      },
+      "Citation": {
+        "properties": {
+          "asserted": {
+            "additionalProperties": true,
+            "title": "Asserted",
+            "type": "object"
+          },
+          "citation_id": {
+            "format": "uuid",
+            "title": "Citation Id",
+            "type": "string"
+          },
+          "claim_index": {
+            "title": "Claim Index",
+            "type": "integer"
+          },
+          "claim_text": {
+            "title": "Claim Text",
+            "type": "string"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "row_exists": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Row Exists"
+          },
+          "row_id": {
+            "title": "Row Id",
+            "type": "integer"
+          },
+          "supports_claim": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supports Claim"
+          },
+          "values_match": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Values Match"
+          }
+        },
+        "required": [
+          "citation_id",
+          "claim_index",
+          "claim_text",
+          "row_id",
+          "asserted",
+          "row_exists",
+          "values_match",
+          "supports_claim",
+          "failure_reason"
+        ],
+        "title": "Citation",
+        "type": "object"
+      },
+      "DetectorMetrics": {
+        "properties": {
+          "anomaly_type": {
+            "title": "Anomaly Type",
+            "type": "string"
+          },
+          "detector": {
+            "title": "Detector",
+            "type": "string"
+          },
+          "f1": {
+            "title": "F1",
+            "type": "number"
+          },
+          "fn": {
+            "title": "Fn",
+            "type": "integer"
+          },
+          "fp": {
+            "title": "Fp",
+            "type": "integer"
+          },
+          "granularity": {
+            "enum": [
+              "case",
+              "row"
+            ],
+            "title": "Granularity",
+            "type": "string"
+          },
+          "pr_auc": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pr Auc"
+          },
+          "precision": {
+            "title": "Precision",
+            "type": "number"
+          },
+          "recall": {
+            "title": "Recall",
+            "type": "number"
+          },
+          "tp": {
+            "title": "Tp",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "detector",
+          "anomaly_type",
+          "granularity",
+          "precision",
+          "recall",
+          "f1",
+          "pr_auc",
+          "tp",
+          "fp",
+          "fn"
+        ],
+        "title": "DetectorMetrics",
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/ErrorDetail"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "EvaluationResponse": {
+        "properties": {
+          "ablations": {
+            "items": {
+              "$ref": "#/components/schemas/AblationRow"
+            },
+            "title": "Ablations",
+            "type": "array"
+          },
+          "agent_metrics": {
+            "$ref": "#/components/schemas/AgentMetrics"
+          },
+          "baseline_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/DetectorMetrics"
+            },
+            "title": "Baseline Metrics",
+            "type": "array"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset"
+          },
+          "detector_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/DetectorMetrics"
+            },
+            "title": "Detector Metrics",
+            "type": "array"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "injected_anomaly_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Injected Anomaly Count"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "run_id",
+          "seed",
+          "dataset",
+          "injected_anomaly_count",
+          "detector_metrics",
+          "baseline_metrics",
+          "agent_metrics",
+          "ablations",
+          "generated_at"
+        ],
+        "title": "EvaluationResponse",
+        "type": "object"
+      },
+      "EvidenceResponse": {
+        "properties": {
+          "case_id": {
+            "format": "uuid",
+            "title": "Case Id",
+            "type": "string"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/TransactionRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "case_id",
+          "rows",
+          "total"
+        ],
+        "title": "EvidenceResponse",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "case_store": {
+            "title": "Case Store",
+            "type": "boolean"
+          },
+          "duckdb": {
+            "title": "Duckdb",
+            "type": "boolean"
+          },
+          "llm_configured": {
+            "title": "Llm Configured",
+            "type": "boolean"
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "degraded"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "duckdb",
+          "case_store",
+          "llm_configured",
+          "llm_model"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "MetricsResponse": {
+        "properties": {
+          "by_anomaly_type": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AnomalyBreakdown"
+            },
+            "title": "By Anomaly Type",
+            "type": "object"
+          },
+          "by_severity_band": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Severity Band",
+            "type": "object"
+          },
+          "by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Status",
+            "type": "object"
+          },
+          "by_verdict": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Verdict",
+            "type": "object"
+          },
+          "by_verification_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Verification Status",
+            "type": "object"
+          },
+          "cases_flagged": {
+            "title": "Cases Flagged",
+            "type": "integer"
+          },
+          "cases_investigated": {
+            "title": "Cases Investigated",
+            "type": "integer"
+          },
+          "cases_queued": {
+            "title": "Cases Queued",
+            "type": "integer"
+          },
+          "converted_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Converted From"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset"
+          },
+          "evaluation_seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluation Seed"
+          },
+          "last_run_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run At"
+          },
+          "last_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Run Id"
+          },
+          "money_at_risk": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Money At Risk",
+            "type": "string"
+          },
+          "money_at_risk_confirmed": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Money At Risk Confirmed",
+            "type": "string"
+          },
+          "total_amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Amount",
+            "type": "string"
+          },
+          "total_transactions": {
+            "title": "Total Transactions",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "dataset",
+          "evaluation_seed",
+          "total_transactions",
+          "total_amount",
+          "currency",
+          "converted_from",
+          "cases_flagged",
+          "cases_investigated",
+          "cases_queued",
+          "money_at_risk",
+          "money_at_risk_confirmed",
+          "by_anomaly_type",
+          "by_severity_band",
+          "by_status",
+          "by_verdict",
+          "by_verification_status",
+          "last_run_id",
+          "last_run_at"
+        ],
+        "title": "MetricsResponse",
+        "type": "object"
+      },
+      "RunSummary": {
+        "properties": {
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "kind": {
+            "enum": [
+              "ingest",
+              "detect",
+              "investigate",
+              "evaluate"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          }
+        },
+        "required": [
+          "run_id",
+          "kind",
+          "status",
+          "seed",
+          "started_at",
+          "finished_at",
+          "summary"
+        ],
+        "title": "RunSummary",
+        "type": "object"
+      },
+      "StatusUpdateRequest": {
+        "properties": {
+          "reviewer_note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewer Note"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "under_review",
+              "confirmed",
+              "dismissed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "StatusUpdateRequest",
+        "type": "object"
+      },
+      "TraceStep": {
+        "properties": {
+          "completion_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Tokens"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "prompt_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Tokens"
+          },
+          "role": {
+            "enum": [
+              "investigator",
+              "verifier"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "step_index": {
+            "title": "Step Index",
+            "type": "integer"
+          },
+          "tool_args": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Args"
+          },
+          "tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Name"
+          },
+          "tool_result": {
+            "title": "Tool Result"
+          }
+        },
+        "required": [
+          "step_index",
+          "role",
+          "kind",
+          "tool_name",
+          "tool_args",
+          "tool_result",
+          "latency_ms",
+          "prompt_tokens",
+          "completion_tokens",
+          "detail",
+          "error"
+        ],
+        "title": "TraceStep",
+        "type": "object"
+      },
+      "TransactionRow": {
+        "properties": {
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "cited": {
+            "title": "Cited",
+            "type": "boolean"
+          },
+          "in_case": {
+            "title": "In Case",
+            "type": "boolean"
+          },
+          "invoice_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice No"
+          },
+          "item_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Category"
+          },
+          "item_desc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Desc"
+          },
+          "officer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Officer Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "row_id": {
+            "title": "Row Id",
+            "type": "integer"
+          },
+          "txn_date": {
+            "format": "date",
+            "title": "Txn Date",
+            "type": "string"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
+          },
+          "vendor_key": {
+            "title": "Vendor Key",
+            "type": "string"
+          },
+          "vendor_name": {
+            "title": "Vendor Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "row_id",
+          "vendor_name",
+          "vendor_key",
+          "invoice_no",
+          "amount",
+          "txn_date",
+          "officer_id",
+          "item_desc",
+          "item_category",
+          "quantity",
+          "unit_price",
+          "in_case",
+          "cited"
+        ],
+        "title": "TransactionRow",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Procurement cases, verified audit notes, evidence and review. Reads batch results; the only writes are a reviewer's status change and the demo.",
+    "title": "SpendGuard API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/cases": {
+      "get": {
+        "description": "The case queue (FR-5.5). \"Dismissed by agent\" stays reachable as a filter (FR-5.4).",
+        "operationId": "list_cases_api_v1_cases_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "new",
+                      "under_review",
+                      "confirmed",
+                      "dismissed"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "anomaly_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "duplicate",
+                      "split",
+                      "inflation",
+                      "vendor_flag"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Anomaly Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "severity_band",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity Band"
+            }
+          },
+          {
+            "in": "query",
+            "name": "verdict",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "likely_true_positive",
+                      "likely_false_positive",
+                      "inconclusive"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verdict"
+            }
+          },
+          {
+            "in": "query",
+            "name": "verification_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "verified",
+                      "unverified",
+                      "failed_after_retries"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Verification Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "investigated",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Investigated"
+            }
+          },
+          {
+            "in": "query",
+            "name": "dismissed_by_agent",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dismissed By Agent"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_amount",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 0.0,
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Amount"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "severity_prelim",
+              "enum": [
+                "severity_prelim",
+                "severity_final",
+                "amount_at_risk",
+                "created_at"
+              ],
+              "title": "Sort",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "desc",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "List Cases",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{case_id}": {
+      "get": {
+        "description": "Everything an auditor needs to decide one case (FR-5.6).",
+        "operationId": "case_detail_api_v1_cases__case_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaseDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Unknown case"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Case Detail",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{case_id}/evidence": {
+      "get": {
+        "description": "A case's rows, a page at a time - a vendor case can hold hundreds.",
+        "operationId": "case_evidence_api_v1_cases__case_id__evidence_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Unknown case"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Case Evidence",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{case_id}/status": {
+      "patch": {
+        "description": "The human decision (FR-5.2). The agent never calls this.",
+        "operationId": "update_status_api_v1_cases__case_id__status_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StatusUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Case"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Unknown case"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Update Status",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/evaluation": {
+      "get": {
+        "description": "Detector metrics against the baseline, agent metrics and ablations for one seed (FR-5.8).",
+        "operationId": "evaluation_api_v1_evaluation_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "seed",
+            "required": false,
+            "schema": {
+              "default": 42,
+              "title": "Seed",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Evaluation",
+        "tags": [
+          "overview"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Can the stores be read? The LLM is reported as configured, never probed (see schema).",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "overview"
+        ]
+      }
+    },
+    "/api/v1/metrics": {
+      "get": {
+        "description": "Dashboard KPIs (FR-5.7). Flagged = investigated + queued, always.",
+        "operationId": "metrics_api_v1_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MetricsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Metrics",
+        "tags": [
+          "overview"
+        ]
+      }
+    },
+    "/api/v1/runs": {
+      "get": {
+        "description": "Run history, newest first, so the dashboard can say which run it shows.",
+        "operationId": "runs_api_v1_runs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunSummary"
+                  },
+                  "title": "Response Runs Api V1 Runs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Runs",
+        "tags": [
+          "overview"
+        ]
+      }
+    },
+    "/api/v1/transactions/{row_id}": {
+      "get": {
+        "description": "One row, for inspecting a citation. Read from the audit view: never the answer key.",
+        "operationId": "transaction_api_v1_transactions__row_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "row_id",
+            "required": true,
+            "schema": {
+              "title": "Row Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionRow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Unknown row"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Transaction",
+        "tags": [
+          "overview"
+        ]
+      }
+    }
+  }
+}
