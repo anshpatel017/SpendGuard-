@@ -417,3 +417,49 @@ def test_the_badge_counts_and_every_citations_checks_are_stored(
     assert failed.row_exists and failed.values_match and failed.supports_claim is False
     assert failed.failure_reason == "not supported: not shown"
     assert roles == {"investigator", "verifier"}
+
+
+# ------------------------------------------------------------------ judge evidence
+
+
+VENDOR_PROFILE = {  # the real shape that went wrong: the deciding fields come last
+    "transactions": 193, "total_amount": 16934897.11, "first_seen": "2025-04-14",
+    "last_seen": "2026-03-30", "distinct_amounts": 192, "officers": 15, "round_share": 0.0,
+    "vendor_name": "Unique Traders Private Limited", "vendor_key": "unique", "found": True,
+    "by_officer": [{"officer_id": f"WSD-{i:03d}", "transactions": 9, "total": 754384.42}
+                   for i in range(5)],
+    "by_category": [{"item_category": f"Plumbing and Water Supply / Item {i}",
+                     "transactions": 71, "total": 7698078.12} for i in range(3)],
+    "recurring_monthly_billing": [],
+    "looks_like_fixed_contract": False,
+}  # fmt: skip
+
+
+def test_a_long_tool_result_keeps_its_summary_fields_when_shrunk() -> None:
+    """Cut at 700 characters, a vendor profile lost looks_like_fixed_contract and the
+    judge rejected a true claim. Whole list items go first; every scalar stays."""
+    from spendguard.agent.investigator import fit_json
+
+    text = fit_json(VENDOR_PROFILE, 700)
+    shrunk = json.loads(text)  # still valid JSON
+    assert len(text) <= 700
+    assert shrunk["looks_like_fixed_contract"] is False
+    assert shrunk["recurring_monthly_billing"] == []
+    assert shrunk["transactions"] == 193
+    assert "narrow the request" in shrunk["shown"]
+    assert fit_json(VENDOR_PROFILE, 100_000) == json.dumps(
+        VENDOR_PROFILE, separators=(",", ":"), ensure_ascii=False
+    )  # small enough: untouched
+
+
+def test_the_judge_sees_the_vendor_profile_fields_a_history_claim_rests_on(
+    con: Any, case: Case
+) -> None:
+    model = ScriptedModel(
+        [tools(("vendor_profile", {"vendor_key": "sharma"})),
+         reply(json.dumps(make_note(GOOD_CLAIMS))), judgement(True, True)]
+    )  # fmt: skip
+    result = Investigator(model, con, policy_index=FakePolicyIndex()).investigate(case)
+    result.trace[1].tool_result = VENDOR_PROFILE  # as the real tool returned it
+    evidence = Verifier(model, con, clause_ids=CLAUSES).evidence_brief(result.note, result)
+    assert '"looks_like_fixed_contract":false' in evidence

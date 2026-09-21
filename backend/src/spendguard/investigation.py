@@ -223,12 +223,21 @@ def run_investigation(
 
 
 def _overlaps_truth(case: Case, groups: Sequence[TruthGroup]) -> bool:
-    """Does the case touch any planted anomaly of its type, even one already claimed?"""
-    same = [g for g in groups if g.anomaly_type == case.anomaly_type]
-    if case.anomaly_type in VENDOR_LEVEL_TYPES:
-        return any(g.vendor_key == case.vendor_key for g in same)
+    """Does the case touch any planted anomaly - of any type, even one already claimed?
+
+    Any type, because a detector can catch real fraud under the wrong label: D2
+    flagged a planted *duplicate* pair as a split (two identical orders summing
+    past the threshold). Scoring that as a false alarm the agent failed to
+    filter would be wrong - the agent rightly called it genuine, and even
+    suggested checking for a duplicate record.
+    """
     rows = set(case.row_ids)
-    return any(rows & g.row_ids for g in same)
+    for g in groups:
+        if g.anomaly_type in VENDOR_LEVEL_TYPES and g.vendor_key == case.vendor_key:
+            return True
+        if rows & g.row_ids:
+            return True
+    return False
 
 
 def sample_for_triage(
@@ -236,10 +245,12 @@ def sample_for_triage(
 ) -> tuple[list[Case], dict[str, bool]]:
     """Up to ``per_type`` real and ``per_type`` spurious cases of each type.
 
-    "Real" means matched to a planted anomaly. "Spurious" means touching no
-    planted anomaly at all: a redundant second alert on a real scheme counts as
-    a detection false positive, but an investigator is right to call it real,
-    so it is left out of both pools rather than scored against the agent.
+    "Real" means matched to a planted anomaly of the case's type. "Spurious"
+    means touching no planted anomaly of any type. Cases in between - a
+    redundant second alert on a real scheme, or real fraud caught under another
+    type's label - count as detection false positives, but an investigator is
+    right to call them genuine, so they are left out of both pools rather than
+    scored against the agent.
     """
     rng = random.Random(seed)
     chosen: list[Case] = []
