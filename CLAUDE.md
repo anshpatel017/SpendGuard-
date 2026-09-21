@@ -153,7 +153,8 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-30
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
-- **D-05** Detection covers 100% of rows; **investigation is top-N by severity** (LLM-bound at 30–60 s per case).
+- **D-05** Detection covers 100% of rows; **investigation is top-N by severity** (LLM-bound: 1–3 min
+  per case on the Groq free tier, measured in Phase 6).
 - **D-09** DuckDB (columnar, analytical) + SQLite/Postgres (transactional). No Node backend, no Django: DuckDB is embedded, so a second runtime buys nothing and Django's ORM cannot address it.
 - **D-12** `vendor_key` is for **blocking**, never identity. Measured: 0 suppliers split, 10 of 382 keys over-merged.
 - **D-15/16** Currency INR; principal control threshold **₹2,50,000** (GFR 2017 ladder, policy SG-PP-2.2).
