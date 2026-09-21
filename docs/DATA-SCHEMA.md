@@ -117,11 +117,14 @@ The injection configuration is stored once in `injection_runs`, not repeated per
 | Column | Type | Meaning |
 |---|---|---|
 | `note_id` | UUID PK | |
-| `case_id` | UUID FK | |
+| `case_id` | UUID FK | A case investigated twice keeps both notes; the newest non-ablation note stands |
+| `run_id` | VARCHAR | The investigation run that wrote it |
 | `finding` | TEXT | The written finding |
 | `recommended_action` | TEXT | What the agent recommends |
 | `verdict` | ENUM | `likely_true_positive`, `likely_false_positive`, `inconclusive` |
-| `verification_status` | ENUM | `verified`, `unverified`, `failed_after_retries` |
+| `claims` | JSON | The structured claims: `[{text, row_ids, facts: [{row_id, field, value}]}]` (D-29) |
+| `policy_clauses` | JSON | Clause ids cited, e.g. `["SG-PP-4.4"]` |
+| `verification_status` | ENUM | `verified`, `unverified`, `failed_after_retries`; `unverified` until the Verifier runs |
 | `citations_checked` | INTEGER | |
 | `citations_passed` | INTEGER | |
 | `deterministic_passed` | INTEGER | Passed the row-exists and values-match check |
@@ -134,14 +137,16 @@ The injection configuration is stored once in `injection_runs`, not repeated per
 
 ### 2.3 `citations`
 
-One row per citation, so citation validity is computed by query rather than by parsing text.
+One row per (claim, cited row), so citation validity is computed by query rather than by parsing text.
 
 | Column | Type | Meaning |
 |---|---|---|
 | `citation_id` | UUID PK | |
 | `note_id` | UUID FK | |
-| `claim_text` | TEXT | The sentence or clause making the claim |
+| `claim_index` | INTEGER | Position of the claim in the note |
+| `claim_text` | TEXT | The sentence making the claim |
 | `row_id` | BIGINT | Cited row |
+| `asserted` | JSON | Field values the claim states about this row, e.g. `{"amount": 87450.0}`; empty if none |
 | `row_exists` | BOOLEAN | Deterministic check |
 | `values_match` | BOOLEAN | Deterministic check |
 | `supports_claim` | BOOLEAN | Semantic check |
@@ -153,13 +158,17 @@ One row per citation, so citation validity is computed by query rather than by p
 |---|---|---|
 | `trace_id` | UUID PK | |
 | `case_id` | UUID FK | |
+| `run_id` | VARCHAR | The investigation run |
+| `note_id` | UUID FK | Null when the investigation produced no note - its trace is still kept |
 | `step_index` | INTEGER | Order within the loop |
 | `role` | VARCHAR | `investigator` or `verifier` |
-| `tool_name` | VARCHAR | Null for a reasoning step |
+| `kind` | VARCHAR | `model`, `tool`, `parse_error`, `context_trim`, `forced_final`, `failed` (why no note) |
+| `tool_name` | VARCHAR | Null for a model step |
 | `tool_args` | JSONB | |
-| `tool_result` | JSONB | Truncated if large, with a truncation flag |
+| `tool_result` | JSONB | Over 20,000 characters becomes `{truncated: true, chars, head}` |
 | `latency_ms` | INTEGER | |
 | `prompt_tokens`, `completion_tokens` | INTEGER | |
+| `detail` | TEXT | What the step did, e.g. "requested vendor_profile" |
 | `error` | TEXT | Populated when the step failed |
 | `created_at` | TIMESTAMP | |
 
