@@ -258,13 +258,19 @@ Not a phase: fixes found by the first real run of the Verifier, and the provider
 
 ## Current Phase
 
-### Phase 9 — Evaluation, real data and freeze 🚧 not started
+### Phase 9 — Evaluation, real data and freeze 🚧 in progress (started 2026-09-22)
 
-- Multi-seed investigation evaluation (triage accuracy, citation validity first draft vs released), and the ablations: Verifier off, no tools, lexical vs dense retrieval, model size.
-- The California purchase-order dataset through ingestion and detection, with the unlabeled-flag protocol (adjusted precision from a manual review of top flags).
-- Blinded human grading of ~50 notes.
-- The frozen demo dataset, the live-injection demo endpoint, and the recorded video.
-- Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible command, and the demo runs from a frozen state.
+Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible command, and the demo runs from a frozen state. Seven steps; those needing no LLM come first.
+
+1. ✅ **Reproducible detector results** (`10639cc`, `9f592e4`). `spendguard report detection` re-runs every seed, the clean-data check and a determinism check, and writes `docs/results/detection.md` with the commit, settings and package versions that produced it. The means match the old hand-built table exactly. The spreads are now the sample standard deviation, a little wider than before. EVALUATION.md 4.0b cites the generated file.
+2. ✅ **Live demo and frozen demo state** (`8d80df2`, D-34).
+   - **Live demo:** `POST /demo/inject`, `spendguard demo` and the dashboard's "Live demo" page. It plants anomalies in a temporary copy of the last three months of clean data and catches them in 3–8 s. Misses are shown as misses (2 of 3 caught on rehearsal, as recall predicts). Verified in the running dashboard.
+   - **Frozen state:** `spendguard freeze` and `spendguard serve --frozen`, a hashed snapshot served from a fresh copy. Re-freeze once verified notes exist.
+3. ⏳ **Ablation code:** template notes (no LLM, can run now), Verifier off (exists), model size (provider switch).
+4. ⏳ **Grading kit:** blinded, shuffled notes, a fixed rubric, grade import, inter-grader agreement.
+5. ⏳ **California real data:** mapping, INR conversion, detection, and a review sheet for adjusted precision. Needs the Kaggle CSV.
+6. ⏳ **Agent evaluation on Gemini**, multi-seed plus the ablation arms. Needs the Gemini key.
+7. ⏳ **EVALUATION.md:** every number traced to a command, the headline sentence, the final freeze, the demo walkthrough.
 
 ## Next Steps
 
