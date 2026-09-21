@@ -31,7 +31,7 @@ SpendGuard audits **100% of an organization's procurement transactions**, detect
 | Planned | MLflow (Phase 9) |
 | Tooling | pytest, ruff, mypy, Vitest, GitHub Actions |
 
-**LLM plan (forced by hardware):** the dev machine has a 4 GB RTX 2050, so a 7B model does not fit. Groq free tier for development, model **`qwen/qwen3.8-27b`** (Groq retired Llama 3.3; Qwen chosen so prompts transfer — D-26); **Qwen2.5-3B-Instruct Q4_K_M** via Ollama for the "fully local" proof; 7B on a free Colab T4 for the model-size comparison. `spendguard check-llm` verifies both chat and tool calling.
+**LLM plan (forced by hardware):** the dev machine has a 4 GB RTX 2050 and no disk space for Ollama yet. `LLM_PROVIDER` switches in one line (D-33): **Groq** `qwen/qwen3.8-27b` for development (D-26), **Gemini** `gemini-2.5-flash` free tier for the Phase 9 evaluation (more quota), **Ollama** Qwen2.5-3B later for the "fully local" proof. `spendguard check-llm` verifies chat and tool calling.
 
 ---
 
@@ -132,9 +132,8 @@ spendguard check-llm                 # endpoint answers, and tool calling works
 spendguard check-policy              # policy.md and config.py agree?
 ```
 
-Frontend (in `frontend/`): `npm install` · `npm run dev` (Vite on :5173, proxies `/api` to
-:8000) · `npm test` · `npm run typecheck` · `npm run build` (served by `spendguard serve`) ·
-`npm run gen:api` (regenerate types from `openapi.json`).
+Frontend (`frontend/`): `npm install` · `npm run dev` (Vite :5173, proxies `/api`) · `npm test` ·
+`npm run typecheck` · `npm run build` (served by `spendguard serve`) · `npm run gen:api`.
 
 The venv is at `.venv`; with it active the bare `spendguard` command works, otherwise use `./.venv/Scripts/spendguard.exe`.
 
@@ -158,17 +157,17 @@ Copy `.env.example` to `.env` (gitignored). Names only, no secrets in the repo:
 - **Reproducibility:** `RANDOM_SEED`
 - **Currency:** `CURRENCY` (INR)
 - **Policy thresholds:** `APPROVAL_THRESHOLD`, `DIRECT_PURCHASE_CEILING`, `LIMITED_TENDER_CEILING`, `DUPLICATE_AMOUNT_TOLERANCE`, `DUPLICATE_DATE_WINDOW_DAYS`, `SPLIT_WINDOW_DAYS`, `PREPAYMENT_LOOKBACK_DAYS`, `NEW_VENDOR_DAYS`, `PRICE_HISTORY_MONTHS`
-- **LLM (Phase 5+):** `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TEMPERATURE`, `AGENT_MAX_STEPS`, `AGENT_CONTEXT_TOKENS`, `VERIFIER_ENABLED`, `VERIFIER_SEMANTIC_CHECK`, `VERIFIER_MAX_RETRIES`, `INVESTIGATE_TOP_N`
+- **LLM (Phase 5+):** `LLM_PROVIDER`; `GROQ_API_KEY`/`GROQ_MODEL`, `GEMINI_API_KEY`/`GEMINI_MODEL`, `OLLAMA_MODEL`; optional `LLM_MODEL`/`LLM_BASE_URL`/`LLM_API_KEY` overrides; `LLM_TEMPERATURE`, `AGENT_MAX_STEPS`, `AGENT_CONTEXT_TOKENS`, `VERIFIER_ENABLED`, `VERIFIER_SEMANTIC_CHECK`, `VERIFIER_MAX_RETRIES`, `INVESTIGATE_TOP_N`
 - **Stores:** `DATABASE_URL` (defaults to SQLite under `data/processed/`)
 - **API:** `API_HOST`, `API_PORT`
 
-The Groq key is set and verified (`spendguard check-llm`). Outstanding manual steps: **Ollama + Qwen2.5-3B** before the local-runtime proof, and the **Kaggle California PO dataset** into `data/raw/` before Phase 9. The `agent` extra pulls PyTorch (via sentence-transformers) and is a large download. CI installs only `dev,detect,api`, so tests needing the embedding model or a key skip there rather than fail.
+The Groq key is set and verified (`spendguard check-llm`). Outstanding manual steps: a free **Gemini key** into `.env` as `GEMINI_API_KEY` (never paste it in chat), **Ollama + Qwen2.5-3B** before the local-runtime proof, and the **Kaggle California PO dataset** into `data/raw/` before Phase 9. The `agent` extra pulls PyTorch (via sentence-transformers) and is a large download. CI installs only `dev,detect,api`, so tests needing the embedding model or a key skip there rather than fail.
 
 ---
 
 ## 7. Important decisions
 
-Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-32). The ones that shape day-to-day work:
+Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-33). The ones that shape day-to-day work:
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
@@ -194,5 +193,7 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-32
   no "duplicate payment"), then a fresh-context LLM judge; failures revised in place, best draft released.
 - **D-32** API/dashboard: store paths fixed per app (`--eval-seed`); evidence via the audit view, a field
   list and a closed schema; contract checked at compile time and runtime; health never probes the LLM.
+- **D-33** Gemini free tier for evaluation runs, Ollama later; evaluation numbers are per model;
+  a per-day quota ends the run for resumption. Gemini free-tier prompts may train Google's models.
 - **O-04** implemented as recommended (the number moves with the band), awaiting confirmation.
   **O-05** open.

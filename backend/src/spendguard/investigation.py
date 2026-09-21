@@ -288,8 +288,9 @@ def evaluate_investigation(
 ) -> InvestigationRun:
     """Evaluation mode: sampled cases on an injected database, scored for triage.
 
-    Triage is scored over every sampled case that has a note, from this run or
-    an earlier one; the newest note for a case counts. ``include_investigated``
+    Triage is scored over every sampled case that has a note by the same model,
+    from this run or an earlier one; the newest such note counts. Notes by other
+    models stay in the store but never enter this model's numbers. ``include_investigated``
     re-investigates the whole sample, for example after a prompt change.
     """
     from spendguard.eval.injection import default_injected_path
@@ -313,7 +314,11 @@ def evaluate_investigation(
         # shows what an auditor would see - everything flagged, some of it
         # investigated - and the dashboard's coverage line is honest about it.
         save_cases(engine, run_id, dataset, cases)
-        done_before = {c.case_id for c in chosen if latest_note(engine, c.case_id) is not None}
+        # Per model: switching provider starts that model's sample afresh (D-33).
+        model = str(getattr(llm, "model", "unknown"))
+        done_before = {
+            c.case_id for c in chosen if latest_note(engine, c.case_id, model_name=model)
+        }
         pending = [c for c in chosen if include_investigated or c.case_id not in done_before]
         results = _investigate_all(
             Investigator(llm, con), Verifier(llm, con), pending, engine, run_id, on_result,
@@ -325,7 +330,7 @@ def evaluate_investigation(
     failed_now = {r.case_id for r in results if r.note is None and not r.quota_exhausted}
     items = []
     for case in chosen:
-        stored = latest_note(engine, case.case_id)
+        stored = latest_note(engine, case.case_id, model_name=model)
         if stored is not None:
             items.append(TriageItem(case.anomaly_type.value, truth[case.case_id], stored.verdict))
         elif case.case_id in failed_now:

@@ -453,12 +453,18 @@ def save_investigation(
     return note_id
 
 
-def latest_note(engine: Engine, case_id: str) -> AuditNoteRecord | None:
-    """The note that currently stands for a case: newest, ablations excluded."""
+def latest_note(
+    engine: Engine, case_id: str, *, model_name: str | None = None
+) -> AuditNoteRecord | None:
+    """The note that currently stands for a case: newest, ablations excluded.
+
+    With ``model_name``, the newest note by that model - so an evaluation of one
+    model is never scored on notes another model wrote.
+    """
+    query = select(AuditNoteRecord).where(
+        AuditNoteRecord.case_id == case_id, AuditNoteRecord.is_ablation.is_(False)
+    )
+    if model_name is not None:
+        query = query.where(AuditNoteRecord.model_name == model_name)
     with Session(engine, expire_on_commit=False) as session:
-        return session.scalars(
-            select(AuditNoteRecord)
-            .where(AuditNoteRecord.case_id == case_id, AuditNoteRecord.is_ablation.is_(False))
-            .order_by(AuditNoteRecord.created_at.desc())
-            .limit(1)
-        ).first()
+        return session.scalars(query.order_by(AuditNoteRecord.created_at.desc()).limit(1)).first()
