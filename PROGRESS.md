@@ -163,7 +163,7 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ---
 
-### Phase 7 — Verifier ✅
+### Phase 7 — Verifier ✅ (`3154e63`)
 
 **Built:** the Verifier. Every note is checked before release: a **deterministic** check (cited rows exist, stated values match, cited policy clauses exist, no "duplicate payment" wording) and a **semantic** check (a fresh-context LLM judge rules whether the evidence supports each claim). Failures go back into the Investigator's own conversation for revision, up to `VERIFIER_MAX_RETRIES`, and the best draft is released as `verified`, `failed_after_retries` or `unverified`. Badge, counts and every citation's check results are stored. `spendguard investigate --no-verify` runs the Verifier-off ablation (FR-7.8).
 
