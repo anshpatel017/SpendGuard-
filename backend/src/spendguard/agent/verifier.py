@@ -39,6 +39,7 @@ from spendguard.agent.investigator import (
     InvestigationResult,
     Investigator,
     TraceStep,
+    fit_json,
 )
 from spendguard.agent.llm import LLMCallError, LLMQuotaExhaustedError
 from spendguard.agent.note import THINKING, InvestigatorNote, first_json_object
@@ -244,9 +245,7 @@ class Verifier:
         lines: list[str] = []
         budget = settings.verifier_context_chars
         for step in steps:
-            text = _compact(step.tool_result)
-            if len(text) > MAX_RESULT_CHARS_EACH:
-                text = text[:MAX_RESULT_CHARS_EACH] + "...(truncated)"
+            text = fit_json(step.tool_result, MAX_RESULT_CHARS_EACH)
             line = f"{step.tool_name}({_compact(step.tool_args or {})}) -> {text}"
             if len(line) > budget:
                 break

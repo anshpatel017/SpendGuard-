@@ -425,6 +425,8 @@ On any failure the objections go back to the Investigator, which revises, up to 
 
 **Caveat, stated rather than hidden.** The judge is the same model that wrote the note. That is why the semantic number is reported separately and labelled model-judged, and why the deterministic number, which involves no model, is the headline.
 
+**First live run (2026-09-22), and two bugs it exposed.** On a split case, all 12 citations existed and matched (100% deterministic), but the judge rejected the claim "the supplier has no fixed monthly contract". The agent had the evidence: `vendor_profile` returned `looks_like_fixed_contract: false`. But the judge was shown each tool result cut at 700 characters, and that field sat at character 952. Tool results are now shrunk by whole list items with every scalar field kept (`fit_json`, shared with the Investigator). The same case also exposed a scoring bug: it was a *planted duplicate* that D2 had flagged as a split, so it touched no planted split and counted as "spurious". The agent called it genuine, which is right, and suggested checking for a duplicate record. A case now counts as spurious only if it touches no planted anomaly of any type.
+
 **Measured so far.** Offline, a note planted with a wrong amount, a nonexistent row and an unsupported claim is caught on each count; sabotaging the value comparison makes four tests fail. Live, the real judge accepted a true claim about a row and rejected an invented one ("blacklisted in 2019") about the same row.
 
 ---

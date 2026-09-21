@@ -189,6 +189,38 @@ def _row_ids_in(value: Any, found: set[int]) -> None:
             _row_ids_in(item, found)
 
 
+def _dump(value: Any) -> str:
+    return json.dumps(value, separators=(",", ":"), default=str, ensure_ascii=False)
+
+
+def fit_json(value: Any, limit: int) -> str:
+    """A tool result as compact JSON of at most ``limit`` characters, cut by whole list items.
+
+    Lists are shortened one item at a time, the bulkiest first, and every scalar
+    field is kept. Cutting the text mid-way was tried twice and failed twice:
+    the Investigator re-ran queries it could not see the end of, and the
+    Verifier's judge lost a vendor profile's ``looks_like_fixed_contract``
+    field - it sat past the cut - and rejected a true claim. Only a result with
+    no lists left to shorten is cut as text.
+    """
+    text = _dump(value)
+    if len(text) <= limit or not isinstance(value, dict):
+        return text if len(text) <= limit else text[:limit] + ' ..."(truncated)"'
+    trimmed = dict(value)
+    totals = {k: len(v) for k, v in value.items() if isinstance(v, list) and v}
+    while len(text) > limit:
+        candidates = [k for k in totals if trimmed[k]]
+        if not candidates:
+            return text[:limit] + ' ..."(truncated)"'
+        key = max(candidates, key=lambda k: len(_dump(trimmed[k])))
+        trimmed[key] = trimmed[key][:-1]
+        shown = ", ".join(
+            f"{len(trimmed[k])} of {n} {k}" for k, n in totals.items() if len(trimmed[k]) < n
+        )
+        text = _dump({**trimmed, "shown": f"{shown}; narrow the request to see the rest"})
+    return text
+
+
 def _chars(messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None) -> int:
     """Size of a request as sent - the measure the token estimate is calibrated on."""
     return len(json.dumps(messages, default=str)) + len(json.dumps(tools or []))
@@ -335,35 +367,8 @@ class Investigator:
         raise AssertionError("unreachable")
 
     def _result_payload(self, result: dict[str, Any]) -> str:
-        """A tool result as the model sees it, cut to size by whole rows.
-
-        Cutting mid-JSON (the first attempt) left the model unsure what it had
-        missed, and it re-ran the same query. Dropping whole rows and saying how
-        many were shown tells it to narrow the query instead.
-        """
-        limit = settings.agent_tool_result_chars
-
-        def dump(value: Any) -> str:
-            return json.dumps(value, separators=(",", ":"), default=str, ensure_ascii=False)
-
-        text = dump(result)
-        lists = [k for k, v in result.items() if isinstance(v, list) and v]
-        if len(text) <= limit or not lists:
-            return text if len(text) <= limit else text[:limit] + ' ..."(truncated)"'
-        key = max(lists, key=lambda k: len(dump(result[k])))
-        items = result[key]
-        keep = len(items)
-        while keep > 1:
-            keep -= 1
-            trimmed = {
-                **result,
-                key: items[:keep],
-                "shown": f"{keep} of {len(items)} {key}; narrow the request to see the rest",
-            }
-            text = dump(trimmed)
-            if len(text) <= limit:
-                return text
-        return text[:limit] + ' ..."(truncated)"'
+        """A tool result as the model sees it: cut to size by whole rows (see fit_json)."""
+        return fit_json(result, settings.agent_tool_result_chars)
 
     def investigate(self, case: Case) -> InvestigationResult:
         started = time.perf_counter()
