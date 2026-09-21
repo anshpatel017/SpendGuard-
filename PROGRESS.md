@@ -232,6 +232,30 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ---
 
+### Between phases — first live verified run, and Gemini as a provider (`567ccd0`, `1bf735a`)
+
+Not a phase: fixes found by the first real run of the Verifier, and the provider switch decided before Phase 9.
+
+**The first live verified run (2026-09-22, Groq)** investigated one case before the daily quota ran out.
+- **Result:** the agent called a split case genuine, and it was: a planted *duplicate* that D2 had also flagged as a split. The agent even suggested checking for a duplicate record.
+- **Citations:** all 12 existed and matched (100% deterministic); 83% were supported (model-judged).
+- **Released as `failed_after_retries`.** Two bugs explain that, both fixed with regression tests built from the real data:
+  - **The judge was shown evidence cut mid-text.** Each tool result was cut at 700 characters; the vendor profile's `looks_like_fixed_contract: false` sat at character 952. So the judge rejected a true claim, which forced a revision and used up the quota. Results are now shrunk by whole list items with every summary field kept (`fit_json`, shared with the Investigator).
+  - **Triage scored real fraud as a false alarm.** The case counted as "spurious" because it touched no planted *split*. A case now counts as spurious only if it touches no planted anomaly of any type.
+
+**Gemini as a provider (D-33).** You decided on Gemini's free tier for the Phase 9 evaluation runs, with Ollama later when there is disk space.
+- **One line switches:** `LLM_PROVIDER=groq | gemini | ollama`. Each provider keeps its own key, endpoint and model (`GROQ_*`, `GEMINI_*`, `OLLAMA_*`), and an explicit `LLM_*` value still overrides. Your `.env` Groq entries were renamed to `GROQ_*` without touching the key, and an empty `GEMINI_API_KEY` was added.
+- **Gemini's rate-limit wording** ("retry in 17.5s", `retryDelay`) is read. A per-day quota ends the run for resumption, even when it hints at a short wait.
+- **Evaluation is per model:** progress and triage count only notes by the running model, so Groq and Gemini results never blend.
+- **Caveats recorded:** Gemini free-tier prompts may be used by Google (fine for synthetic and public data, never for confidential records). Free-tier limits are per account and will be measured on first use.
+- **Fixed along the way:** literal backspace bytes that had replaced a regex's `\b` word boundaries.
+
+**Files:** `agent/investigator.py` (`fit_json`), `agent/verifier.py`, `agent/llm.py`, `config.py` (per-provider settings, `endpoint_for`), `db/store.py` (`latest_note` by model), `investigation.py`, `api/overview.py`, `.env.example`, tests in `test_verifier.py`, `test_investigation.py`, `test_llm.py`, and `docs/DECISIONS.md` (D-31 addendum, D-33).
+
+**671 backend tests** (+7 live, opt-in) **and 29 frontend tests passing.**
+
+---
+
 ## Current Phase
 
 ### Phase 9 — Evaluation, real data and freeze 🚧 not started
@@ -244,9 +268,14 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ## Next Steps
 
-1. **Resume the live evaluation when the quota refills:** `spendguard investigate --eval-seed 42 --per-type 1` continues the sample with the Verifier on; 4 cases remain (real inflation, split and vendor flag, plus one spurious inflation). The first live run (2026-09-22) did one case before the quota ran out, and exposed two bugs, now fixed (D-31): the judge was shown tool results cut mid-text, and a planted duplicate flagged as a split was scored as a false alarm.
-2. **Get a free Gemini API key (you, ~2 minutes)** — decided 2026-09-22 (D-33): Gemini for the evaluation runs, Ollama later when there is disk space. Create the key at https://aistudio.google.com/apikey, paste it into `.env` after `GEMINI_API_KEY=` (never into chat), set `LLM_PROVIDER=gemini`, then run `spendguard check-llm`. `LLM_PROVIDER=groq` switches back. Your `.env` Groq entries were renamed to `GROQ_*`; the key itself was not touched.
+1. **Get a free Gemini API key (you, ~2 minutes).**
+   - Create it at https://aistudio.google.com/apikey.
+   - Paste it into `.env` after `GEMINI_API_KEY=` — never into chat.
+   - Set `LLM_PROVIDER=gemini`, then run `spendguard check-llm`.
+   - Optionally, note the daily request limit (RPD) for `gemini-2.5-flash` at https://aistudio.google.com/rate-limit.
+   - `LLM_PROVIDER=groq` switches back.
+2. **Then say "start Phase 9".** No LLM is needed for detector reproducibility, the frozen demo and the live-injection endpoint, MLflow, the ablation code or the grading kit, so those come first. The agent evaluation runs daily alongside them. On Gemini, the seed-42 sample starts fresh (5 cases), because results are per model. The Groq sample still has 4 cases left if you want to finish it: `LLM_PROVIDER=groq`, then `spendguard investigate --eval-seed 42 --per-type 1`.
 3. **Download the Kaggle "Large Purchases by the State of California" CSV** into `data/raw/` — needed for the real-data part of Phase 9.
 4. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred).
-5. **Before the local-runtime proof** — install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M`.
-6. **Housekeeping:** all work sits on `main` and is committed locally but **not pushed**. Say the word and I will push, or set up a branch-and-PR flow.
+5. **Later, when there is disk space:** install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M` for the fully-local proof; then `LLM_PROVIDER=ollama`.
+6. **Housekeeping:** `main` is 5 commits ahead of GitHub (`0035fe8`, `2fb6f8d`, `567ccd0`, `1bf735a` and this update). Push when ready with `git push`.
