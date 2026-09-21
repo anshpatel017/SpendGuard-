@@ -188,7 +188,7 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ---
 
-### Phase 8 — API and dashboard ✅
+### Phase 8 — API and dashboard ✅ (`a5789ec`, `0035fe8`)
 
 **Built:** the FastAPI backend (`spendguard serve`) and the React dashboard it serves.
 - **API** (`/api/v1`): the case queue with filters, sorting and paging; case detail with the audit note, per-citation check results, evidence and context rows, and the trace; paged evidence; single-transaction lookup; the review action; metrics; evaluation results; run history; health. Errors are structured, never a stack trace. OpenAPI is published at `/docs` and exported by `spendguard openapi`.
