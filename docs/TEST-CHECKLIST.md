@@ -109,17 +109,17 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 ## 5. Investigator agent
 
-- [ ] **[int]** Output parses and validates against the audit note JSON schema. [FR-3.1]
-- [ ] **[int]** The loop terminates at the step bound and does not run unbounded. [FR-3.2]
-- [ ] **[int]** Every claim in the note carries at least one citation. [FR-3.5]
-- [ ] **[int]** Every cited row_id exists in `transactions`. [FR-3.5]
-- [ ] **[int]** Exactly one verdict is emitted, from the allowed set. [FR-3.6]
+- [x] **[int]** Output parses and validates against the audit note JSON schema. [FR-3.1]
+- [x] **[int]** The loop terminates at the step bound and does not run unbounded. [FR-3.2]
+- [x] **[int]** Every claim in the note carries at least one citation. [FR-3.5]
+- [ ] **[int]** Every cited row_id exists in `transactions`. [FR-3.5] *(Investigator flags citations of rows it never saw; the existence check itself is the Verifier's, Phase 7.)*
+- [x] **[int]** Exactly one verdict is emitted, from the allowed set. [FR-3.6]
 - [ ] **[int]** A clean, obviously legitimate case yields `likely_false_positive` with a stated reason. [FR-3.6]
 - [ ] **[int]** An obvious injected duplicate yields `likely_true_positive`. [FR-3.6]
-- [ ] **[int]** The agent performs no writes to case state. [FR-3.7]
-- [ ] **[int]** A trace is recorded with tool name, arguments, result, latency and token counts for every step. [FR-3.8]
-- [ ] **[int]** Investigation runs on exactly the configured top-N cases, ordered by `severity_prelim`. [FR-3.9]
-- [ ] **[int]** Switching the configured provider changes the endpoint used and nothing else. [FR-3.11]
+- [x] **[int]** The agent performs no writes to case state. [FR-3.7]
+- [x] **[int]** A trace is recorded with tool name, arguments, result, latency and token counts for every step. [FR-3.8]
+- [x] **[int]** Investigation runs on exactly the configured top-N cases, ordered by `severity_prelim`. [FR-3.9]
+- [x] **[int]** Switching the configured provider changes the endpoint used and nothing else. [FR-3.11]
 - [ ] **[man]** Read ten generated notes end to end and confirm they are coherent, specific, and free of invented entities.
 
 ---
@@ -188,7 +188,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[int]** D4 vendor-level cases are matched by the rule appropriate to vendor-level cases, not by row overlap. [Open issue]
 - [ ] **[int]** Citation validity is reported split into deterministic and semantic. [FR-7.5]
 - [ ] **[int]** Triage accuracy is computed only over investigated cases, and the report states that this sample is severity-biased. [FR-7.6]
-- [ ] **[int]** Efficiency metrics — tool calls, tokens, latency — are recorded per case. [FR-7.7]
+- [x] **[int]** Efficiency metrics — tool calls, tokens, latency — are recorded per case. [FR-7.7]
 - [ ] **[int]** The Verifier-off ablation runs and produces a comparison table. [FR-7.8]
 - [ ] **[int]** The template-notes ablation runs and produces a comparison table. [FR-7.9]
 - [ ] **[int]** Every run is logged to the experiment tracker with its parameters, seeds and results. [FR-7.10] *(logged to DuckDB `eval_results` + JSON/Markdown reports now; MLflow wiring in Phase 10)*

@@ -14,14 +14,16 @@ from spendguard.agent.llm import (
     LLMCallError,
     LLMClient,
     LLMNotConfiguredError,
+    LLMQuotaExhaustedError,
     _parse_arguments,
+    retry_after_seconds,
 )
 from spendguard.config import LLMProvider
 
 
-def _response(status: int) -> Any:
+def _response(status: int, headers: dict[str, str] | None = None) -> Any:
     """Minimal stand-in for an httpx response: the SDK reads .request off it."""
-    return type("R", (), {"status_code": status, "headers": {}, "request": None})()
+    return type("R", (), {"status_code": status, "headers": headers or {}, "request": None})()
 
 
 class _Function:
@@ -127,6 +129,87 @@ def test_a_rate_limit_is_retried(client: Any, monkeypatch: pytest.MonkeyPatch) -
     llm, stub = client([error, _Completion(_Message("recovered"))])
     assert llm.chat([{"role": "user", "content": "x"}]).content == "recovered"
     assert len(stub.requests) == 2
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        ("Rate limit reached ... Please try again in 27.9s. Need more tokens?", 27.9),
+        ("Please try again in 1m2.5s.", 62.5),
+        ("Please try again in 450ms.", 0.45),
+        ("Service unavailable", None),
+    ],
+)
+def test_the_servers_requested_wait_is_read_from_the_message(
+    message: str, expected: float | None
+) -> None:
+    import openai
+
+    error = openai.APIStatusError(message, response=_response(429), body=None)
+    wait = retry_after_seconds(error)
+    assert wait == pytest.approx(expected) if expected is not None else wait is None
+
+
+def test_a_retry_after_header_wins_over_the_message() -> None:
+    import openai
+
+    error = openai.APIStatusError(
+        "try again in 30s", response=_response(429, {"retry-after": "4"}), body=None
+    )
+    assert retry_after_seconds(error) == 4.0
+
+
+def test_a_rate_limit_waits_as_long_as_the_server_asks(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Free tiers limit tokens per minute; a 1-2-4 s backoff gave up far too early."""
+    import openai
+
+    slept: list[float] = []
+    monkeypatch.setattr("time.sleep", slept.append)
+    limited = [
+        openai.APIStatusError("Please try again in 20s.", response=_response(429), body=None)
+        for _ in range(4)
+    ]
+    llm, stub = client([*limited, _Completion(_Message("through"))], max_retries=3)
+    assert llm.chat([{"role": "user", "content": "x"}]).content == "through"
+    assert slept == [20.5] * 4  # four waits, more than max_retries: waits are not failures
+    assert llm.rate_limit_wait_seconds == pytest.approx(82.0)
+    assert len(stub.requests) == 5
+
+
+def test_an_exhausted_quota_ends_the_run_instead_of_hanging_it(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import openai
+
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    daily = openai.APIStatusError(
+        "Rate limit reached on tokens per day (TPD): Limit 200000, Used 199256. "
+        "Please try again in 21m22.176s.",
+        response=_response(429),
+        body=None,
+    )
+    llm, stub = client([daily])
+    with pytest.raises(LLMQuotaExhaustedError, match="retry in 1282s"):
+        llm.chat([{"role": "user", "content": "x"}])
+    assert len(stub.requests) == 1
+
+
+def test_a_limit_that_never_clears_is_a_failure_not_a_quota(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import openai
+
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    busy = [
+        openai.APIStatusError("Please try again in 5s.", response=_response(429), body=None)
+        for _ in range(10)
+    ]
+    llm, _ = client(busy)
+    with pytest.raises(LLMCallError, match="not clearing") as caught:
+        llm.chat([{"role": "user", "content": "x"}])
+    assert not isinstance(caught.value, LLMQuotaExhaustedError)
 
 
 def test_a_refused_request_is_not_retried(client: Any) -> None:

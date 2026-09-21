@@ -220,7 +220,7 @@ class ToolBox:
                         "row_id": {"type": "integer", "description": "The row to compare."},
                         "limit": {
                             "type": "integer",
-                            "description": f"Maximum comparable rows, default 10, max {MAX_ROWS}.",
+                            "description": f"Rows per list, default 5, max {MAX_ROWS}.",
                         },
                     },
                     "required": ["row_id"],
@@ -361,7 +361,7 @@ class ToolBox:
         profile["looks_like_fixed_contract"] = bool(recurring)
         return profile
 
-    def find_similar_invoices(self, row_id: int, limit: int = 10) -> dict[str, Any]:
+    def find_similar_invoices(self, row_id: int, limit: int = 5) -> dict[str, Any]:
         limit = max(1, min(int(limit), MAX_ROWS))
         subject = self._rows(f"SELECT * FROM {AUDIT_VIEW} WHERE row_id = ?", [row_id])
         if not subject:

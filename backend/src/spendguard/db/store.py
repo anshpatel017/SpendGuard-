@@ -9,22 +9,28 @@ from the detector and the rows it covers, so the same anomaly found again maps
 to the same case. Its detector fields are refreshed; its status, reviewer note
 and investigation state are left untouched.
 
+Investigation results live here too: one audit note per investigation, one
+citation row per (claim, cited row), and every step of the agent's trace.
+
 Swapping to PostgreSQL is a one-line change to ``DATABASE_URL``.
 """
 
 from __future__ import annotations
 
+import json
+import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
     JSON,
     Boolean,
     DateTime,
     Float,
+    Integer,
     String,
     Text,
     create_engine,
@@ -35,8 +41,11 @@ from sqlalchemy import (
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
-from spendguard.cases import Case
+from spendguard.cases import AnomalyType, Case
 from spendguard.config import settings
+
+if TYPE_CHECKING:
+    from spendguard.agent.investigator import InvestigationResult
 
 
 class CaseStatus(StrEnum):
@@ -92,6 +101,83 @@ class RunRecord(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime)
 
 
+class VerificationStatus(StrEnum):
+    UNVERIFIED = "unverified"  # written by the Investigator, not yet checked (Phase 7)
+    VERIFIED = "verified"
+    FAILED_AFTER_RETRIES = "failed_after_retries"
+
+
+class AuditNoteRecord(Base):
+    """One note per investigation. A case investigated twice keeps both; the newest counts."""
+
+    __tablename__ = "audit_notes"
+
+    note_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    run_id: Mapped[str] = mapped_column(String(80), index=True)
+    verdict: Mapped[str] = mapped_column(String(30), index=True)
+    finding: Mapped[str] = mapped_column(Text)
+    recommended_action: Mapped[str] = mapped_column(Text)
+    claims: Mapped[list[dict[str, Any]]] = mapped_column(JSON)  # the structured claims
+    policy_clauses: Mapped[list[str]] = mapped_column(JSON, default=list)
+    verification_status: Mapped[str] = mapped_column(
+        String(30), default=VerificationStatus.UNVERIFIED.value, index=True
+    )
+    citations_checked: Mapped[int | None] = mapped_column(Integer)
+    citations_passed: Mapped[int | None] = mapped_column(Integer)
+    deterministic_passed: Mapped[int | None] = mapped_column(Integer)
+    semantic_passed: Mapped[int | None] = mapped_column(Integer)
+    retry_count: Mapped[int] = mapped_column(Integer, default=0)
+    model_name: Mapped[str] = mapped_column(String(100))
+    is_ablation: Mapped[bool] = mapped_column(Boolean, default=False)
+    ablation_name: Mapped[str | None] = mapped_column(String(50))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class CitationRecord(Base):
+    """One row per (claim, cited row), so citation validity is a query, not text parsing.
+
+    ``asserted`` holds the field values the claim states about this row; the
+    Verifier fills ``row_exists`` / ``values_match`` / ``supports_claim``.
+    """
+
+    __tablename__ = "citations"
+
+    citation_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    note_id: Mapped[str] = mapped_column(String(36), index=True)
+    claim_index: Mapped[int] = mapped_column(Integer)
+    claim_text: Mapped[str] = mapped_column(Text)
+    row_id: Mapped[int] = mapped_column(Integer, index=True)
+    asserted: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    row_exists: Mapped[bool | None] = mapped_column(Boolean)
+    values_match: Mapped[bool | None] = mapped_column(Boolean)
+    supports_claim: Mapped[bool | None] = mapped_column(Boolean)
+    failure_reason: Mapped[str | None] = mapped_column(Text)
+
+
+class TraceRecord(Base):
+    """Every step of every investigation, including the ones that failed."""
+
+    __tablename__ = "agent_traces"
+
+    trace_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    run_id: Mapped[str] = mapped_column(String(80), index=True)
+    note_id: Mapped[str | None] = mapped_column(String(36), index=True)
+    role: Mapped[str] = mapped_column(String(20), default="investigator")
+    step_index: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(String(20))
+    tool_name: Mapped[str | None] = mapped_column(String(40))
+    tool_args: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    tool_result: Mapped[Any] = mapped_column(JSON)
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+    prompt_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
+    detail: Mapped[str | None] = mapped_column(Text)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
 class StoreMismatchError(RuntimeError):
     """The store already holds cases for a different dataset."""
 
@@ -128,7 +214,9 @@ def save_cases(
                 "Re-run with --reset to clear it, or point DATABASE_URL at another store."
             )
         if reset:
-            session.execute(delete(CaseRecord))
+            # Notes, citations and traces belong to the cases being cleared.
+            for table in (CitationRecord, TraceRecord, AuditNoteRecord, CaseRecord):
+                session.execute(delete(table))
 
         existing = {
             r.case_id: r
@@ -209,3 +297,152 @@ def set_status(
         if note is not None:
             record.reviewer_note = note
     return record
+
+
+# ------------------------------------------------------------------ investigation
+
+# Tool results are stored for the trace view, capped so one 50-row query cannot
+# bloat the store. The cap is recorded, never silent.
+TRACE_RESULT_CHARS = 20_000
+
+
+def _trace_result(value: Any) -> Any:
+    text = json.dumps(value, default=str, ensure_ascii=False)
+    if len(text) <= TRACE_RESULT_CHARS:
+        return json.loads(text)  # a JSON-safe copy: dates become strings
+    return {"truncated": True, "chars": len(text), "head": text[:TRACE_RESULT_CHARS]}
+
+
+def case_from_record(record: CaseRecord) -> Case:
+    """Rebuild the detector's case from its stored form, for investigation."""
+    return Case(
+        case_id=record.case_id,
+        anomaly_type=AnomalyType(record.anomaly_type),
+        detector=record.detector,
+        row_ids=tuple(record.row_ids),
+        detector_score=record.detector_score,
+        amount_at_risk=record.amount_at_risk,
+        severity_prelim=record.severity_prelim,
+        vendor_key=record.vendor_key,
+        metadata=record.details or {},
+    )
+
+
+def cases_to_investigate(
+    engine: Engine,
+    *,
+    top_n: int | None = None,
+    anomaly_type: str | None = None,
+    case_ids: Sequence[str] | None = None,
+    include_investigated: bool = False,
+) -> list[Case]:
+    """Highest preliminary severity first: investigation is top-N (decision D-05).
+
+    Cases a person has already confirmed or dismissed are skipped - model time
+    is not spent second-guessing a decision already made. Naming case ids
+    explicitly overrides every filter.
+    """
+    query = select(CaseRecord)
+    if case_ids:
+        query = query.where(CaseRecord.case_id.in_(list(case_ids)))
+    else:
+        if not include_investigated:
+            query = query.where(CaseRecord.investigated.is_(False))
+        if anomaly_type:
+            query = query.where(CaseRecord.anomaly_type == anomaly_type)
+        query = query.where(
+            CaseRecord.status.in_([CaseStatus.NEW.value, CaseStatus.UNDER_REVIEW.value])
+        )
+    query = query.order_by(CaseRecord.severity_prelim.desc(), CaseRecord.case_id)
+    if top_n is not None and not case_ids:
+        query = query.limit(top_n)
+    with Session(engine) as session:
+        return [case_from_record(r) for r in session.scalars(query)]
+
+
+def save_investigation(
+    engine: Engine,
+    run_id: str,
+    result: InvestigationResult,
+    *,
+    ablation_name: str | None = None,
+) -> str | None:
+    """Store the note, its citations and the full trace. Returns the note id, if any.
+
+    The case is marked investigated and its final severity set, but its review
+    status is never changed: the agent recommends, a person decides (D-04). A
+    failed investigation stores its trace - that is what explains the failure -
+    and leaves the case uninvestigated. An ablation run stores its note for
+    comparison and leaves the case alone.
+    """
+    note_id: str | None = None
+    with Session(engine) as session, session.begin():
+        if result.note is not None:
+            note_id = str(uuid.uuid4())
+            session.add(
+                AuditNoteRecord(
+                    note_id=note_id,
+                    case_id=result.case_id,
+                    run_id=run_id,
+                    verdict=result.note.verdict.value,
+                    finding=result.note.finding,
+                    recommended_action=result.note.recommended_action,
+                    claims=[c.model_dump(mode="json") for c in result.note.claims],
+                    policy_clauses=list(result.note.policy_clauses),
+                    model_name=result.model,
+                    is_ablation=ablation_name is not None,
+                    ablation_name=ablation_name,
+                )
+            )
+            for index, claim in enumerate(result.note.claims):
+                for row_id in claim.row_ids:
+                    asserted = {f.field: f.value for f in claim.facts if f.row_id == row_id}
+                    session.add(
+                        CitationRecord(
+                            citation_id=str(uuid.uuid4()),
+                            note_id=note_id,
+                            claim_index=index,
+                            claim_text=claim.text,
+                            row_id=row_id,
+                            asserted=_trace_result(asserted),
+                        )
+                    )
+        for step in result.trace:
+            session.add(
+                TraceRecord(
+                    trace_id=str(uuid.uuid4()),
+                    case_id=result.case_id,
+                    run_id=run_id,
+                    note_id=note_id,
+                    step_index=step.step_index,
+                    kind=step.kind,
+                    tool_name=step.tool_name,
+                    tool_args=_trace_result(step.tool_args),
+                    tool_result=_trace_result(step.tool_result),
+                    latency_ms=step.latency_ms,
+                    prompt_tokens=step.prompt_tokens,
+                    completion_tokens=step.completion_tokens,
+                    detail=step.note,
+                    error=step.error,
+                )
+            )
+        if note_id is not None and ablation_name is None:
+            record = session.get(CaseRecord, result.case_id)
+            if record is not None:
+                record.investigated = True
+                record.severity_final = result.severity_final
+                if result.severity_band is not None:
+                    record.severity_band = result.severity_band
+                record.dismissed_by_agent = result.dismissed_by_agent
+    return note_id
+
+
+def latest_note(engine: Engine, case_id: str) -> AuditNoteRecord | None:
+    """The note that currently stands for a case: newest, ablations excluded."""
+    with Session(engine, expire_on_commit=False) as session:
+        return session.scalars(
+            select(AuditNoteRecord)
+            .where(AuditNoteRecord.case_id == case_id, AuditNoteRecord.is_ablation.is_(False))
+            .order_by(AuditNoteRecord.created_at.desc())
+            .limit(1)
+        ).first()

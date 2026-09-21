@@ -131,6 +131,13 @@ class Settings(BaseSettings):
     llm_timeout_seconds: int = 120
 
     agent_max_steps: int = 12
+    # Tool results are truncated before going back to the model. Every turn resends
+    # the whole conversation, so an oversized result is paid for on every step.
+    agent_tool_result_chars: int = 2_500
+    # Largest request the agent may send, in input tokens. Groq's free tier refuses
+    # anything over ~7,000 (HTTP 413) and Ollama silently truncates past num_ctx, so
+    # the oldest tool results are trimmed to stay under this. Keep it below both.
+    agent_context_tokens: int = 5_500
     verifier_max_retries: int = 2
     investigate_top_n: int = 50
 

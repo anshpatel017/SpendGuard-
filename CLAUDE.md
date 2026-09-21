@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–5 complete · 528 tests passing · currently on Phase 6 (Investigator).
+> **Status:** Phases 0–6 complete · 595 tests passing · currently on Phase 7 (Verifier).
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -45,18 +45,21 @@ SpendGuard/
 │   │   ├── config.py           SINGLE source of truth for every tunable value
 │   │   ├── policy_check.py     parses policy.md thresholds; fails build on drift
 │   │   ├── cases.py            Case model, AnomalyType, severity (D-02, D-08)
-│   │   ├── cli.py              generate · ingest · detect · inject · evaluate · check-policy
+│   │   ├── cli.py              generate · ingest · detect · inject · evaluate ·
+│   │   │                    investigate · check-llm · check-policy
 │   │   ├── detection.py        `spendguard detect` orchestration → case store
+│   │   ├── investigation.py    `spendguard investigate`: top-N from the store, or eval mode
 │   │   ├── db/duck.py          DuckDB schema, audit_transactions view, writers
-│   │   ├── db/store.py         SQLAlchemy case store, review workflow
+│   │   ├── db/store.py         case store, review workflow, notes · citations · traces
 │   │   ├── pipeline/           synthetic generator, ingestion, vendor normalization
 │   │   ├── detectors/          base · baseline · d1_duplicates · d2_splits
 │   │   │                    d3_inflation · d4_vendor
-│   │   ├── eval/               injection harness · matching · metrics · runner
+│   │   ├── eval/               injection harness · matching · metrics · runner · triage
 │   │   ├── agent/              llm (provider switch) · tools (the six) · policy (RAG)
-│   │   │                    investigator + verifier are Phase 6-7, next
+│   │   │                    note (schema) · prompts · investigator (the loop)
+│   │   │                    verifier is Phase 7, next
 │   │   └── api/                (empty — Phase 8)
-│   └── tests/                  mirrors src; 528 tests
+│   └── tests/                  mirrors src; 595 tests (+6 live, opt-in)
 ├── docs/                       DESIGN · REQUIREMENTS · ARCHITECTURE · DATA-SCHEMA
 │                               API-CONTRACT · EVALUATION · TEST-CHECKLIST
 │                               DECISIONS (binding) · PHASE-PLAN
@@ -78,6 +81,9 @@ SpendGuard/
 6. **Tune on the dev seed (42) only**; report on held-out seeds (7, 2026).
 7. **Agent tools never raise.** A failure is `{"error": ...}` the model can read and recover from.
    Tools read `audit_transactions` only, through a read-only connection.
+8. **The agent never changes review status.** It writes a note, a verdict and `severity_final`;
+   only a person moves a case (D-04). Every request fits `AGENT_CONTEXT_TOKENS` (D-30).
+9. **Live LLM tests are opt-in** (`-m llm`). The default suite and CI never call a rate-limited API.
 
 **Style**
 
@@ -104,6 +110,8 @@ spendguard ingest <csv>              # clean, normalize, load DuckDB + dataset c
 spendguard detect                    # D1-D4 over 100% of rows -> case store
 spendguard inject --seed 42          # plant known anomalies in a copy -> ground truth
 spendguard evaluate --seed 42 --detector baseline --detector d1 --detector d2 --detector d3 --detector d4
+spendguard investigate --top 10      # Investigator on the 10 highest-severity open cases
+spendguard investigate --eval-seed 42 --per-type 2   # triage accuracy on planted anomalies
 spendguard check-llm                 # endpoint answers, and tool calling works
 spendguard check-policy              # policy.md and config.py agree?
 ```
@@ -111,11 +119,12 @@ spendguard check-policy              # policy.md and config.py agree?
 The venv is at `.venv`; with it active the bare `spendguard` command works, otherwise use `./.venv/Scripts/spendguard.exe`.
 
 ```bash
-./.venv/Scripts/python.exe -m pytest backend                          # tests
+./.venv/Scripts/python.exe -m pytest backend                          # tests (offline)
+./.venv/Scripts/python.exe -m pytest backend -m llm                   # live LLM tests, minutes
 ./.venv/Scripts/python.exe -m ruff check backend/src backend/tests    # lint
 ./.venv/Scripts/python.exe -m ruff format backend/src backend/tests   # format
 ./.venv/Scripts/python.exe -m mypy --config-file backend/pyproject.toml backend/src
-./.venv/Scripts/python.exe -m pip install -e "./backend[dev,detect]"  # install
+./.venv/Scripts/python.exe -m pip install -e "./backend[dev,detect,agent]"  # install
 ```
 
 CI runs lint → format check → mypy → pytest on every push.
@@ -129,16 +138,18 @@ Copy `.env.example` to `.env` (gitignored). Names only, no secrets in the repo:
 - **Reproducibility:** `RANDOM_SEED`
 - **Currency:** `CURRENCY` (INR)
 - **Policy thresholds:** `APPROVAL_THRESHOLD`, `DIRECT_PURCHASE_CEILING`, `LIMITED_TENDER_CEILING`, `DUPLICATE_AMOUNT_TOLERANCE`, `DUPLICATE_DATE_WINDOW_DAYS`, `SPLIT_WINDOW_DAYS`, `PREPAYMENT_LOOKBACK_DAYS`, `NEW_VENDOR_DAYS`, `PRICE_HISTORY_MONTHS`
-- **LLM (Phase 5+):** `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TEMPERATURE`, `AGENT_MAX_STEPS`, `VERIFIER_MAX_RETRIES`, `INVESTIGATE_TOP_N`
+- **LLM (Phase 5+):** `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TEMPERATURE`, `AGENT_MAX_STEPS`, `AGENT_CONTEXT_TOKENS`, `VERIFIER_MAX_RETRIES`, `INVESTIGATE_TOP_N`
 - **Stores:** `DATABASE_URL` (defaults to SQLite under `data/processed/`)
 
-Outstanding manual steps: a **Groq API key** before Phase 5, **Ollama + Qwen2.5-3B** before the local-runtime proof, and the **Kaggle California PO dataset** into `data/raw/` before Phase 9.
+The Groq key is set and verified (`spendguard check-llm`). Outstanding manual steps: **Ollama + Qwen2.5-3B** before the local-runtime proof, and the **Kaggle California PO dataset** into `data/raw/` before Phase 9.
+
+The `agent` extra pulls PyTorch (via sentence-transformers) and is a large download. CI installs only `dev,detect`, so tests needing the embedding model or a key skip there rather than fail.
 
 ---
 
 ## 7. Important decisions
 
-Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-28). The ones that shape day-to-day work:
+Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-30). The ones that shape day-to-day work:
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
@@ -158,4 +169,11 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-28
   Chunk on clause boundaries — half a clause reads as authoritative and is incomplete.
 - **D-28** Agent tools: read-only connection, a view without the answer key, a validated
   single-SELECT, and errors returned as data.
-- **O-03/04/05** remain open — see the decision log.
+- **D-29** Notes are structured claims (`row_ids` + checkable `facts`), so the Verifier checks
+  data, not prose. The prompt shows one example of the case's type and asks for the innocent
+  explanation first.
+- **D-30** Groq free tier: ~8k input tokens/min and **200k tokens/day (~10 investigations)**.
+  The client waits as long as a 429 asks; the loop trims the bulkiest old tool results to fit
+  the token budget; a spent daily quota stops the run, and the next run resumes.
+- **O-04** implemented as recommended (the number moves with the band), awaiting confirmation.
+  **O-05** open.

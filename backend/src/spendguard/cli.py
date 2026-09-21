@@ -5,6 +5,8 @@ spendguard ingest <csv>             CSV -> DuckDB transactions + dataset card
 spendguard detect                   run the detectors, store cases for review
 spendguard inject                   plant seeded anomalies in a copy of the database
 spendguard evaluate                 score detectors against the planted anomalies
+spendguard investigate              the Investigator on the top-N cases (or --eval-seed)
+spendguard check-llm                the LLM endpoint answers and can call tools?
 spendguard check-policy             policy.md and config.py agree?
 """
 
@@ -226,6 +228,112 @@ def evaluate(
                 f"{m.fp:,}",
                 f"{m.fn:,}",
                 style=style,
+            )
+        console.print(table)
+    for path_out in run.report_paths:
+        console.print(f"[green]Report[/green] {path_out}")
+
+
+@app.command()
+def investigate(
+    top: Annotated[int | None, typer.Option(help="How many cases, highest severity first.")] = None,
+    anomaly_type: Annotated[
+        str | None,
+        typer.Option("--type", help="Only this type: duplicate, split, inflation, vendor_flag."),
+    ] = None,
+    case: Annotated[
+        list[str] | None, typer.Option(help="Investigate these case ids. Repeatable.")
+    ] = None,
+    again: Annotated[bool, typer.Option(help="Include cases already investigated.")] = False,
+    eval_seed: Annotated[
+        int | None,
+        typer.Option(help="Evaluation mode: sample cases from this injected database instead."),
+    ] = None,
+    per_type: Annotated[
+        int, typer.Option(help="Evaluation mode: real and spurious cases per type.")
+    ] = 2,
+) -> None:
+    """Investigate prioritized cases and write cited audit notes. Never closes a case."""
+    from spendguard.agent.investigator import InvestigationResult
+    from spendguard.agent.llm import LLMClient, LLMNotConfiguredError
+    from spendguard.cases import Case
+    from spendguard.investigation import evaluate_investigation, run_investigation
+
+    try:
+        llm = LLMClient()
+    except LLMNotConfiguredError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    def progress(i: int, n: int, c: Case, r: InvestigationResult) -> None:
+        verdict = r.verdict.value if r.verdict else f"[red]failed[/red] {(r.error or '')[:80]}"
+        severity = (
+            f"{c.severity_prelim:.1f} -> {r.severity_final:.1f} {r.severity_band}"
+            if r.severity_final is not None
+            else f"{c.severity_prelim:.1f}"
+        )
+        console.print(
+            f"[{i}/{n}] {c.anomaly_type.value:<11} {c.case_id[:8]}  {verdict:<22} "
+            f"severity {severity}  {r.tool_calls} tools  {r.seconds:.0f}s"
+        )
+
+    console.print(f"Model: {llm.model} ({llm.provider.value})")
+    if eval_seed is not None:
+        from spendguard.eval.injection import default_injected_path
+
+        if not default_injected_path(eval_seed).exists():
+            console.print(f"[red]No injected database for seed {eval_seed}.[/red] Run inject.")
+            raise typer.Exit(code=1)
+        run = evaluate_investigation(
+            eval_seed,
+            per_type=per_type,
+            include_investigated=again,
+            llm=llm,
+            on_result=progress,
+        )
+    else:
+        run = run_investigation(
+            top_n=top,
+            anomaly_type=anomaly_type,
+            case_ids=case,
+            include_investigated=again,
+            llm=llm,
+            on_result=progress,
+        )
+
+    s = run.summary()
+    if not s["cases"] and not run.sampled:
+        console.print("[yellow]Nothing to investigate.[/yellow] Run `spendguard detect` first.")
+        return
+    console.print(
+        f"\n{s['completed']}/{s['cases']} notes written - verdicts {s['verdicts']} - "
+        f"{s['tool_calls']} tool calls, {s['prompt_tokens']:,} prompt tokens, "
+        f"{s['seconds']:.0f}s ({s['rate_limit_wait_seconds']:.0f}s waiting on rate limits)"
+    )
+    if run.quota_stopped:
+        console.print(
+            f"[yellow]Stopped: the provider's daily quota ran out.[/yellow] {run.not_attempted} "
+            "case(s) not attempted. Run the same command later; it continues where it stopped."
+        )
+    if run.sampled:
+        console.print(f"Sample: {run.investigated_so_far} of {run.sampled} investigated so far.")
+    if run.triage:
+        table = Table(title=f"Triage - {run.run_id}")
+        for col in ("Type", "Cases", "Real", "Real kept", "Wrongly dismissed", "Spurious filtered"):
+            table.add_column(col, justify="left" if col == "Type" else "right")
+
+        def pct(value: object) -> str:
+            return "-" if value is None else f"{value:.0%}"
+
+        for kind, m in run.triage.items():
+            table.add_row(
+                kind,
+                str(m["cases"]),
+                str(m["real"]),
+                pct(m["real_kept"]),
+                pct(m["real_wrongly_dismissed"]),
+                pct(m["spurious_filtered"]),
+                style="bold" if kind == "all" else None,
             )
         console.print(table)
     for path_out in run.report_paths:

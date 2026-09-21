@@ -119,7 +119,7 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ---
 
-### Phase 5 — Agent tools and policy RAG ✅
+### Phase 5 — Agent tools and policy RAG ✅ (`1603324`)
 
 **Built:** the provider-switchable LLM client, the six agent tools, and semantic retrieval over the procurement policy. Plus `spendguard check-llm`, which verifies the endpoint answers *and* that tool calling works.
 
@@ -138,21 +138,46 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ---
 
+### Phase 6 — Investigator ✅
+
+**Built:** the Investigator — a hand-written, bounded tool-calling loop that briefs the model on a case, runs the tools it asks for, and validates the JSON audit note it returns; the note schema (structured, citable claims); per-type prompts; persistence of notes, per-row citations and full traces; and `spendguard investigate`, with an operational mode (top-N open cases from the store) and an evaluation mode (a seeded sample of real and spurious cases on an injected database, scored for triage).
+
+**Files:** `agent/note.py`, `agent/prompts.py`, `agent/investigator.py`, `investigation.py`, `eval/triage.py`, `db/store.py` (`audit_notes`, `citations`, `agent_traces`), `agent/llm.py` (rate-limit and quota handling), `cli.py`, `config.py` (`AGENT_CONTEXT_TOKENS`, `AGENT_TOOL_RESULT_CHARS`), `tests/test_investigator_note.py`, `tests/test_investigator.py`, `tests/test_investigation.py`, `tests/conftest.py`, `docs/DATA-SCHEMA.md`.
+
+**Exit criterion met:** on the dev seed, the top case of **each of the four types** produced a schema-valid note with every claim cited, no citation of a row the agent had not seen, and a full trace (4–10 tool calls, 15–25k prompt tokens a case). All four were genuine planted anomalies (checked against ground truth); inflation, split and vendor_flag came back `likely_true_positive`, and the duplicate's claims argued for a duplicate, though its verdict line was not captured in the smoke output. The stored evaluation note (a duplicate) is specific and correct: same invoice number one day apart, and it checked the supplier for a fixed monthly contract before concluding.
+
+**Decisions and gotchas:**
+
+- **Notes are structured claims, not prose with citation markers (D-29).** Each claim carries its `row_ids` and optional `facts` (`{row_id, field, value}`), so the Verifier checks data, not text. A fact may only name a field the audit view exposes.
+- **The prompt shows one worked example — the case's own type — and tells the agent to look for the innocent explanation first.** An investigator that only confirms flags adds nothing; dismissal is the contribution (D-04).
+- **A malformed note is sent back with the validation error** (up to twice), and when steps run out a final turn with tools switched off asks for the note. Qwen 3's `<think>` blocks are stripped before parsing.
+- **Free tier limits shaped the loop (D-30).** The first live run failed every case: the client retried a 429 after 1, 2 and 4 s while Groq asked for ~28 s. It now waits as long as the server asks. Then a vendor investigation grew to 7,753 tokens in one request and was refused outright (HTTP 413), so every request now fits a **token budget**: the bulkiest earlier tool results are trimmed to the row ids they held (oldest-first was tried; the model re-requested what it lost). Tool results are cut by whole rows, never mid-JSON.
+- **The binding limit is 200,000 tokens per day — about ten investigations.** Runs now stop cleanly when the daily quota is spent and resume on the next run; evaluation samples accumulate across days, and a quota stop is never scored as an agent failure.
+- **O-04 implemented as recommended** (the number moves with the band) — awaiting your confirmation.
+- **Live LLM tests are now opt-in** (`pytest -m llm`). With a key in `.env` the default suite was calling Groq, which spends the daily quota on every test run.
+- **Seen once, for the Verifier:** a note's recommended action said "duplicate payment", echoing the policy's own "duplicate-payment register" despite the prompt's rule.
+
+**Triage evaluation — started, not finished.** `spendguard investigate --eval-seed 42 --per-type 1` drew 6 cases; 1 completed (a real duplicate, correctly kept) before the daily quota ran out. The triage numbers — real anomalies kept, spurious ones filtered — need the full sample and belong to Phase 9.
+
+**595 tests passing** (+6 live tests, opt-in).
+
+---
+
 ## Current Phase
 
-### Phase 6 — Investigator 🚧 not started
+### Phase 7 — Verifier 🚧 not started
 
-- The bounded tool-calling loop: prompt with the case and the tool schemas, parse the tool call, execute it, feed the result back, repeat to `AGENT_MAX_STEPS`, then emit a structured audit note.
-- Strict JSON schema for the note, with few-shot examples per anomaly type.
-- Every claim must cite `row_id`s; the verdict is one of `likely_true_positive`, `likely_false_positive`, `inconclusive` (D-04).
-- Every step logged as a trace: tool, arguments, result, latency, tokens.
-- Exit criterion: a case goes in, a schema-valid cited audit note comes out, with a full trace stored, on all four anomaly types.
+- Extract every citation from a note (already structured: claims → `row_ids` + `facts`, one `citations` row per claim and row).
+- **Deterministic check:** every cited row exists in `audit_transactions`, and every asserted field value matches the row.
+- **Semantic check:** the cited rows actually support the claim's sentence (LLM judge, small prompt).
+- On failure, regenerate the note with the failure reasons fed back, up to `VERIFIER_MAX_RETRIES`; a note that still fails is stored as `failed_after_retries`, never silently released.
+- Citation validity reported as two numbers, deterministic and semantic (D-13). Add a wording check ("duplicate payment" on PO data).
+- Exit criterion: a note with a planted wrong amount, a nonexistent row, and an unsupported claim is caught on each count; verified notes are marked `verified`.
 
 ## Next Steps
 
-1. **Phase 4 now** — build D3, then D4, evaluate on seeds 42 / 7 / 2026 plus clean data, update this file, commit.
-2. **Before Phase 5** — you create a free **Groq API key** at console.groq.com/keys and paste it into `.env` as `LLM_API_KEY`. Phases 0–4 need no LLM at all.
+1. **Decide how to run the investigation evaluation at scale (your call).** Groq's free tier allows ~10 investigations a day; Phase 9 needs hundreds. Options: (a) **Ollama locally** with Qwen2.5-3B — no limits, fully local (the project's own claim), but a weaker model on a 4 GB GPU; (b) **another free provider** with more generous limits, e.g. Google Gemini's free tier (the client already supports `LLM_PROVIDER=gemini`; needs a free API key from you); (c) **stay on Groq** and let the evaluation accumulate ~10 cases a day. Development of Phase 7 can continue on Groq meanwhile.
+2. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred).
 3. **Before the local-runtime proof** — install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M`.
 4. **Before Phase 9** — download the Kaggle "Large Purchases by the State of California" CSV into `data/raw/`.
-5. **Still open for you to decide:** **O-04** (when the agent drops a case to Low, does `severity_final` become a number below 33 or does only the band move?) and **O-05** (are D3 pseudo-categories from description clustering core or deferred?).
-6. **Housekeeping:** all work sits on `main` and is committed locally but **not pushed**. Say the word and I will push, or set up a branch-and-PR flow.
+5. **Housekeeping:** all work sits on `main` and is committed locally but **not pushed**. Say the word and I will push, or set up a branch-and-PR flow.
