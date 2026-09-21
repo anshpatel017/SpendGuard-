@@ -383,3 +383,21 @@ def test_evaluation_resumes_its_sample_and_never_scores_a_quota_stop(
     second = evaluate(CitesFirstRow())
     assert len(second.results) == first.sampled - 1  # only what was left
     assert second.investigated_so_far == second.sampled == first.sampled
+
+
+def test_an_evaluation_counts_only_notes_by_its_own_model(
+    tmp_path: Path, injected: InjectionResult
+) -> None:
+    """Groq and Gemini notes share the store but never one number (D-33)."""
+    first = evaluate_investigation(
+        11, per_type=1, db_path=injected.out_db, report_dir=tmp_path, llm=CitesFirstRow()
+    )
+    assert first.investigated_so_far == first.sampled
+
+    other_model = CitesFirstRow()
+    other_model.model = "gemini-2.5-flash"
+    second = evaluate_investigation(
+        11, per_type=1, db_path=injected.out_db, report_dir=tmp_path, llm=other_model
+    )
+    assert len(second.results) == first.sampled  # none of the scripted model's notes count
+    assert {r.model for r in second.results} == {"gemini-2.5-flash"}

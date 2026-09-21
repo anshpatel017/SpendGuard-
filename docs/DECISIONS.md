@@ -450,6 +450,23 @@ On any failure the objections go back to the Investigator, which revises, up to 
 
 ---
 
+## D-33 — Gemini for the evaluation runs; Ollama later; one line switches between them
+
+**Decision (user, 2026-09-22).** Run the Phase 9 agent evaluation on **Gemini's free tier**. Groq allows about ten investigations a day, and the evaluation needs hundreds. Ollama is deferred: the dev machine has no disk space for it yet. It stays the path for the "fully local" claim.
+
+**One line switches provider.** `LLM_PROVIDER=groq | gemini | ollama`. Each provider keeps its own key, endpoint and model (`GROQ_*`, `GEMINI_*`, `OLLAMA_*`); an explicit `LLM_*` value still overrides the active one. Before this, switching meant editing three lines and overwriting the other provider's key.
+
+**Evaluation is per model.** A seed's evaluation store can hold notes by several models. A run's progress and its triage numbers count only notes by the model doing the run, so Groq and Gemini results never blend into one figure.
+
+**Rate limits in Gemini's wording.** A 429 says "Please retry in 17.5s" or carries `retryDelay`, and both are read. A **per-day** quota (Gemini's `GenerateRequestsPerDay…`, Groq's `TPD`) ends the run for resumption rather than failing each remaining case, even when it hints at a short wait.
+
+**Caveats, stated.**
+- **Data use:** Gemini's free tier may use prompts to improve Google's products. Acceptable for the synthetic data and the public California dataset; never for an organization's confidential records. That is what the Ollama run is for.
+- **Limits:** the free-tier limits are shown per account in AI Studio, not in public documentation. They are measured on first use, not assumed.
+- **Model:** the default is `gemini-2.5-flash` (stable, described as best price-performance). Newer 3.x Flash models exist; `GEMINI_MODEL` changes it. Prompts were developed on Qwen (D-26), so the first Gemini runs are also a test of how well they transfer.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |

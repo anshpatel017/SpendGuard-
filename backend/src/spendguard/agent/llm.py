@@ -67,8 +67,20 @@ class LLMResponse:
         return self.prompt_tokens + self.completion_tokens
 
 
-# "Please try again in 27.9s" / "in 1m2.5s" / "in 450ms" - Groq's wording on a 429.
-_TRY_AGAIN = re.compile(r"try again in\s+(?:(\d+)m)?\s*(?:(\d+(?:\.\d+)?)s|(\d+)ms)", re.I)
+# How long a 429 asks us to wait, in each provider's wording:
+#   Groq    "Please try again in 27.9s" / "in 1m2.5s" / "in 450ms"
+#   Gemini  "Please retry in 17.508s", and "retryDelay": "17s" in the error details
+_TRY_AGAIN = re.compile(
+    r"(?:try again|retry) in\s+(?:(\d+)m)?\s*(?:(\d+(?:\.\d+)?)s|(\d+)ms)", re.I
+)
+_RETRY_DELAY = re.compile(r"retryDelay['\"]?\s*[:=]\s*['\"](\d+(?:\.\d+)?)s", re.I)
+# A quota counted per day ("tokens per day (TPD)", "GenerateRequestsPerDay..."). It
+# does not clear in minutes, whatever a short retry hint says.
+_PER_DAY = re.compile(r"per\s*day|perday|\bTPD\b|\bRPD\b", re.I)
+
+
+def is_daily_quota(exc: Any) -> bool:
+    return bool(_PER_DAY.search(str(exc)))
 
 
 def retry_after_seconds(exc: Any) -> float | None:
@@ -86,9 +98,11 @@ def retry_after_seconds(exc: Any) -> float | None:
             return float(header)
         except ValueError:
             pass
-    match = _TRY_AGAIN.search(str(exc))
+    text = str(exc)
+    match = _TRY_AGAIN.search(text)
     if not match:
-        return None
+        delay = _RETRY_DELAY.search(text)
+        return float(delay.group(1)) if delay else None
     minutes, seconds, millis = match.groups()
     total = int(minutes or 0) * 60 + float(seconds or 0) + int(millis or 0) / 1000
     return total
@@ -127,16 +141,18 @@ class LLMClient:
         max_retries: int = 3,
     ) -> None:
         self.provider = provider or settings.llm_provider
-        self.base_url = base_url or settings.llm_base_url
-        self.model = model or settings.llm_model
-        self.api_key = api_key or settings.llm_api_key
+        preset_url, preset_model, preset_key = settings.endpoint_for(self.provider)
+        self.base_url = base_url or preset_url
+        self.model = model or preset_model
+        self.api_key = api_key or preset_key
         self.max_retries = max_retries
         self.rate_limit_wait_seconds = 0.0  # total time spent waiting on 429s
 
         if self.provider is not LLMProvider.OLLAMA and self.api_key in ("", "not-set"):
             raise LLMNotConfiguredError(
-                f"No API key for provider '{self.provider.value}'. Copy .env.example to .env "
-                "and set LLM_API_KEY, or switch LLM_PROVIDER to ollama for a local model."
+                f"No API key for provider '{self.provider.value}'. Put it in .env as "
+                f"{self.provider.value.upper()}_API_KEY=..., or switch LLM_PROVIDER to another "
+                "provider (ollama needs no key)."
             )
 
         from openai import OpenAI
@@ -184,6 +200,11 @@ class LLMClient:
                 if exc.status_code not in self.RETRY_STATUSES:
                     raise LLMCallError(f"{self.model} refused the request: {exc}") from exc
                 asked = retry_after_seconds(exc) if exc.status_code == 429 else None
+                daily = exc.status_code == 429 and is_daily_quota(exc)
+                if daily and asked is None:
+                    raise LLMQuotaExhaustedError(
+                        f"{self.model} daily quota exhausted: {exc}"
+                    ) from exc
                 if asked is not None:
                     waits += 1
                     if asked > self.MAX_WAIT_SECONDS:
@@ -191,7 +212,10 @@ class LLMClient:
                             f"{self.model} quota exhausted, retry in {asked:.0f}s: {exc}"
                         ) from exc
                     if waits > self.MAX_RATE_LIMIT_WAITS:
-                        raise LLMCallError(f"{self.model} rate limit not clearing: {exc}") from exc
+                        # A daily quota can hint at a short wait and never clear: stop the
+                        # run then, rather than fail every remaining case one by one.
+                        error = LLMQuotaExhaustedError if daily else LLMCallError
+                        raise error(f"{self.model} rate limit not clearing: {exc}") from exc
                     pause = asked + 0.5
                     self.rate_limit_wait_seconds += pause
                     time.sleep(pause)

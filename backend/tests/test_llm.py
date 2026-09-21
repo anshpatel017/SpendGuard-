@@ -236,8 +236,10 @@ def test_a_missing_key_fails_with_an_instruction_not_a_stack_trace(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr("openai.OpenAI", lambda **kwargs: None)
-    with pytest.raises(LLMNotConfiguredError, match="LLM_API_KEY"):
+    with pytest.raises(LLMNotConfiguredError, match="GROQ_API_KEY"):
         LLMClient(provider=LLMProvider.GROQ, api_key="not-set")
+    with pytest.raises(LLMNotConfiguredError, match="GEMINI_API_KEY"):
+        LLMClient(provider=LLMProvider.GEMINI, api_key="not-set")
 
 
 def test_ollama_needs_no_key(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -283,3 +285,80 @@ def test_health_reports_success(client: Any) -> None:
     llm, _ = client([_Completion(_Message("ok"))])
     health = llm.health()
     assert health["ok"] is True and health["reply"] == "ok"
+
+
+# ------------------------------------------------------------------ Gemini (D-33)
+
+
+@pytest.mark.parametrize(
+    ("message", "expected"),
+    [
+        ("You exceeded your current quota. Please retry in 17.508s.", 17.508),
+        ('[{"error": {"details": [{"retryDelay": "42s"}]}}]', 42.0),
+    ],
+)
+def test_geminis_requested_wait_is_read_too(message: str, expected: float) -> None:
+    import openai
+
+    error = openai.APIStatusError(message, response=_response(429), body=None)
+    assert retry_after_seconds(error) == pytest.approx(expected)
+
+
+def test_a_spent_daily_quota_with_no_wait_stops_the_run_at_once(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import openai
+
+    slept: list[float] = []
+    monkeypatch.setattr("time.sleep", slept.append)
+    daily = openai.APIStatusError(
+        "Quota exceeded for metric generate_content_free_tier_requests, "
+        "quotaId: GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+        response=_response(429),
+        body=None,
+    )
+    llm, stub = client([daily])
+    with pytest.raises(LLMQuotaExhaustedError, match="daily quota"):
+        llm.chat([{"role": "user", "content": "x"}])
+    assert slept == [] and len(stub.requests) == 1
+
+
+def test_a_daily_quota_that_hints_at_a_short_wait_still_ends_as_a_quota_stop(
+    client: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Otherwise every remaining case would wait, fail and be counted as a failure."""
+    import openai
+
+    monkeypatch.setattr("time.sleep", lambda _: None)
+    daily = [
+        openai.APIStatusError(
+            "GenerateRequestsPerDayPerProjectPerModel. Please retry in 30s.",
+            response=_response(429),
+            body=None,
+        )
+        for _ in range(10)
+    ]
+    llm, _ = client(daily)
+    with pytest.raises(LLMQuotaExhaustedError):
+        llm.chat([{"role": "user", "content": "x"}])
+
+
+def test_each_provider_brings_its_own_endpoint_model_and_key(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Switching is LLM_PROVIDER alone; the other two providers' settings stay put."""
+    from spendguard.config import Settings
+
+    s = Settings(
+        _env_file=None,  # type: ignore[call-arg]
+        llm_provider="gemini",
+        groq_api_key="gsk_x",
+        gemini_api_key="gem_y",
+    )
+    assert s.llm_base_url.startswith("https://generativelanguage.googleapis.com")
+    assert s.llm_model == s.gemini_model and s.llm_api_key == "gem_y"
+    assert s.endpoint_for(LLMProvider.GROQ) == (s.groq_base_url, s.groq_model, "gsk_x")
+    assert s.endpoint_for(LLMProvider.OLLAMA)[2] == "ollama"  # no key needed
+
+    explicit = Settings(_env_file=None, llm_provider="gemini", llm_model="gemini-3.8-flash")  # type: ignore[call-arg]
+    assert explicit.llm_model == "gemini-3.8-flash"  # an explicit LLM_* value still wins
