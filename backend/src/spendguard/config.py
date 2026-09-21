@@ -152,6 +152,20 @@ class Settings(BaseSettings):
 
     embedding_model: str = "BAAI/bge-small-en-v1.5"
 
+    # -------------------------------------------------------------------- API
+    # Phase 8. The API reads batch results and writes review state; it never runs
+    # a detector or the LLM inside a request (D-10).
+    api_host: str = "127.0.0.1"
+    api_port: int = 8000
+    # The Vite dev server. The built frontend is served by the API itself.
+    api_cors_origins: list[str] = Field(
+        default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"]
+    )
+    api_page_size_max: int = 200
+    api_evidence_rows: int = 200  # case rows returned with the detail; the rest are paged
+    api_context_rows: int = 15  # the supplier's nearby rows shown for comparison
+    frontend_dist: Path = PROJECT_ROOT / "frontend" / "dist"
+
     # ----------------------------------------------------------------- runtime
     log_level: str = "INFO"
 

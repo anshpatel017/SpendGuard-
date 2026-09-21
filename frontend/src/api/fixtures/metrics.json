@@ -1,0 +1,47 @@
+{
+ "dataset": "synthetic_inr",
+ "evaluation_seed": 42,
+ "total_transactions": 50907,
+ "total_amount": "4610250792.41",
+ "currency": "INR",
+ "converted_from": null,
+ "cases_flagged": 511,
+ "cases_investigated": 1,
+ "cases_queued": 510,
+ "money_at_risk": "97698491.83",
+ "money_at_risk_confirmed": "0.00",
+ "by_anomaly_type": {
+  "duplicate": {
+   "count": 177,
+   "amount_at_risk": "13926455.58"
+  },
+  "inflation": {
+   "count": 230,
+   "amount_at_risk": "31138744.01"
+  },
+  "split": {
+   "count": 98,
+   "amount_at_risk": "29901456.22"
+  },
+  "vendor_flag": {
+   "count": 6,
+   "amount_at_risk": "22731836.02"
+  }
+ },
+ "by_severity_band": {
+  "high": 228,
+  "medium": 265,
+  "low": 18
+ },
+ "by_status": {
+  "new": 511
+ },
+ "by_verdict": {
+  "likely_true_positive": 1
+ },
+ "by_verification_status": {
+  "unverified": 1
+ },
+ "last_run_id": "investigate-eval-20260921T152039-seed42",
+ "last_run_at": "2026-09-21T15:20:39.721439"
+}
