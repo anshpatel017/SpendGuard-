@@ -244,6 +244,18 @@ def test_a_rate_with_nothing_to_measure_is_none_not_zero() -> None:
     assert m["vendor_flag"]["spurious_filtered"] is None
 
 
+def test_real_fraud_caught_under_another_label_is_not_scored_as_a_false_alarm() -> None:
+    """Seen live: D2 flagged a planted duplicate pair as a split. The agent called it
+    genuine - rightly - so it must not count as a false alarm the agent failed to filter."""
+    duplicate = TruthGroup("g1", AnomalyType.DUPLICATE, frozenset({1, 2}), "acme", 50_000.0)
+    split_on_duplicate = _case([1, 2], kind="split")
+    clean_split = _case([30, 31], kind="split")
+
+    _, truth = sample_for_triage([split_on_duplicate, clean_split], [duplicate], 2, seed=7)
+    assert split_on_duplicate.case_id not in truth  # neither real nor spurious
+    assert truth[clean_split.case_id] is False
+
+
 def test_triage_sampling_leaves_out_redundant_alerts_and_is_seeded() -> None:
     group = TruthGroup("g1", AnomalyType.SPLIT, frozenset({1, 2, 3}), "acme", 300_000.0)
     real = _case([1, 2, 3], kind="split", score=0.95)
