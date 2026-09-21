@@ -188,6 +188,14 @@ class Settings(BaseSettings):
     api_context_rows: int = 15  # the supplier's nearby rows shown for comparison
     frontend_dist: Path = PROJECT_ROOT / "frontend" / "dist"
 
+    # --------------------------------------------------------- live demo
+    # POST /demo/inject plants anomalies in a *copy* of the most recent months of
+    # the clean dataset and detects them live. Three months of the development
+    # data is ~9,200 rows: detection takes ~3 s, which an audience can wait for.
+    demo_months: int = 3
+    demo_max_anomalies: int = 6
+    demo_source_db: Path | None = None  # None: the clean dataset, settings.duckdb_path
+
     # ----------------------------------------------------------------- runtime
     log_level: str = "INFO"
 

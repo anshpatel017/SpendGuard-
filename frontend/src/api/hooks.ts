@@ -33,6 +33,13 @@ export function useEvaluation(seed: number) {
   return useQuery({ queryKey: keys.evaluation(seed), queryFn: () => api.evaluation(seed) });
 }
 
+/** The live demo: plants anomalies in a throwaway copy and detects them (a few seconds). */
+export function useDemoInject() {
+  return useMutation({
+    mutationFn: ({ count, seed }: { count: number; seed: number | null }) => api.demoInject(count, seed),
+  });
+}
+
 export function useUpdateStatus(caseId: string) {
   const client = useQueryClient();
   return useMutation({

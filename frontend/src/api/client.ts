@@ -2,11 +2,12 @@
 // every error arrives as an ApiError carrying the API's own code and message.
 import type { z } from "zod";
 
-import type { CaseStatus, StatusUpdateRequest } from "./types";
+import type { CaseStatus, DemoInjectRequest, StatusUpdateRequest } from "./types";
 import {
   caseDetailSchema,
   caseListSchema,
   caseSchema,
+  demoSchema,
   evaluationSchema,
   healthSchema,
   metricsSchema,
@@ -85,4 +86,9 @@ export const api = {
   transaction: (rowId: number) => request(`/transactions/${rowId}`, transactionSchema),
   evaluation: (seed: number) => request(`/evaluation?seed=${seed}`, evaluationSchema),
   health: () => request("/health", healthSchema),
+  demoInject: (anomalyCount: number, seed: number | null) =>
+    request("/demo/inject", demoSchema, {
+      method: "POST",
+      body: JSON.stringify({ anomaly_count: anomalyCount, seed } satisfies DemoInjectRequest),
+    }),
 };

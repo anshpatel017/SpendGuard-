@@ -24,7 +24,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from spendguard.api import cases, overview
+from spendguard.api import cases, demo, overview
 from spendguard.api.deps import AppStores
 from spendguard.api.schemas import ErrorResponse
 from spendguard.config import settings
@@ -44,13 +44,15 @@ def create_app(
     database_url: str | None = None,
     eval_dir: Path | None = None,
     frontend_dist: Path | None = None,
+    demo_source: Path | None = None,
 ) -> FastAPI:
     app = FastAPI(
         title="SpendGuard API",
         version="1.0.0",
         description=(
             "Procurement cases, verified audit notes, evidence and review. Reads batch "
-            "results; the only writes are a reviewer's status change and the demo."
+            "results; the only writes are a reviewer's status change and the live demo, "
+            "which writes only to a temporary copy."
         ),
         responses={422: {"model": ErrorResponse}, 404: {"model": ErrorResponse}},
     )
@@ -58,6 +60,7 @@ def create_app(
         duckdb_path=Path(duckdb_path or settings.duckdb_path),
         engine=get_engine(database_url),
         eval_dir=Path(eval_dir or settings.processed_data_dir / "eval"),
+        demo_source=Path(demo_source or settings.demo_source_db or settings.duckdb_path),
     )
     app.add_middleware(
         CORSMiddleware,
@@ -87,6 +90,7 @@ def create_app(
 
     app.include_router(cases.router, prefix=API_PREFIX)
     app.include_router(overview.router, prefix=API_PREFIX)
+    app.include_router(demo.router, prefix=API_PREFIX)
 
     dist = Path(frontend_dist or settings.frontend_dist)
     if (dist / "index.html").exists():

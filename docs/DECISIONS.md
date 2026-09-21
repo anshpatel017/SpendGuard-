@@ -467,6 +467,24 @@ On any failure the objections go back to the Investigator, which revises, up to 
 
 ---
 
+## D-34 — The live demo and the frozen demo state
+
+**Live demo (`POST /demo/inject`, `spendguard demo`, the dashboard's "Live demo" page).**
+- **Where:** a temporary copy of the last three months of the *clean* dataset (about 9,200 rows), deleted afterwards. The data being served is never touched, and a test hashes it before and after.
+- **What gets planted:** duplicates, splits and price inflation. Vendor flags are excluded, because they need months of a supplier's history.
+- **What counts as caught:** only a case of the same type, under the evaluation's matching rule (D-03).
+- **Time:** 3–8 s, because a full scan takes about 25 s and an audience will not wait that long.
+- **Misses are shown as misses.** On three rehearsal seeds the demo caught 2 of 3 each time; the misses were small price markups, exactly what D3's measured recall (about 0.48) predicts. Rigging it to always succeed would contradict the evaluation it is meant to illustrate.
+- **Determinism:** the anomaly mix is drawn with `random.Random(seed)`. The first draft used `hash()`, which is randomized per process, so one seed would have planted different anomalies on different runs.
+
+**Frozen demo state (`spendguard freeze`, `spendguard serve --frozen`).**
+- **Why a snapshot:** audit notes come from a language model and are not reproduced word for word by a rerun, so the demonstration must show the notes that were actually checked.
+- **What is snapshotted:** one evaluation run's database, case store and newest reports, with SHA-256 hashes in a manifest.
+- **Serving:** `serve --frozen` checks every hash, copies the snapshot to a working folder, and serves the copy. A presenter's review clicks never leak into the next demo or into the snapshot.
+- **Kept local:** `data/` is git-ignored. The manifest is what makes the state checkable.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |

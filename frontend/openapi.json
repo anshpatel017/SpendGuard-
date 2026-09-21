@@ -841,6 +841,167 @@
         "title": "Citation",
         "type": "object"
       },
+      "DemoInjectRequest": {
+        "properties": {
+          "anomaly_count": {
+            "default": 3,
+            "minimum": 1.0,
+            "title": "Anomaly Count",
+            "type": "integer"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "title": "DemoInjectRequest",
+        "type": "object"
+      },
+      "DemoInjectResponse": {
+        "properties": {
+          "caught": {
+            "title": "Caught",
+            "type": "integer"
+          },
+          "dataset_rows": {
+            "title": "Dataset Rows",
+            "type": "integer"
+          },
+          "elapsed_seconds": {
+            "title": "Elapsed Seconds",
+            "type": "number"
+          },
+          "other_cases": {
+            "title": "Other Cases",
+            "type": "integer"
+          },
+          "requested": {
+            "title": "Requested",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/DemoInjectResult"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "seed": {
+            "title": "Seed",
+            "type": "integer"
+          },
+          "window_end": {
+            "format": "date",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "format": "date",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "seed",
+          "dataset_rows",
+          "window_start",
+          "window_end",
+          "requested",
+          "caught",
+          "other_cases",
+          "results",
+          "elapsed_seconds"
+        ],
+        "title": "DemoInjectResponse",
+        "type": "object"
+      },
+      "DemoInjectResult": {
+        "properties": {
+          "amount_at_risk": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount At Risk",
+            "type": "string"
+          },
+          "anomaly_type": {
+            "enum": [
+              "duplicate",
+              "split",
+              "inflation",
+              "vendor_flag"
+            ],
+            "title": "Anomaly Type",
+            "type": "string"
+          },
+          "case_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Case Id"
+          },
+          "detected": {
+            "title": "Detected",
+            "type": "boolean"
+          },
+          "detected_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detected By"
+          },
+          "detector_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detector Score"
+          },
+          "injected_row_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Injected Row Ids",
+            "type": "array"
+          },
+          "injection_group_id": {
+            "title": "Injection Group Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "injection_group_id",
+          "anomaly_type",
+          "injected_row_ids",
+          "amount_at_risk",
+          "detected",
+          "detected_by",
+          "case_id",
+          "detector_score"
+        ],
+        "title": "DemoInjectResult",
+        "type": "object"
+      },
       "DetectorMetrics": {
         "properties": {
           "anomaly_type": {
@@ -1585,7 +1746,7 @@
     }
   },
   "info": {
-    "description": "Procurement cases, verified audit notes, evidence and review. Reads batch results; the only writes are a reviewer's status change and the demo.",
+    "description": "Procurement cases, verified audit notes, evidence and review. Reads batch results; the only writes are a reviewer's status change and the live demo, which writes only to a temporary copy.",
     "title": "SpendGuard API",
     "version": "1.0.0"
   },
@@ -2032,6 +2193,61 @@
         "summary": "Update Status",
         "tags": [
           "cases"
+        ]
+      }
+    },
+    "/api/v1/demo/inject": {
+      "post": {
+        "description": "Plant anomalies in a bounded copy of the clean data, detect, report what was caught.",
+        "operationId": "inject_demo_api_v1_demo_inject_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoInjectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoInjectResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "A demo is already running, or no clean data to copy"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Inject Demo",
+        "tags": [
+          "demo"
         ]
       }
     },
