@@ -369,6 +369,41 @@ Hybrid retrieval is the standard remedy when queries turn on exact terms, so it 
 
 ---
 
+## D-29 — The Investigator: structured claims, one example, the innocent explanation first
+
+**Decision.** A hand-written loop (D-11) in `agent/investigator.py`: brief the model on the case, let it call the six tools for at most `AGENT_MAX_STEPS` turns, then parse and validate its JSON note. The note is structured: `verdict`, `finding`, a list of `claims` (each a sentence, the `row_ids` it rests on, and optional `facts` of the form `{row_id, field, value}`), `policy_clauses`, and `recommended_action`.
+
+**Why structured claims rather than prose with inline citations.** A fact like `{"row_id": 2847, "field": "amount", "value": 87450}` can be checked deterministically against the audit view; the sentence needs a semantic check. That is the split D-13 reports, and it means the Verifier never has to parse citation markers out of free text. A fact may name only a field the audit view exposes, so the answer key cannot be asserted even by accident.
+
+**Prompt choices, each for a reason:**
+
+- **Only the example for the case's type is shown.** Four worked examples cost tokens on every turn, and a small model imitates whatever it sees.
+- **Look for the innocent explanation first.** The detectors are tuned for recall, and D3 shares its price band with honest premium purchases (D-23). An investigator that only confirms flags adds nothing; the contribution is the one that can dismiss them (D-04).
+- **Every figure through the calculator.** A number computed in the model's head is one the Verifier cannot trust.
+
+**Recovering instead of failing.** A malformed note is sent back with the validation error, phrased for the model, up to twice. Out of steps, one last turn with `tool_choice="none"` asks for the note from the evidence already gathered. Qwen 3's `<think>` blocks and fenced code are stripped before parsing.
+
+**Measured on the dev seed, top case of each type:** all four produced schema-valid notes with every claim cited and no citation of a row the agent had not seen. 4–10 tool calls and 15–25k prompt tokens per case. One wording slip seen: a duplicate note's recommended action said "duplicate payment", echoing the policy's "duplicate-payment register" despite the prompt's rule — a deterministic check for the Verifier.
+
+---
+
+## D-30 — Working inside a free tier: honour the wait, and budget the context
+
+**Finding.** Groq's free tier allows roughly **8,000 input tokens per minute**, **1,000 requests per day** and — the binding one — **200,000 tokens per day** for every model on the account that can do this work (`qwen/qwen3.8-27b`, `gpt-oss-120b`, `gpt-oss-20b`; confirmed against Groq's published limits). An investigation resends the whole conversation every turn — 2–6k tokens a turn, 15–25k per case — so it hits the per-minute limit within two or three turns, and the daily cap after **about ten investigations**. The daily bucket refills at roughly 8,300 tokens an hour. Switching models does not help; they carry the same limits.
+
+**Two fixes, both in code rather than configuration.**
+
+1. **Wait as long as the server asks.** A 429 carries a `retry-after` header or a message like "try again in 27.9s". The first client retried after 1, 2 and 4 seconds and gave up, so every investigation failed. The client now sleeps for the requested time, counts those waits separately from real failures (up to six, each capped at 65 s, so an exhausted *daily* quota ends the run rather than hanging it), and reports total wait time.
+2. **Keep every request under a token budget** (`AGENT_CONTEXT_TOKENS`, default 5,500). A long vendor investigation reached 7,753 tokens in one request and was refused outright (HTTP 413). Before each turn the conversation is estimated — characters per token calibrated from the token counts the API returns — and the **bulkiest earlier tool results** are replaced with a marker listing the row ids they contained. The system prompt, the case brief and the latest turn are never trimmed. If trimming is not enough, gathering stops and the note is written from what the model has. Trimming oldest-first was tried first; the model then re-requested the small vendor profile it had lost, so size decides now, not age.
+
+Tool results are also cut **by whole rows** with a note saying how many were shown; cutting mid-JSON left the model unsure what it had missed, and it re-ran the same query.
+
+3. **Stop on a spent daily quota; resume next run.** A 429 asking for a wait longer than 65 s is a daily quota, not a per-minute one, and raises `LLMQuotaExhaustedError`. The run stops at once instead of failing every remaining case, and says how many were not attempted. Operational runs resume naturally (unfinished cases stay uninvestigated). Evaluation runs draw the same seeded sample each time and skip cases that already have a note, so a sample accumulates across days; a case the quota cut short is never scored as an agent failure.
+
+**Cost.** About 1–3 minutes per investigation on the free tier, much of it waiting, and **about ten investigations a day**. That is enough to develop and demonstrate on; it is **not** enough for the Phase 9 evaluation (hundreds of investigations across seeds and ablations), which needs a local model or a more generous free provider. The budget also matters locally: Ollama silently truncates past `num_ctx`, which is worse than a refusal.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |
@@ -376,6 +411,6 @@ Hybrid retrieval is the standard remedy when queries turn on exact terms, so it 
 | ~~O-01~~ | ~~Reporting currency~~ | **Resolved — see D-15. INR.** |
 | ~~O-02~~ | ~~Approval threshold figure~~ | **Resolved — see D-16. ₹2,50,000.** |
 | **O-03** | **`reference_amount` in `amount_weight`.** Defining it as the maximum amount in the run makes severity non-comparable across runs — a single unusually large transaction rescales every other case, and the same case receives a different severity on a different subset. A fixed constant or a high percentile of the amount distribution would keep severity stable across the demo run, the evaluation run, and the ablations. | Recommend a fixed reference; awaiting decision |
-| **O-04** | **`severity_final` semantics.** When the agent drops a false positive "to Low", does `severity_final` become an actual number below 33, or does only the band move while the number stays? Both fields exist in the contract; one line settles it. | Undecided |
+| **O-04** | **`severity_final` semantics.** When the agent drops a false positive "to Low", does `severity_final` become an actual number below 33, or does only the band move while the number stays? Both fields exist in the contract; one line settles it. | **Implemented as recommended, awaiting confirmation:** the number moves with the band — `likely_false_positive` caps it just below 33, `inconclusive` just below 66, `likely_true_positive` keeps it. Sorting by severity and filtering by band then agree. One function (`final_severity`) to change if decided otherwise. |
 | ~~O-06~~ | ~~D1 must not block on exact `vendor_key` alone~~ | **Resolved — see D-19. Approved by the user, 2026-09-11.** |
 | **O-05** | **Item category source.** Where the dataset lacks a usable category, D3 needs pseudo-categories from description clustering. Whether this is in the core build or deferred is not yet fixed. | Undecided |

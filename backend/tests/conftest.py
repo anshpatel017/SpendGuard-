@@ -26,6 +26,20 @@ _SCHEMA = {
 }  # fmt: skip
 
 
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """Live LLM tests run only when asked for with ``-m llm``.
+
+    They spend a rate-limited free-tier quota and take minutes, so a routine
+    ``pytest`` - or CI - must never trigger them just because a key is present.
+    """
+    if "llm" in (config.getoption("markexpr") or ""):
+        return
+    skip = pytest.mark.skip(reason="live LLM test; run with -m llm")
+    for item in items:
+        if "llm" in item.keywords:
+            item.add_marker(skip)
+
+
 def build_db(path: Path, rows: list[dict[str, object]]) -> duckdb.DuckDBPyConnection:
     """A transactions table from hand-written rows; unspecified fields get plain defaults."""
     full = []
