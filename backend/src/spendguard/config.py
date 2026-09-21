@@ -54,9 +54,15 @@ class Settings(BaseSettings):
     raw_data_dir: Path = PROJECT_ROOT / "data" / "raw"
     processed_data_dir: Path = PROJECT_ROOT / "data" / "processed"
     frozen_data_dir: Path = PROJECT_ROOT / "data" / "frozen"
+    # Generated result tables, committed: every number in docs/EVALUATION.md is
+    # copied from here, and each file names the command and commit that made it.
+    results_dir: Path = PROJECT_ROOT / "docs" / "results"
 
     # ------------------------------------------------------- reproducibility
     random_seed: int = 42
+    # Seeds reported. The first is the development seed every threshold was tuned
+    # on; the rest are held out (CLAUDE.md convention 6).
+    evaluation_seeds: list[int] = Field(default_factory=lambda: [42, 7, 2026])
 
     # -------------------------------------------------------------- currency
     # Decision D-15. Conversion for non-INR datasets uses a rate pinned per
