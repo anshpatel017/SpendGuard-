@@ -111,7 +111,7 @@ export function EvaluationPage() {
               <div className="card kpi">
                 <div className="label">Triage accuracy</div>
                 <div className="value">{formatPercent(a.triage_accuracy, 0)}</div>
-                <div className="sub">Decisive verdicts against the answer key · {a.notes} notes</div>
+                <div className="sub">Decisive verdicts against the answer key · {a.notes} note{a.notes === 1 ? "" : "s"}</div>
               </div>
               <div className="card kpi">
                 <div className="label">Per investigation</div>

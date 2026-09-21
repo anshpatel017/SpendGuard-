@@ -36,7 +36,7 @@ export function useEvaluation(seed: number) {
 export function useUpdateStatus(caseId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ status, note }: { status: CaseStatus; note: string | null }) =>
+    mutationFn: ({ status, note }: { status: CaseStatus; note: string }) =>
       api.updateStatus(caseId, status, note),
     onSuccess: async () => {
       await Promise.all([

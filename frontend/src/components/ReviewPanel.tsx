@@ -40,7 +40,7 @@ export function ReviewPanel({ c }: { c: Case }) {
           value={note} maxLength={4000} onChange={(e) => setNote(e.target.value)} />
         <div className="row">
           <button type="button" className="btn primary" disabled={!dirty || save.isPending}
-            onClick={() => save.mutate({ status, note: note.trim() ? note.trim() : null })}>
+            onClick={() => save.mutate({ status, note: note.trim() })}>
             {save.isPending ? "Saving…" : "Save decision"}
           </button>
           {save.isSuccess && !dirty && <span className="chip ok">Saved</span>}

@@ -144,39 +144,39 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[unit]** Case status transitions persist and survive a restart. [FR-5.3]
 - [x] **[unit]** Reviewer notes persist against the correct case. [FR-5.2]
 - [ ] **[int]** Alembic migrations apply cleanly to an empty database. [NFR-10]
-- [ ] **[int]** The API opens DuckDB read-only, so a batch run and the API can operate concurrently. [Architecture 2.4]
+- [ ] **[int]** The API opens DuckDB read-only, so a batch run and the API can operate concurrently. [Architecture 2.4] *(The API opens read-only on every request; concurrency with a writing batch run not yet tested.)*
 - [ ] **[int]** A batch run while the dashboard is open does not produce a lock error. [Architecture 2.4]
 
 ---
 
 ## 8. API
 
-- [ ] **[int]** Every endpoint validates its response against its Pydantic model. [FR-5.9]
-- [ ] **[int]** The OpenAPI schema is published and matches the implemented routes. [FR-5.9]
-- [ ] **[int]** Case listing filters correctly by status, anomaly type, severity band, and verdict. [FR-5.5]
-- [ ] **[int]** Case detail returns the note, its citations, the referenced evidence rows, and the trace. [FR-5.6]
-- [ ] **[int]** A case that has not been investigated returns detector output with an explicit not-investigated marker, not a null-filled note. [FR-5.6]
-- [ ] **[int]** Status update rejects an invalid transition target. [FR-5.1]
-- [ ] **[int]** Metrics endpoint returns flagged, investigated and queued counts that sum consistently. [FR-5.7]
-- [ ] **[int]** Requesting an unknown case id returns 404 with a structured error, not a stack trace. [NFR-10]
-- [ ] **[int]** Evaluation endpoint returns detector-versus-baseline and ablation tables. [FR-5.8]
+- [x] **[int]** Every endpoint validates its response against its Pydantic model. [FR-5.9]
+- [x] **[int]** The OpenAPI schema is published and matches the implemented routes. [FR-5.9]
+- [x] **[int]** Case listing filters correctly by status, anomaly type, severity band, and verdict. [FR-5.5]
+- [x] **[int]** Case detail returns the note, its citations, the referenced evidence rows, and the trace. [FR-5.6]
+- [x] **[int]** A case that has not been investigated returns detector output with an explicit not-investigated marker, not a null-filled note. [FR-5.6]
+- [x] **[int]** Status update rejects an invalid transition target. [FR-5.1]
+- [x] **[int]** Metrics endpoint returns flagged, investigated and queued counts that sum consistently. [FR-5.7]
+- [x] **[int]** Requesting an unknown case id returns 404 with a structured error, not a stack trace. [NFR-10]
+- [x] **[int]** Evaluation endpoint returns detector-versus-baseline and ablation tables. [FR-5.8]
 
 ---
 
 ## 9. Frontend
 
-- [ ] **[man]** Case queue sorts and filters correctly, and pagination works past the first page. [FR-6.2]
-- [ ] **[man]** KPI cards show money at risk and the flagged / investigated / queued line. [FR-6.1]
-- [ ] **[man]** Citations in the note are inspectable and resolve to the correct evidence rows. [FR-6.3]
-- [ ] **[man]** Evidence table visually distinguishes the rows belonging to the case. [FR-6.4]
-- [ ] **[man]** Verification badge shows passed of checked, and an unverified note is visibly marked as such. [FR-6.5] [FR-6.9]
-- [ ] **[man]** Agent trace renders as an ordered timeline with arguments and results readable. [FR-6.6]
-- [ ] **[man]** Status change and reviewer note save, and survive a page reload. [FR-6.7]
-- [ ] **[man]** Metrics view renders the detector table and the ablation table. [FR-6.8]
-- [ ] **[man]** Loading and error states render for every data-fetching view — no blank screens. [NFR-5]
-- [ ] **[man]** A deliberate API shape change is caught by Zod validation with a visible error. [Architecture 2.6]
+- [x] **[man]** Case queue sorts and filters correctly, and pagination works past the first page. [FR-6.2]
+- [x] **[man]** KPI cards show money at risk and the flagged / investigated / queued line. [FR-6.1]
+- [x] **[man]** Citations in the note are inspectable and resolve to the correct evidence rows. [FR-6.3]
+- [x] **[man]** Evidence table visually distinguishes the rows belonging to the case. [FR-6.4]
+- [x] **[man]** Verification badge shows passed of checked, and an unverified note is visibly marked as such. [FR-6.5] [FR-6.9]
+- [x] **[man]** Agent trace renders as an ordered timeline with arguments and results readable. [FR-6.6]
+- [x] **[man]** Status change and reviewer note save, and survive a page reload. [FR-6.7]
+- [x] **[man]** Metrics view renders the detector table and the ablation table. [FR-6.8]
+- [x] **[man]** Loading and error states render for every data-fetching view — no blank screens. [NFR-5]
+- [ ] **[man]** A deliberate API shape change is caught by Zod validation with a visible error. [Architecture 2.6] *(Unit-tested: a float amount or a missing field fails validation and raises a `contract_mismatch` error the page shows. Not yet shown live in the browser.)*
 - [ ] **[man]** Layout holds at a projector resolution and does not scroll horizontally.
-- [ ] **[man]** Every monetary value shows `₹` with Indian digit grouping, and converted figures are visibly marked as converted. [FR-6.10]
+- [ ] **[man]** Every monetary value shows `₹` with Indian digit grouping, and converted figures are visibly marked as converted. [FR-6.10] *(₹ and Indian grouping verified, formatted from strings with no float. The converted-currency banner exists but no converted dataset has been loaded yet; Phase 9, California data.)*
 
 ---
 
