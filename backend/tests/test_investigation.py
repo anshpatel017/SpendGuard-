@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from spendguard.agent.investigator import InvestigationResult, TraceStep
 from spendguard.agent.llm import LLMQuotaExhaustedError
 from spendguard.agent.note import InvestigatorNote, Verdict
+from spendguard.agent.verifier import JUDGE_PROMPT
 from spendguard.cases import AnomalyType, Case
 from spendguard.db.store import (
     AuditNoteRecord,
@@ -43,7 +44,7 @@ from spendguard.investigation import evaluate_investigation, run_investigation, 
 from spendguard.pipeline.ingest import IngestResult
 
 from .conftest import build_db
-from .test_investigator import ScriptedModel, note
+from .test_investigator import ScriptedModel, note, reply
 
 
 def _case(
@@ -261,10 +262,10 @@ def test_triage_sampling_leaves_out_redundant_alerts_and_is_seeded() -> None:
 
 
 class CitesFirstRow(ScriptedModel):
-    """Writes a valid note citing the first evidence row, whatever the case.
+    """Writes a valid note citing the first evidence row, and as judge supports every claim.
 
-    ``quota`` is how many notes it writes before the provider's daily quota
-    runs out; ``None`` means it never does.
+    ``quota`` is how many calls it answers before the provider's daily quota runs
+    out; ``None`` means it never does. A verified case costs two: note, judgement.
     """
 
     def __init__(self, verdict: str = "likely_true_positive", quota: int | None = None) -> None:
@@ -277,9 +278,13 @@ class CitesFirstRow(ScriptedModel):
             if self.quota == 0:
                 raise LLMQuotaExhaustedError("tokens per day: try again in 21m22s")
             self.quota -= 1
-        found = re.search(r'"row_id":(\d+)', messages[1]["content"])
-        assert found is not None
-        self.turns = [note([int(found.group(1))], self.verdict)]
+        if messages[0]["content"] == JUDGE_PROMPT:
+            self.turns = [reply('{"claims":[{"index":0,"supported":true,"reason":"shown"}]}')]
+        else:
+            found = re.search(r'\{"row_id":(\d+),.*?"amount":([\d.]+)', messages[1]["content"])
+            assert found is not None
+            row_id, amount = int(found.group(1)), float(found.group(2))
+            self.turns = [note([row_id], self.verdict, amount=amount)]
         return super().chat(messages, tools, **kw)
 
 
@@ -336,7 +341,7 @@ def test_a_spent_quota_stops_the_run_and_the_next_run_carries_on(tmp_path: Path)
     save_cases(engine, "d", "ds", [_case([1, 2], 3e6), _case([3, 4], 2e6), _case([5, 6], 1e6)])
 
     first = run_investigation(
-        db_path=tmp_path / "clean.duckdb", store_url=store, llm=CitesFirstRow(quota=1)
+        db_path=tmp_path / "clean.duckdb", store_url=store, llm=CitesFirstRow(quota=2)
     )
     assert first.quota_stopped
     assert [r.status for r in first.results] == ["completed", "failed"]

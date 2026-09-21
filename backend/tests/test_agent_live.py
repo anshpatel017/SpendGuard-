@@ -82,8 +82,9 @@ def test_the_investigator_writes_a_cited_note_for_every_anomaly_type(
     injected: InjectionResult,
     kind: str,  # type: ignore[no-untyped-def]
 ) -> None:
-    """Phase 6 exit criterion: a schema-valid, cited note with a full trace, per type."""
+    """Phase 6 and 7 exit criteria: a cited note with a full trace, checked, per type."""
     from spendguard.agent.investigator import Investigator
+    from spendguard.agent.verifier import Verifier, investigate_and_verify
     from spendguard.detectors import PRODUCTION_DETECTORS, REGISTRY
 
     with duckdb.connect(str(injected.out_db), read_only=True) as con:
@@ -93,7 +94,9 @@ def test_the_investigator_writes_a_cited_note_for_every_anomaly_type(
         )
         if not of_kind:
             pytest.skip(f"no {kind} case in the test dataset")
-        result = Investigator(client, con).investigate(of_kind[0])
+        result = investigate_and_verify(
+            Investigator(client, con), Verifier(client, con), of_kind[0]
+        )
 
     assert result.status == "completed", result.error
     assert result.note is not None and result.note.claims
@@ -101,3 +104,44 @@ def test_the_investigator_writes_a_cited_note_for_every_anomaly_type(
     assert result.tool_calls >= 1  # it investigated rather than answering from the brief
     assert [s.step_index for s in result.trace] == list(range(len(result.trace)))
     assert result.severity_final is not None
+    assert result.verification is not None  # checked, whatever the outcome
+    assert any(s.role == "verifier" for s in result.trace)
+
+
+def test_the_judge_catches_a_planted_unsupported_claim(  # type: ignore[no-untyped-def]
+    client, injected: InjectionResult
+) -> None:
+    """One call: a true claim and an invented one about the same real row."""
+    from spendguard.agent.investigator import InvestigationResult
+    from spendguard.agent.note import InvestigatorNote
+    from spendguard.agent.verifier import Verifier
+
+    with duckdb.connect(str(injected.out_db), read_only=True) as con:
+        row = con.execute(
+            f"SELECT row_id, vendor_name, amount FROM {AUDIT_VIEW} ORDER BY row_id LIMIT 1"
+        ).fetchone()
+        assert row is not None
+        row_id, vendor, amount = int(row[0]), str(row[1]), float(row[2])
+        note = InvestigatorNote.model_validate(
+            {
+                "verdict": "likely_true_positive",
+                "finding": "A test note with one true claim and one invented claim.",
+                "claims": [
+                    {"text": f"Row {row_id} is billed by {vendor}.", "row_ids": [row_id]},
+                    {
+                        "text": f"The supplier on row {row_id} was blacklisted by the "
+                        "procurement committee in 2019.",
+                        "row_ids": [row_id],
+                    },
+                ],
+                "policy_clauses": [],
+                "recommended_action": "None; this is a test.",
+            }
+        )
+        result = InvestigationResult("test", "duplicate", "completed", "test", note=note)
+        report = Verifier(client, con).check(result)
+
+    assert report.semantic_ran, report.judge_error
+    assert report.deterministic_passed == report.checked
+    assert 0 not in report.unsupported, "the true claim was rejected"
+    assert 1 in report.unsupported, f"the invented claim passed (amount {amount})"

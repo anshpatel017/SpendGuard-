@@ -112,7 +112,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[int]** Output parses and validates against the audit note JSON schema. [FR-3.1]
 - [x] **[int]** The loop terminates at the step bound and does not run unbounded. [FR-3.2]
 - [x] **[int]** Every claim in the note carries at least one citation. [FR-3.5]
-- [ ] **[int]** Every cited row_id exists in `transactions`. [FR-3.5] *(Investigator flags citations of rows it never saw; the existence check itself is the Verifier's, Phase 7.)*
+- [x] **[int]** Every cited row_id exists in `transactions`. [FR-3.5] *(Enforced by the Verifier's deterministic check, Phase 7.)*
 - [x] **[int]** Exactly one verdict is emitted, from the allowed set. [FR-3.6]
 - [ ] **[int]** A clean, obviously legitimate case yields `likely_false_positive` with a stated reason. [FR-3.6]
 - [ ] **[int]** An obvious injected duplicate yields `likely_true_positive`. [FR-3.6]
@@ -126,15 +126,15 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 ## 6. Verifier agent
 
-- [ ] **[unit]** All cited row_ids are extracted from a note, including repeated and multi-id citations. [FR-4.1]
-- [ ] **[unit]** A citation to a nonexistent row_id is caught. [FR-4.2]
-- [ ] **[unit]** A note stating a wrong amount for a real row is caught by the deterministic check. [FR-4.3]
-- [ ] **[unit]** A note citing a real row that does not support the claim is caught by the semantic check. [FR-4.4]
-- [ ] **[int]** A failed note triggers regeneration, and the failure reason is passed back as context. [FR-4.5]
-- [ ] **[int]** Regeneration stops at the retry limit. [FR-4.5]
-- [ ] **[int]** A note that still fails is stored with an explicit unverified status. [FR-4.7]
-- [ ] **[int]** `verification_status` and the passed-of-checked counts are persisted with the note. [FR-4.6]
-- [ ] **[int]** Deterministic and semantic validity are recorded as two separate numbers. [FR-7.5]
+- [x] **[unit]** All cited row_ids are extracted from a note, including repeated and multi-id citations. [FR-4.1]
+- [x] **[unit]** A citation to a nonexistent row_id is caught. [FR-4.2]
+- [x] **[unit]** A note stating a wrong amount for a real row is caught by the deterministic check. [FR-4.3]
+- [x] **[unit]** A note citing a real row that does not support the claim is caught by the semantic check. [FR-4.4]
+- [x] **[int]** A failed note triggers regeneration, and the failure reason is passed back as context. [FR-4.5]
+- [x] **[int]** Regeneration stops at the retry limit. [FR-4.5]
+- [x] **[int]** A note that still fails is stored with an explicit unverified status. [FR-4.7]
+- [x] **[int]** `verification_status` and the passed-of-checked counts are persisted with the note. [FR-4.6]
+- [x] **[int]** Deterministic and semantic validity are recorded as two separate numbers. [FR-7.5]
 - [ ] **[man]** Deliberately corrupt a note by hand and confirm the Verifier rejects it.
 
 ---
@@ -186,7 +186,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [ ] **[int]** Per-row metrics are produced as a secondary table. [FR-7.4]
 - [x] **[int]** The case-overlap matching rule is implemented exactly as specified and unit-tested at its boundaries. [FR-7.3]
 - [x] **[int]** D4 vendor-level cases are matched by the rule appropriate to vendor-level cases, not by row overlap. [Open issue]
-- [ ] **[int]** Citation validity is reported split into deterministic and semantic. [FR-7.5]
+- [x] **[int]** Citation validity is reported split into deterministic and semantic. [FR-7.5]
 - [ ] **[int]** Triage accuracy is computed only over investigated cases, and the report states that this sample is severity-biased. [FR-7.6]
 - [x] **[int]** Efficiency metrics — tool calls, tokens, latency — are recorded per case. [FR-7.7]
 - [ ] **[int]** The Verifier-off ablation runs and produces a comparison table. [FR-7.8]

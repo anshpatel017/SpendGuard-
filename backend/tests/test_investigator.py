@@ -97,7 +97,9 @@ def reply(text: str) -> LLMResponse:
     return LLMResponse(content=text)
 
 
-def note(row_ids: list[int], verdict: str = "likely_true_positive") -> LLMResponse:
+def note(
+    row_ids: list[int], verdict: str = "likely_true_positive", amount: float = 5000.0
+) -> LLMResponse:
     return reply(
         json.dumps(
             {
@@ -107,7 +109,7 @@ def note(row_ids: list[int], verdict: str = "likely_true_positive") -> LLMRespon
                     {
                         "text": "Both rows are for the same amount.",
                         "row_ids": row_ids,
-                        "facts": [{"row_id": row_ids[0], "field": "amount", "value": 5000.0}],
+                        "facts": [{"row_id": row_ids[0], "field": "amount", "value": amount}],
                     }
                 ],
                 "policy_clauses": ["SG-PP-4.4"],
