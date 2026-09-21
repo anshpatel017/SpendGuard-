@@ -138,7 +138,7 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ---
 
-### Phase 6 — Investigator ✅
+### Phase 6 — Investigator ✅ (`feb62e3`)
 
 **Built:** the Investigator — a hand-written, bounded tool-calling loop that briefs the model on a case, runs the tools it asks for, and validates the JSON audit note it returns; the note schema (structured, citable claims); per-type prompts; persistence of notes, per-row citations and full traces; and `spendguard investigate`, with an operational mode (top-N open cases from the store) and an evaluation mode (a seeded sample of real and spurious cases on an injected database, scored for triage).
 
