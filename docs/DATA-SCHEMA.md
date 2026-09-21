@@ -124,12 +124,12 @@ The injection configuration is stored once in `injection_runs`, not repeated per
 | `verdict` | ENUM | `likely_true_positive`, `likely_false_positive`, `inconclusive` |
 | `claims` | JSON | The structured claims: `[{text, row_ids, facts: [{row_id, field, value}]}]` (D-29) |
 | `policy_clauses` | JSON | Clause ids cited, e.g. `["SG-PP-4.4"]` |
-| `verification_status` | ENUM | `verified`, `unverified`, `failed_after_retries`; `unverified` until the Verifier runs |
+| `verification_status` | ENUM | `verified` (both checks ran and passed), `failed_after_retries` (a known failure remains), `unverified` (Verifier off, or the judge could not run) — D-31 |
 | `citations_checked` | INTEGER | |
 | `citations_passed` | INTEGER | |
 | `deterministic_passed` | INTEGER | Passed the row-exists and values-match check |
 | `semantic_passed` | INTEGER | Passed the support check |
-| `retry_count` | INTEGER | Regeneration attempts used |
+| `retry_count` | INTEGER | Regeneration attempts used. The released note is the best draft, not necessarily the last |
 | `model_name` | VARCHAR | Model that produced it |
 | `is_ablation` | BOOLEAN | Produced under an ablation configuration |
 | `ablation_name` | VARCHAR | Which ablation, if any |
@@ -149,8 +149,8 @@ One row per (claim, cited row), so citation validity is computed by query rather
 | `asserted` | JSON | Field values the claim states about this row, e.g. `{"amount": 87450.0}`; empty if none |
 | `row_exists` | BOOLEAN | Deterministic check |
 | `values_match` | BOOLEAN | Deterministic check |
-| `supports_claim` | BOOLEAN | Semantic check |
-| `failure_reason` | TEXT | Populated on failure |
+| `supports_claim` | BOOLEAN | Semantic check, model-judged per claim and applied to each of its rows; null if the judge did not run |
+| `failure_reason` | TEXT | Populated on failure, in the words fed back to the Investigator |
 
 ### 2.4 `agent_traces`
 
@@ -162,7 +162,7 @@ One row per (claim, cited row), so citation validity is computed by query rather
 | `note_id` | UUID FK | Null when the investigation produced no note - its trace is still kept |
 | `step_index` | INTEGER | Order within the loop |
 | `role` | VARCHAR | `investigator` or `verifier` |
-| `kind` | VARCHAR | `model`, `tool`, `parse_error`, `context_trim`, `forced_final`, `failed` (why no note) |
+| `kind` | VARCHAR | Investigator: `model`, `tool`, `parse_error`, `context_trim`, `forced_final`, `failed` (why no note). Verifier: `check` (deterministic summary), `judge` (the semantic call, with its per-claim verdicts) |
 | `tool_name` | VARCHAR | Null for a model step |
 | `tool_args` | JSONB | |
 | `tool_result` | JSONB | Over 20,000 characters becomes `{truncated: true, chars, head}` |

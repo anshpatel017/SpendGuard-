@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
@@ -103,6 +104,27 @@ class InvestigatorNote(BaseModel):
     def cited_row_ids(self) -> list[int]:
         return sorted({r for claim in self.claims for r in claim.row_ids})
 
+    def citations(self) -> list[Citation]:
+        """Every (claim, cited row) pair, with what the claim asserts about that row (FR-4.1).
+
+        A row cited twice by one claim is one citation; a row cited by two claims
+        is two, because each claim can be right or wrong about it independently.
+        """
+        out = []
+        for index, claim in enumerate(self.claims):
+            for row_id in dict.fromkeys(claim.row_ids):
+                asserted = {f.field: f.value for f in claim.facts if f.row_id == row_id}
+                out.append(Citation(index, claim.text, row_id, asserted))
+        return out
+
+
+@dataclass(frozen=True)
+class Citation:
+    claim_index: int
+    claim_text: str
+    row_id: int
+    asserted: dict[str, Any]
+
 
 # The shape shown to the model. Kept beside the schema so the two cannot drift.
 NOTE_TEMPLATE = {
@@ -124,11 +146,11 @@ class NoteParseError(ValueError):
     """The model's reply could not be turned into a valid note."""
 
 
-_THINKING = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+THINKING = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
 _FENCED = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
 
-def _first_json_object(text: str) -> str | None:
+def first_json_object(text: str) -> str | None:
     """The first balanced {...} in text, respecting strings."""
     start = text.find("{")
     while start != -1:
@@ -162,12 +184,12 @@ def parse_note(content: str) -> InvestigatorNote:
     is not a valid note raises :class:`NoteParseError` with a message the model
     can act on, because the Investigator feeds it straight back.
     """
-    text = _THINKING.sub("", content or "").strip()
+    text = THINKING.sub("", content or "").strip()
     if not text:
         raise NoteParseError("The reply was empty. Reply with the JSON note only.")
 
     fenced = _FENCED.search(text)
-    candidate = fenced.group(1) if fenced else _first_json_object(text)
+    candidate = fenced.group(1) if fenced else first_json_object(text)
     if candidate is None:
         raise NoteParseError("No JSON object found. Reply with the JSON note only.")
 

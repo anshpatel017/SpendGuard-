@@ -404,6 +404,31 @@ Tool results are also cut **by whole rows** with a note saying how many were sho
 
 ---
 
+## D-31 — The Verifier: mechanical checks first, a fresh-context judge second, revise in place
+
+**Decision.** Every note is checked before release, in two parts reported as two numbers (D-13):
+
+1. **Deterministic** (`agent/checks.py`, no model): every cited row exists in `audit_transactions`; every value a claim states about a row matches it; every cited policy clause exists in `policy.md`; the note never says "duplicate payment". The headline number.
+2. **Semantic** (`agent/verifier.py`, one LLM call per draft): does the evidence support each claim? Labelled model-judged.
+
+On any failure the objections go back to the Investigator, which revises, up to `VERIFIER_MAX_RETRIES`. The best draft is released with `verified`, `failed_after_retries` or `unverified`.
+
+**Choices, each with its reason:**
+
+- **A stated number matches if it is the row's value rounded to the precision the note used.** `259463` matches `259463.41`; `260000` does not. A tolerance band would pass a transposed digit on a large amount; exact equality would fail an honest whole-rupee figure. The prompt asks for exact values, so a figure rounded to the thousand is treated as a different figure. Text matches ignoring case and spacing, but invoice numbers are not normalized further: `INV-4471` against `INV-04471` is precisely the retyping that makes a duplicate, so it must not be smoothed away.
+- **The judge gets a fresh context.** It never sees the Investigator's reasoning, only the claims, the rows they cite and the tool results the Investigator obtained (calculator first, then vendor profile, Benford statistics, comparable invoices; capped). Showing it the conversation would let it be persuaded instead of checking.
+- **The judge rules on claims, not on rows one at a time.** "The four orders total ₹3,26,873" is supported by its rows together, not by any single row. Its verdict is applied to every citation of that claim.
+- **Revision continues the Investigator's own conversation** rather than investigating again. The evidence is already there, so a fix costs one or two turns instead of 15–25k tokens, which matters when the day allows about ten investigations (D-30). The model may still call tools if an objection means it needs more evidence.
+- **The best draft is released, not the last.** A revision that made things worse does not replace a better one.
+- **`verified` requires both checks to have run.** If the judge could not answer (unparseable twice, or quota spent), a note with no mechanical failure is released `unverified`, never `verified`. Any known failure means `failed_after_retries`.
+- **With the Verifier off** (`--no-verify`, the FR-7.8 ablation), nothing is enforced and nothing is regenerated, but the deterministic check still runs and is stored. The ablation's citation validity is measured by the same code as the main run.
+
+**Caveat, stated rather than hidden.** The judge is the same model that wrote the note. That is why the semantic number is reported separately and labelled model-judged, and why the deterministic number, which involves no model, is the headline.
+
+**Measured so far.** Offline, a note planted with a wrong amount, a nonexistent row and an unsupported claim is caught on each count; sabotaging the value comparison makes four tests fail. Live, the real judge accepted a true claim about a row and rejected an invented one ("blacklisted in 2019") about the same row.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |

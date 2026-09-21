@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Any
 
 from spendguard.agent.investigator import InvestigationResult, Investigator
+from spendguard.agent.verifier import Verifier, investigate_and_verify
 from spendguard.cases import AnomalyType, Case
 from spendguard.config import settings
 from spendguard.db.duck import connect, table_exists
@@ -88,7 +89,40 @@ class InvestigationRun:
             "rate_limit_wait_seconds": round(self.rate_limit_wait_seconds, 1),
             "quota_stopped": self.quota_stopped,
             "not_attempted": self.not_attempted,
+            "verification": citation_validity(done),
         }
+
+
+def _rate(numerator: int, denominator: int) -> float | None:
+    return round(numerator / denominator, 3) if denominator else None
+
+
+def citation_validity(results: Sequence[InvestigationResult]) -> dict[str, Any]:
+    """Citation validity as two numbers, never one (D-13), before and after the Verifier.
+
+    ``deterministic`` - rows exist and stated values match - is the headline.
+    ``semantic`` is model-judged and labelled so. The first-draft figure is what
+    the Investigator produced unaided; the gap to the released figure is what the
+    Verifier's regeneration bought.
+    """
+    released = [r.verification for r in results if r.verification]
+    first = [r.first_check for r in results if r.first_check]
+    judged = [v for v in released if v.semantic_ran]
+    checked = sum(v.checked for v in released)
+    judged_checked = sum(v.checked for v in judged)
+    return {
+        "status": dict(Counter(r.verification_status for r in results)),
+        "regenerated": sum(1 for r in results if r.retry_count),
+        "citations_checked": checked,
+        "deterministic_valid": _rate(sum(v.deterministic_passed for v in released), checked),
+        "semantic_supported_model_judged": _rate(
+            sum(v.semantic_passed or 0 for v in judged), judged_checked
+        ),
+        "first_draft_deterministic_valid": _rate(
+            sum(v.deterministic_passed for v in first), sum(v.checked for v in first)
+        ),
+        "first_draft_passed": sum(1 for v in first if v.passed),
+    }
 
 
 def _default_llm() -> Any:
@@ -99,14 +133,17 @@ def _default_llm() -> Any:
 
 def _investigate_all(
     investigator: Investigator,
+    verifier: Verifier,
     cases: Sequence[Case],
     engine: Any,
     run_id: str,
     on_result: ProgressFn | None,
+    *,
+    verify: bool,
 ) -> list[InvestigationResult]:
     results = []
     for i, case in enumerate(cases, start=1):
-        result = investigator.investigate(case)
+        result = investigate_and_verify(investigator, verifier, case, enabled=verify)
         save_investigation(engine, run_id, result)  # saved as it goes: a crash loses one case
         results.append(result)
         if on_result:
@@ -126,8 +163,10 @@ def run_investigation(
     store_url: str | None = None,
     llm: Any | None = None,
     on_result: ProgressFn | None = None,
+    verify: bool | None = None,
 ) -> InvestigationRun:
     """Operational mode: the top-N cases from the case store."""
+    verify = settings.verifier_enabled if verify is None else verify
     started = datetime.now(UTC).replace(tzinfo=None)
     t0 = time.perf_counter()
     db_path = db_path or settings.duckdb_path
@@ -155,8 +194,10 @@ def run_investigation(
                 "--eval-seed` for it; the case store is for real findings only."
             )
         if cases:
-            investigator = Investigator(llm, con)
-            results = _investigate_all(investigator, cases, engine, run_id, on_result)
+            results = _investigate_all(
+                Investigator(llm, con), Verifier(llm, con), cases, engine, run_id, on_result,
+                verify=verify,
+            )  # fmt: skip
 
     run = InvestigationRun(
         run_id=run_id,
@@ -171,7 +212,7 @@ def run_investigation(
         run_id,
         "investigate",
         dataset,
-        config=_config_snapshot(llm, top_n=top_n, anomaly_type=anomaly_type),
+        config=_config_snapshot(llm, verify, top_n=top_n, anomaly_type=anomaly_type),
         summary=run.summary(),
         started_at=started,
     )
@@ -232,6 +273,7 @@ def evaluate_investigation(
     report_dir: Path | None = None,
     llm: Any | None = None,
     on_result: ProgressFn | None = None,
+    verify: bool | None = None,
 ) -> InvestigationRun:
     """Evaluation mode: sampled cases on an injected database, scored for triage.
 
@@ -241,6 +283,7 @@ def evaluate_investigation(
     """
     from spendguard.eval.injection import default_injected_path
 
+    verify = settings.verifier_enabled if verify is None else verify
     started = datetime.now(UTC).replace(tzinfo=None)
     t0 = time.perf_counter()
     db_path = db_path or default_injected_path(seed)
@@ -258,8 +301,10 @@ def evaluate_investigation(
         save_cases(engine, run_id, dataset, chosen)
         done_before = {c.case_id for c in chosen if latest_note(engine, c.case_id) is not None}
         pending = [c for c in chosen if include_investigated or c.case_id not in done_before]
-        investigator = Investigator(llm, con)
-        results = _investigate_all(investigator, pending, engine, run_id, on_result)
+        results = _investigate_all(
+            Investigator(llm, con), Verifier(llm, con), pending, engine, run_id, on_result,
+            verify=verify,
+        )  # fmt: skip
 
     # A case counts once: its newest note, or this run's failure if it has no note.
     # A case the quota cut short was never really investigated, so it is not scored.
@@ -288,7 +333,7 @@ def evaluate_investigation(
         run_id,
         "investigate",
         dataset,
-        config={**_config_snapshot(llm), "seed": seed, "per_type": per_type},
+        config={**_config_snapshot(llm, verify), "seed": seed, "per_type": per_type},
         summary={
             **run.summary(),
             "sampled": run.sampled,
@@ -301,8 +346,11 @@ def evaluate_investigation(
     return run
 
 
-def _config_snapshot(llm: Any, **extra: Any) -> dict[str, Any]:
+def _config_snapshot(llm: Any, verify: bool, **extra: Any) -> dict[str, Any]:
     return {
+        "verifier_enabled": verify,
+        "verifier_semantic_check": settings.verifier_semantic_check,
+        "verifier_max_retries": settings.verifier_max_retries,
         "provider": str(getattr(llm, "provider", "unknown")),
         "model": str(getattr(llm, "model", "unknown")),
         "temperature": settings.llm_temperature,
@@ -328,6 +376,11 @@ def write_triage_report(
             "prompt_tokens": r.prompt_tokens,
             "seconds": r.seconds,
             "unseen_citations": r.unseen_citations,
+            "verification_status": r.verification_status,
+            "retry_count": r.retry_count,
+            "citations_checked": r.verification.checked if r.verification else None,
+            "deterministic_passed": r.verification.deterministic_passed if r.verification else None,
+            "semantic_passed": r.verification.semantic_passed if r.verification else None,
             "error": r.error,
         }
         for r in run.results
@@ -375,6 +428,21 @@ def write_triage_report(
         f"{s['unseen_citations']} citations of rows the agent never saw. "
         f"{s['seconds']:.0f}s in total, {s['rate_limit_wait_seconds']:.0f}s of it waiting on "
         "rate limits.",
+    ]
+    v = s["verification"]
+    lines += [
+        "",
+        "## Citation validity (this run)",
+        "",
+        "| | First draft | Released |",
+        "|---|---:|---:|",
+        f"| Deterministic - rows exist, values match | {cell(v['first_draft_deterministic_valid'])} "
+        f"| {cell(v['deterministic_valid'])} |",
+        f"| Semantic - evidence supports the claim (model-judged) | - "
+        f"| {cell(v['semantic_supported_model_judged'])} |",
+        "",
+        f"{v['citations_checked']} citations checked. Release status {v['status']}; "
+        f"{v['regenerated']} note(s) regenerated after the Verifier objected.",
     ]
     if run.quota_stopped:
         lines += [

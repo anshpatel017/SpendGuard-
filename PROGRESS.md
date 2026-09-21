@@ -163,21 +163,46 @@ Ten phases, numbered 0–9. A phase is **done** when its exit criterion is demon
 
 ---
 
+### Phase 7 — Verifier ✅
+
+**Built:** the Verifier. Every note is checked before release: a **deterministic** check (cited rows exist, stated values match, cited policy clauses exist, no "duplicate payment" wording) and a **semantic** check (a fresh-context LLM judge rules whether the evidence supports each claim). Failures go back into the Investigator's own conversation for revision, up to `VERIFIER_MAX_RETRIES`, and the best draft is released as `verified`, `failed_after_retries` or `unverified`. Badge, counts and every citation's check results are stored. `spendguard investigate --no-verify` runs the Verifier-off ablation (FR-7.8).
+
+**Files:** `agent/checks.py` (new, deterministic), `agent/verifier.py` (new, judge and loop), `agent/investigator.py` (keeps its conversation; `revise()`, `finalize()`), `agent/note.py` (`citations()`), `db/store.py` (verification fields and trace role persisted), `investigation.py` (Verifier in both modes; citation validity in the summary and report), `cli.py` (`--verify/--no-verify`, badge per case), `config.py` (`VERIFIER_ENABLED`, `VERIFIER_SEMANTIC_CHECK`, `VERIFIER_TEMPERATURE`, `VERIFIER_MAX_ROWS`, `VERIFIER_CONTEXT_CHARS`), `.env.example`, `tests/test_verifier.py` (new, 38 tests), `tests/test_investigation.py`, `tests/test_investigator.py`, `tests/test_agent_live.py`, `docs/DECISIONS.md` (D-31), `docs/DATA-SCHEMA.md`, `docs/TEST-CHECKLIST.md`.
+
+**Exit criterion met:** a note planted with a wrong amount, a nonexistent row and an unsupported claim is caught on each count, and a clean note is released `verified`. The tests are not vacuous: breaking the value comparison on purpose makes four of them fail. Live, the real judge accepted a true claim about a row and rejected an invented one about the same row. On the real note the agent wrote in Phase 6, the deterministic check passes all 8 citations and all 14 stated values, and catches that note's "duplicate payment" wording.
+
+**Decisions and gotchas:**
+
+- **Two numbers, never blended (D-13, D-31).** Deterministic validity involves no model and is the headline. The semantic number comes from the same model family that wrote the note, so it is labelled model-judged.
+- **A stated number matches at the precision it was stated.** `259463` matches `259463.41`; `260000` does not; nor does a transposed digit. Invoice numbers are compared almost literally, because `INV-4471` against `INV-04471` is the retyping that makes a duplicate.
+- **The judge gets a fresh context:** claims, cited rows and the Investigator's tool results, never its reasoning. It rules on claims, not rows one at a time, because "the four orders total ₹3,26,873" is supported by its rows together.
+- **Revision continues the Investigator's conversation** instead of investigating again. A fix costs a turn or two rather than 15–25k tokens, which matters at ~10 investigations a day. This needed a small refactor: the loop now lives in one `_gather()` used by both `investigate()` and `revise()`.
+- **The best draft is released, not the last**, and a revision that never arrives keeps the original note.
+- **`verified` requires both checks to have run.** A judge that could not answer means `unverified`; any known failure means `failed_after_retries`.
+- **The Verifier-off ablation still measures.** Nothing is enforced or regenerated, but the deterministic check runs and is stored, so both arms are measured by the same code.
+- A test fixture was wrong, not the code: a scripted note claimed ₹5,000 for a ₹1,000 row, and the new Verifier caught it.
+
+**Not yet done live:** a full investigate → verify → revise run on real cases. The attempt stopped on the Groq daily quota after one case, cleanly, with four sample cases left. `spendguard investigate --eval-seed 42 --per-type 1` continues it when the quota refills.
+
+**633 tests passing** (+7 live tests, opt-in).
+
+---
+
 ## Current Phase
 
-### Phase 7 — Verifier 🚧 not started
+### Phase 8 — API and dashboard 🚧 not started
 
-- Extract every citation from a note (already structured: claims → `row_ids` + `facts`, one `citations` row per claim and row).
-- **Deterministic check:** every cited row exists in `audit_transactions`, and every asserted field value matches the row.
-- **Semantic check:** the cited rows actually support the claim's sentence (LLM judge, small prompt).
-- On failure, regenerate the note with the failure reasons fed back, up to `VERIFIER_MAX_RETRIES`; a note that still fails is stored as `failed_after_retries`, never silently released.
-- Citation validity reported as two numbers, deterministic and semantic (D-13). Add a wording check ("duplicate payment" on PO data).
-- Exit criterion: a note with a planted wrong amount, a nonexistent row, and an unsupported claim is caught on each count; verified notes are marked `verified`.
+- FastAPI over the two stores, per `docs/API-CONTRACT.md`: case queue (filter by type, band, status, verification), case detail with evidence rows, the audit note with per-citation check results, the trace timeline, the review action (set status and reviewer note, the only write), metrics.
+- React 18 + TypeScript + Vite + TanStack Query: case queue, evidence view (cited rows highlighted), verification badge, trace timeline, review controls. Money in INR with Indian grouping.
+- Investigation stays a batch CLI job (D-10); the API reads results and never runs the LLM inside a request.
+- Exit criterion: from the browser, an auditor can pick a case, read the verified note with its cited rows, walk the trace, and confirm or dismiss the case.
 
 ## Next Steps
 
-1. **Decide how to run the investigation evaluation at scale (your call).** Groq's free tier allows ~10 investigations a day; Phase 9 needs hundreds. Options: (a) **Ollama locally** with Qwen2.5-3B — no limits, fully local (the project's own claim), but a weaker model on a 4 GB GPU; (b) **another free provider** with more generous limits, e.g. Google Gemini's free tier (the client already supports `LLM_PROVIDER=gemini`; needs a free API key from you); (c) **stay on Groq** and let the evaluation accumulate ~10 cases a day. Development of Phase 7 can continue on Groq meanwhile.
-2. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred).
-3. **Before the local-runtime proof** — install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M`.
-4. **Before Phase 9** — download the Kaggle "Large Purchases by the State of California" CSV into `data/raw/`.
-5. **Housekeeping:** all work sits on `main` and is committed locally but **not pushed**. Say the word and I will push, or set up a branch-and-PR flow.
+1. **Phase 8 next** — needs Node.js on this machine for the React frontend (I'll check and guide you if it's missing).
+2. **Resume the live evaluation when the quota refills** (the next day): `spendguard investigate --eval-seed 42 --per-type 1`. It picks up the four remaining sample cases with the Verifier on.
+3. **Scale for Phase 9 is still open.** You chose to stay on Groq for now (~10 investigations a day). Phase 9 needs hundreds; the options remain Ollama locally or a free Gemini key.
+4. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred).
+5. **Before the local-runtime proof** — install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M`.
+6. **Before Phase 9** — download the Kaggle "Large Purchases by the State of California" CSV into `data/raw/`.
+7. **Housekeeping:** all work sits on `main` and is committed locally but **not pushed**. Say the word and I will push, or set up a branch-and-PR flow.

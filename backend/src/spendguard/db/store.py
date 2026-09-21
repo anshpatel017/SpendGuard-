@@ -376,6 +376,7 @@ def save_investigation(
     comparison and leaves the case alone.
     """
     note_id: str | None = None
+    report = result.verification
     with Session(engine) as session, session.begin():
         if result.note is not None:
             note_id = str(uuid.uuid4())
@@ -389,24 +390,34 @@ def save_investigation(
                     recommended_action=result.note.recommended_action,
                     claims=[c.model_dump(mode="json") for c in result.note.claims],
                     policy_clauses=list(result.note.policy_clauses),
+                    verification_status=result.verification_status,
+                    citations_checked=report.checked if report else None,
+                    citations_passed=report.citations_passed if report else None,
+                    deterministic_passed=report.deterministic_passed if report else None,
+                    semantic_passed=report.semantic_passed if report else None,
+                    retry_count=result.retry_count,
                     model_name=result.model,
                     is_ablation=ablation_name is not None,
                     ablation_name=ablation_name,
                 )
             )
-            for index, claim in enumerate(result.note.claims):
-                for row_id in claim.row_ids:
-                    asserted = {f.field: f.value for f in claim.facts if f.row_id == row_id}
-                    session.add(
-                        CitationRecord(
-                            citation_id=str(uuid.uuid4()),
-                            note_id=note_id,
-                            claim_index=index,
-                            claim_text=claim.text,
-                            row_id=row_id,
-                            asserted=_trace_result(asserted),
-                        )
+            checks = {(c.claim_index, c.row_id): c for c in report.citations} if report else {}
+            for citation in result.note.citations():
+                check = checks.get((citation.claim_index, citation.row_id))
+                session.add(
+                    CitationRecord(
+                        citation_id=str(uuid.uuid4()),
+                        note_id=note_id,
+                        claim_index=citation.claim_index,
+                        claim_text=citation.claim_text,
+                        row_id=citation.row_id,
+                        asserted=_trace_result(citation.asserted),
+                        row_exists=check.row_exists if check else None,
+                        values_match=check.values_match if check else None,
+                        supports_claim=check.supports_claim if check else None,
+                        failure_reason=check.failure_reason if check else None,
                     )
+                )
         for step in result.trace:
             session.add(
                 TraceRecord(
@@ -415,6 +426,7 @@ def save_investigation(
                     run_id=run_id,
                     note_id=note_id,
                     step_index=step.step_index,
+                    role=step.role,
                     kind=step.kind,
                     tool_name=step.tool_name,
                     tool_args=_trace_result(step.tool_args),
