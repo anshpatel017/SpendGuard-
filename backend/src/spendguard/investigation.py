@@ -298,7 +298,10 @@ def evaluate_investigation(
         groups = load_ground_truth(con)
         cases = [c for name in PRODUCTION_DETECTORS for c in REGISTRY[name]().detect(con)]
         chosen, truth = sample_for_triage(cases, groups, per_type, seed)
-        save_cases(engine, run_id, dataset, chosen)
+        # Every flagged case goes to the store, not just the sample: the store then
+        # shows what an auditor would see - everything flagged, some of it
+        # investigated - and the dashboard's coverage line is honest about it.
+        save_cases(engine, run_id, dataset, cases)
         done_before = {c.case_id for c in chosen if latest_note(engine, c.case_id) is not None}
         pending = [c for c in chosen if include_investigated or c.case_id not in done_before]
         results = _investigate_all(

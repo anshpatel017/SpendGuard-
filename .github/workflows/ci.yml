@@ -21,7 +21,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: python -m pip install -e "./backend[dev,detect]"
+        run: python -m pip install -e "./backend[dev,detect,api]"
 
       - name: Lint
         run: python -m ruff check backend/src backend/tests

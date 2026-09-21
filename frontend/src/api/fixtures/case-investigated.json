@@ -1,0 +1,736 @@
+{
+ "case": {
+  "case_id": "e20bb7c5-4677-5d6c-a297-05a74bdd8833",
+  "run_id": "detect-backfill-seed42",
+  "anomaly_type": "duplicate",
+  "detector": "d1",
+  "row_ids": [
+   6934,
+   50772
+  ],
+  "vendor_key": "fabrics shah",
+  "detector_score": 1.0,
+  "amount_at_risk": "259463.41",
+  "severity_prelim": 77.34,
+  "severity_final": 77.34,
+  "severity_band": "high",
+  "status": "new",
+  "investigated": true,
+  "dismissed_by_agent": false,
+  "reviewer_note": null,
+  "created_at": "2026-09-21T13:52:31.838218",
+  "updated_at": "2026-09-21T15:43:35.436953",
+  "metadata": {
+   "policy_clause": "SG-PP-4.4",
+   "original_row_id": 6934,
+   "stages": [
+    "exact"
+   ],
+   "pairs": [
+    {
+     "row_ids": [
+      6934,
+      50772
+     ],
+     "stage": "exact",
+     "probability": 1.0
+    }
+   ]
+  }
+ },
+ "audit_note": {
+  "note_id": "548a5b41-2e54-4988-94e6-c8fc28ebad98",
+  "case_id": "e20bb7c5-4677-5d6c-a297-05a74bdd8833",
+  "finding": "Rows 6934 and 50772 are the same obligation recorded twice: identical supplier, invoice number SFC/24-25/158, amount, item, quantity and officer, with dates only one day apart. The supplier bills many distinct amounts (931 distinct across 939 transactions) with no fixed monthly contract, so a recurring billing pattern cannot explain the repeat. This matches every indicator of a suspected duplicate under SG-PP-4.4 and breaches the unique-invoice rule of SG-PP-4.1.",
+  "recommended_action": "Withhold any payment against row 50772 pending review under SG-PP-4.4, confirm with Shah Fabrics & Co that invoice SFC/24-25/158 represents a single obligation, and if a duplicate payment is confirmed recover by set-off under SG-PP-4.5 and record the incident in the duplicate-payment register.",
+  "verdict": "likely_true_positive",
+  "policy_clauses": [
+   "SG-PP-4.4",
+   "SG-PP-4.1",
+   "SG-PP-4.5"
+  ],
+  "verification_status": "unverified",
+  "citations": [
+   {
+    "citation_id": "62a0deae-89a1-4411-a8ba-21d220e530dc",
+    "claim_index": 0,
+    "claim_text": "Both records are from Shah Fabrics & Co for Rs 259,463.41 for 193 Staff Uniform Sets at Rs 1,344.37 each.",
+    "row_id": 6934,
+    "asserted": {
+     "amount": 259463.41,
+     "quantity": 193.0,
+     "unit_price": 1344.37
+    },
+    "row_exists": null,
+    "values_match": null,
+    "supports_claim": null,
+    "failure_reason": null
+   },
+   {
+    "citation_id": "2bffd4bb-21ad-4612-b66d-ec7752dcb668",
+    "claim_index": 0,
+    "claim_text": "Both records are from Shah Fabrics & Co for Rs 259,463.41 for 193 Staff Uniform Sets at Rs 1,344.37 each.",
+    "row_id": 50772,
+    "asserted": {
+     "amount": 259463.41,
+     "quantity": 193.0,
+     "unit_price": 1344.37
+    },
+    "row_exists": null,
+    "values_match": null,
+    "supports_claim": null,
+    "failure_reason": null
+   },
+   {
+    "citation_id": "4b2c4147-80b5-4870-89a3-60d15d73a9bd",
+    "claim_index": 1,
+    "claim_text": "The two records carry the identical invoice number SFC/24-25/158.",
+    "row_id": 6934,
+    "asserted": {
+     "invoice_no": "SFC/24-25/158"
+    },
+    "row_exists": null,
+    "values_match": null,
+    "supports_claim": null,
+    "failure_reason": null
+   },
+   {
+    "citation_id": "6eae8992-fcb4-47cb-9d98-4ec453fa0f43",
+    "claim_index": 1,
+    "claim_text": "The two records carry the identical invoice number SFC/24-25/158.",
+    "row_id": 50772,
+    "asserted": {
+     "invoice_no": "SFC/24-25/158"
+    },
+    "row_exists": null,
+    "values_match": null,
+    "supports_claim": null,
+    "failure_reason": null
+   },
+   {
+    "citation_id": "575148ba-0148-47f6-b50f-7ab14c5385b4",
+    "claim_index": 2,
+    "claim_text": "The two records are dated one day apart (2024-08-21 and 2024-08-22) and were both raised by officer POL-058.",
+    "row_id": 6934,
+    "asserted": {
+     "txn_date": "2024-08-21",
+     "officer_id": "POL-058"
+    },
+    "row_exists": null,
+    "values_match": null,
+    "supports_claim": null,
+    "failure_reason": null
+   },
+   {
+    "citation_id": "72e4ced4-99e4-4791-92eb-cc22c69f970a",
+    "claim_index": 2,
+    "claim_text": "The two records are dated one day apart (2024-08-21 and 2024-08-22) and were both raised by officer POL-058.",
+    "row_id": 50772,
+    "asserted": {
+     "txn_date": "2024-08-22",
+     "officer_id": "POL-058"
+    },
+    "row_exists": null,
+    "values_match": null,
+    "supports_claim": null,
+    "failure_reason": null
+   },
+   {
+    "citation_id": "df03a4ed-ea88-4074-9752-d241e1a352cd",
+    "claim_index": 3,
+    "claim_text": "The supplier has no recurring fixed-amount monthly billing that would explain a repeat of the same amount.",
+    "row_id": 6934,
+    "asserted": {
+     "vendor_key": "fabrics shah"
+    },
+    "row_exists": null,
+    "values_match": null,
+    "supports_claim": null,
+    "failure_reason": null
+   },
+   {
+    "citation_id": "5624a462-5b7b-42e8-8eff-b67f99bc07d5",
+    "claim_index": 3,
+    "claim_text": "The supplier has no recurring fixed-amount monthly billing that would explain a repeat of the same amount.",
+    "row_id": 50772,
+    "asserted": {
+     "vendor_key": "fabrics shah"
+    },
+    "row_exists": null,
+    "values_match": null,
+    "supports_claim": null,
+    "failure_reason": null
+   }
+  ],
+  "citations_checked": null,
+  "citations_passed": null,
+  "deterministic_passed": null,
+  "semantic_passed": null,
+  "retry_count": 0,
+  "model_name": "qwen/qwen3.8-27b",
+  "created_at": "2026-09-21T13:53:31.738358"
+ },
+ "evidence_rows": [
+  {
+   "row_id": 6934,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/158",
+   "amount": "259463.41",
+   "txn_date": "2024-08-21",
+   "officer_id": "POL-058",
+   "item_desc": "Staff Uniform Set",
+   "item_category": "Uniforms and Textiles / Staff Uniform Set",
+   "quantity": 193.0,
+   "unit_price": "1344.37",
+   "in_case": true,
+   "cited": true
+  },
+  {
+   "row_id": 50772,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/158",
+   "amount": "259463.41",
+   "txn_date": "2024-08-22",
+   "officer_id": "POL-058",
+   "item_desc": "Staff Uniform Set",
+   "item_category": "Uniforms and Textiles / Staff Uniform Set",
+   "quantity": 193.0,
+   "unit_price": "1344.37",
+   "in_case": true,
+   "cited": true
+  }
+ ],
+ "evidence_total": 2,
+ "context_rows": [
+  {
+   "row_id": 6882,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/156",
+   "amount": "138383.46",
+   "txn_date": "2024-08-20",
+   "officer_id": "HLT-041",
+   "item_desc": "Hospital Bedsheets",
+   "item_category": "Uniforms and Textiles / Hospital Bedsheets",
+   "quantity": 387.0,
+   "unit_price": "357.58",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 6883,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/157",
+   "amount": "63461.64",
+   "txn_date": "2024-08-20",
+   "officer_id": "POL-043",
+   "item_desc": "Staff Uniform Set",
+   "item_category": "Uniforms and Textiles / Staff Uniform Set",
+   "quantity": 44.0,
+   "unit_price": "1442.31",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 6811,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/153",
+   "amount": "141237.84",
+   "txn_date": "2024-08-19",
+   "officer_id": "HLT-008",
+   "item_desc": "Hospital Bedsheets",
+   "item_category": "Uniforms and Textiles / Hospital Bedsheets",
+   "quantity": 218.0,
+   "unit_price": "647.88",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 6812,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/154",
+   "amount": "38513.16",
+   "txn_date": "2024-08-19",
+   "officer_id": "HLT-041",
+   "item_desc": "Hospital Bedsheets",
+   "item_category": "Uniforms and Textiles / Hospital Bedsheets",
+   "quantity": 119.0,
+   "unit_price": "323.64",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 6813,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/155",
+   "amount": "13493.50",
+   "txn_date": "2024-08-19",
+   "officer_id": "POL-025",
+   "item_desc": "Staff Uniform Set",
+   "item_category": "Uniforms and Textiles / Staff Uniform Set",
+   "quantity": 10.0,
+   "unit_price": "1349.35",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 7064,
+   "vendor_name": "Shah Fabrics &  Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/159",
+   "amount": "162794.38",
+   "txn_date": "2024-08-23",
+   "officer_id": "POL-043",
+   "item_desc": "Staff Uniform Set",
+   "item_category": "Uniforms and Textiles / Staff Uniform Set",
+   "quantity": 119.0,
+   "unit_price": "1368.02",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 7065,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/160",
+   "amount": "143628.16",
+   "txn_date": "2024-08-23",
+   "officer_id": "TRN-019",
+   "item_desc": "Staff Uniform Set",
+   "item_category": "Uniforms and Textiles / Staff Uniform Set",
+   "quantity": 122.0,
+   "unit_price": "1177.28",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 6782,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/152",
+   "amount": "92562.60",
+   "txn_date": "2024-08-17",
+   "officer_id": "POL-025",
+   "item_desc": "Hospital Bedsheets",
+   "item_category": "Uniforms and Textiles / Hospital Bedsheets",
+   "quantity": 260.0,
+   "unit_price": "356.01",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 7164,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/161",
+   "amount": "18065.40",
+   "txn_date": "2024-08-26",
+   "officer_id": "POL-025",
+   "item_desc": "Hospital Bedsheets",
+   "item_category": "Uniforms and Textiles / Hospital Bedsheets",
+   "quantity": 60.0,
+   "unit_price": "301.09",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 7226,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/162",
+   "amount": "26684.55",
+   "txn_date": "2024-08-27",
+   "officer_id": "POL-043",
+   "item_desc": "Staff Uniform Set",
+   "item_category": "Uniforms and Textiles / Staff Uniform Set",
+   "quantity": 19.0,
+   "unit_price": "1404.45",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 6606,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/150",
+   "amount": "186820.88",
+   "txn_date": "2024-08-14",
+   "officer_id": "POL-025",
+   "item_desc": "Staff Uniform Set",
+   "item_category": "Uniforms and Textiles / Staff Uniform Set",
+   "quantity": 142.0,
+   "unit_price": "1315.64",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 6607,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/151",
+   "amount": "14583.10",
+   "txn_date": "2024-08-14",
+   "officer_id": "POL-058",
+   "item_desc": "Staff Uniform Set",
+   "item_category": "Uniforms and Textiles / Staff Uniform Set",
+   "quantity": 10.0,
+   "unit_price": "1458.31",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 7295,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/163",
+   "amount": "345182.40",
+   "txn_date": "2024-08-28",
+   "officer_id": "POL-047",
+   "item_desc": "Staff Uniform Set - Premium Grade",
+   "item_category": "Uniforms and Textiles / Staff Uniform Set",
+   "quantity": 180.0,
+   "unit_price": "1917.68",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 7370,
+   "vendor_name": "M/s Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/164",
+   "amount": "29313.77",
+   "txn_date": "2024-08-29",
+   "officer_id": "POL-025",
+   "item_desc": "Hospital Bedsheets",
+   "item_category": "Uniforms and Textiles / Hospital Bedsheets",
+   "quantity": 53.0,
+   "unit_price": "553.09",
+   "in_case": false,
+   "cited": false
+  },
+  {
+   "row_id": 7371,
+   "vendor_name": "Shah Fabrics & Co",
+   "vendor_key": "fabrics shah",
+   "invoice_no": "SFC/24-25/165",
+   "amount": "97511.40",
+   "txn_date": "2024-08-29",
+   "officer_id": "POL-047",
+   "item_desc": "Hospital Bedsheets",
+   "item_category": "Uniforms and Textiles / Hospital Bedsheets",
+   "quantity": 315.0,
+   "unit_price": "309.56",
+   "in_case": false,
+   "cited": false
+  }
+ ],
+ "trace": [
+  {
+   "step_index": 0,
+   "role": "investigator",
+   "kind": "model",
+   "tool_name": null,
+   "tool_args": null,
+   "tool_result": null,
+   "latency_ms": 1346,
+   "prompt_tokens": 2182,
+   "completion_tokens": 63,
+   "detail": "requested vendor_profile, find_similar_invoices",
+   "error": null
+  },
+  {
+   "step_index": 1,
+   "role": "investigator",
+   "kind": "tool",
+   "tool_name": "vendor_profile",
+   "tool_args": {
+    "vendor_key": "fabrics shah"
+   },
+   "tool_result": {
+    "transactions": 939,
+    "total_amount": 105318511.80999999,
+    "first_seen": "2024-04-01",
+    "last_seen": "2026-03-31",
+    "distinct_amounts": 931,
+    "officers": 17,
+    "round_share": 0.0010649627263045794,
+    "vendor_name": "Shah Fabrics & Co",
+    "vendor_key": "fabrics shah",
+    "found": true,
+    "by_officer": [
+     {
+      "officer_id": "POL-047",
+      "transactions": 146,
+      "total": 17520428.48
+     },
+     {
+      "officer_id": "POL-043",
+      "transactions": 144,
+      "total": 16274917.370000008
+     },
+     {
+      "officer_id": "POL-050",
+      "transactions": 144,
+      "total": 15942911.739999998
+     },
+     {
+      "officer_id": "POL-025",
+      "transactions": 132,
+      "total": 13299864.940000005
+     },
+     {
+      "officer_id": "TRN-019",
+      "transactions": 102,
+      "total": 11518956.490000002
+     }
+    ],
+    "by_category": [
+     {
+      "item_category": "Uniforms and Textiles / Staff Uniform Set",
+      "transactions": 462,
+      "total": 72285330.67999996
+     },
+     {
+      "item_category": "Uniforms and Textiles / Hospital Bedsheets",
+      "transactions": 476,
+      "total": 32913561.929999996
+     },
+     {
+      "item_category": null,
+      "transactions": 1,
+      "total": 119619.2
+     }
+    ],
+    "recurring_monthly_billing": [],
+    "looks_like_fixed_contract": false
+   },
+   "latency_ms": 31,
+   "prompt_tokens": 0,
+   "completion_tokens": 0,
+   "detail": null,
+   "error": null
+  },
+  {
+   "step_index": 2,
+   "role": "investigator",
+   "kind": "tool",
+   "tool_name": "find_similar_invoices",
+   "tool_args": {
+    "row_id": 6934
+   },
+   "tool_result": {
+    "subject": {
+     "row_id": 6934,
+     "vendor_name": "Shah Fabrics & Co",
+     "vendor_key": "fabrics shah",
+     "invoice_no": "SFC/24-25/158",
+     "amount": 259463.41,
+     "txn_date": "2024-08-21",
+     "officer_id": "POL-058",
+     "item_desc": "Staff Uniform Set",
+     "item_category": "Uniforms and Textiles / Staff Uniform Set",
+     "quantity": 193.0,
+     "unit_price": 1344.37
+    },
+    "same_supplier_within_90_days": [
+     {
+      "row_id": 6882,
+      "vendor_name": "Shah Fabrics & Co",
+      "invoice_no": "SFC/24-25/156",
+      "amount": 138383.46,
+      "txn_date": "2024-08-20",
+      "officer_id": "HLT-041",
+      "item_desc": "Hospital Bedsheets"
+     },
+     {
+      "row_id": 6883,
+      "vendor_name": "Shah Fabrics & Co",
+      "invoice_no": "SFC/24-25/157",
+      "amount": 63461.64,
+      "txn_date": "2024-08-20",
+      "officer_id": "POL-043",
+      "item_desc": "Staff Uniform Set"
+     },
+     {
+      "row_id": 50772,
+      "vendor_name": "Shah Fabrics & Co",
+      "invoice_no": "SFC/24-25/158",
+      "amount": 259463.41,
+      "txn_date": "2024-08-22",
+      "officer_id": "POL-058",
+      "item_desc": "Staff Uniform Set"
+     },
+     {
+      "row_id": 6811,
+      "vendor_name": "Shah Fabrics & Co",
+      "invoice_no": "SFC/24-25/153",
+      "amount": 141237.84,
+      "txn_date": "2024-08-19",
+      "officer_id": "HLT-008",
+      "item_desc": "Hospital Bedsheets"
+     },
+     {
+      "row_id": 6812,
+      "vendor_name": "Shah Fabrics & Co",
+      "invoice_no": "SFC/24-25/154",
+      "amount": 38513.16,
+      "txn_date": "2024-08-19",
+      "officer_id": "HLT-041",
+      "item_desc": "Hospital Bedsheets"
+     }
+    ],
+    "same_commodity_closest_unit_price": [
+     {
+      "row_id": 50772,
+      "vendor_name": "Shah Fabrics & Co",
+      "amount": 259463.41,
+      "unit_price": 1344.37,
+      "quantity": 193.0,
+      "txn_date": "2024-08-22"
+     },
+     {
+      "row_id": 41698,
+      "vendor_name": "Galaxy Garments Pvt Ltd",
+      "amount": 188095.6,
+      "unit_price": 1343.54,
+      "quantity": 140.0,
+      "txn_date": "2026-01-13"
+     },
+     {
+      "row_id": 38234,
+      "vendor_name": "Annapurna Fabrics Pvt Ltd",
+      "amount": 208555.6,
+      "unit_price": 1345.52,
+      "quantity": 155.0,
+      "txn_date": "2025-12-01"
+     },
+     {
+      "row_id": 30399,
+      "vendor_name": "Bhatia Tailors Pvt Ltd",
+      "amount": 110143.22,
+      "unit_price": 1343.21,
+      "quantity": 82.0,
+      "txn_date": "2025-08-21"
+     },
+     {
+      "row_id": 17659,
+      "vendor_name": "Desai Garments  & Co",
+      "amount": 146684.57,
+      "unit_price": 1345.73,
+      "quantity": 109.0,
+      "txn_date": "2025-03-01"
+     }
+    ]
+   },
+   "latency_ms": 11,
+   "prompt_tokens": 0,
+   "completion_tokens": 0,
+   "detail": null,
+   "error": null
+  },
+  {
+   "step_index": 3,
+   "role": "investigator",
+   "kind": "model",
+   "tool_name": null,
+   "tool_args": null,
+   "tool_result": null,
+   "latency_ms": 451,
+   "prompt_tokens": 3530,
+   "completion_tokens": 33,
+   "detail": "requested policy_lookup",
+   "error": null
+  },
+  {
+   "step_index": 4,
+   "role": "investigator",
+   "kind": "tool",
+   "tool_name": "policy_lookup",
+   "tool_args": {
+    "query": "duplicate transaction records same invoice number recorded twice"
+   },
+   "tool_result": {
+    "query": "duplicate transaction records same invoice number recorded twice",
+    "clauses": [
+     {
+      "clause_id": "SG-PP-4.4",
+      "title": "Indicators of duplicate payment",
+      "section": "4. Duplicate payment prevention and recovery",
+      "text": "The following combination shall be treated as a suspected duplicate and withheld from payment pending review:\n\n- same supplier, allowing for variant spelling of the registered name\n- identical amount, or amounts differing by less than **0.5%**\n- transaction dates within **fourteen days** of each other\n- invoice references that are identical, or that differ only in formatting, punctuation or sequence separators",
+      "similarity": 0.7604
+     },
+     {
+      "clause_id": "SG-PP-4.1",
+      "title": "Unique invoice registration",
+      "section": "4. Duplicate payment prevention and recovery",
+      "text": "Every supplier invoice shall be registered against a unique invoice number per supplier per financial year. The accounting system shall reject a second registration of the same supplier and invoice number.",
+      "similarity": 0.7484
+     },
+     {
+      "clause_id": "SG-PP-4.5",
+      "title": "Recovery",
+      "section": "4. Duplicate payment prevention and recovery",
+      "text": "Where a duplicate payment is confirmed, recovery shall be initiated immediately by set-off against the supplier's next payment or by direct demand. The incident shall be recorded in the duplicate-payment register with the amount, date, cause and recovery status.",
+      "similarity": 0.7174
+     }
+    ]
+   },
+   "latency_ms": 15410,
+   "prompt_tokens": 0,
+   "completion_tokens": 0,
+   "detail": null,
+   "error": null
+  },
+  {
+   "step_index": 5,
+   "role": "investigator",
+   "kind": "model",
+   "tool_name": null,
+   "tool_args": null,
+   "tool_result": null,
+   "latency_ms": 537,
+   "prompt_tokens": 3875,
+   "completion_tokens": 37,
+   "detail": "requested calculator",
+   "error": null
+  },
+  {
+   "step_index": 6,
+   "role": "investigator",
+   "kind": "tool",
+   "tool_name": "calculator",
+   "tool_args": {
+    "expression": "259463.41 * 2"
+   },
+   "tool_result": {
+    "expression": "259463.41 * 2",
+    "result": 518926.82
+   },
+   "latency_ms": 0,
+   "prompt_tokens": 0,
+   "completion_tokens": 0,
+   "detail": null,
+   "error": null
+  },
+  {
+   "step_index": 7,
+   "role": "investigator",
+   "kind": "model",
+   "tool_name": null,
+   "tool_args": null,
+   "tool_result": null,
+   "latency_ms": 1934,
+   "prompt_tokens": 3957,
+   "completion_tokens": 782,
+   "detail": "replied with a note",
+   "error": null
+  }
+ ],
+ "currency": "INR"
+}

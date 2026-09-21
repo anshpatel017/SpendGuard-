@@ -6,6 +6,8 @@ spendguard detect                   run the detectors, store cases for review
 spendguard inject                   plant seeded anomalies in a copy of the database
 spendguard evaluate                 score detectors against the planted anomalies
 spendguard investigate              the Investigator on the top-N cases (or --eval-seed)
+spendguard serve                    the API and dashboard (or --eval-seed for an evaluation run)
+spendguard openapi                  write the API schema the frontend's types are generated from
 spendguard check-llm                the LLM endpoint answers and can call tools?
 spendguard check-policy             policy.md and config.py agree?
 """
@@ -368,6 +370,66 @@ def investigate(
         console.print(table)
     for path_out in run.report_paths:
         console.print(f"[green]Report[/green] {path_out}")
+
+
+def _eval_stores(seed: int) -> tuple[Path, str]:
+    from spendguard.eval.injection import default_injected_path
+
+    db = default_injected_path(seed)
+    store = settings.processed_data_dir / "eval" / f"investigation_seed{seed}.sqlite"
+    if not db.exists() or not store.exists():
+        console.print(
+            f"[red]No evaluation stores for seed {seed}.[/red] Run `spendguard inject --seed "
+            f"{seed}` and `spendguard investigate --eval-seed {seed}` first."
+        )
+        raise typer.Exit(code=1)
+    return db, f"sqlite:///{store.as_posix()}"
+
+
+@app.command()
+def serve(
+    host: Annotated[str, typer.Option(help="Interface to listen on.")] = settings.api_host,
+    port: Annotated[int, typer.Option(help="Port.")] = settings.api_port,
+    eval_seed: Annotated[
+        int | None,
+        typer.Option(help="Show an evaluation run's stores (planted anomalies) instead."),
+    ] = None,
+) -> None:
+    """Serve the API, and the dashboard if it has been built (frontend/dist)."""
+    import uvicorn
+
+    from spendguard.api import create_app
+
+    db, url = _eval_stores(eval_seed) if eval_seed is not None else (settings.duckdb_path, None)
+    app_ = create_app(duckdb_path=db, database_url=url)
+    built = (settings.frontend_dist / "index.html").exists()
+    console.print(f"Data: {db.name}" + (" (evaluation, planted anomalies)" if eval_seed else ""))
+    console.print(f"API:  http://{host}:{port}/api/v1  ·  docs http://{host}:{port}/docs")
+    if built:
+        console.print(f"[green]Dashboard[/green] http://{host}:{port}/")
+    else:
+        console.print(
+            "[yellow]Dashboard not built.[/yellow] `cd frontend && npm run build`, or run "
+            "`npm run dev` there for the development server."
+        )
+    uvicorn.run(app_, host=host, port=port, log_level=settings.log_level.lower())
+
+
+@app.command()
+def openapi(
+    out: Annotated[Path, typer.Option(help="Where to write the schema.")] = (
+        settings.project_root / "frontend" / "openapi.json"
+    ),
+) -> None:
+    """Write the OpenAPI schema. The frontend generates its types from it (API-CONTRACT §4)."""
+    import json
+
+    from spendguard.api import create_app
+
+    schema = create_app().openapi()
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    console.print(f"[green]Wrote[/green] {out} ({len(schema['paths'])} paths)")
 
 
 @app.command("check-llm")
