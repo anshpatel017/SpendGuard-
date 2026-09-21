@@ -429,6 +429,25 @@ On any failure the objections go back to the Investigator, which revises, up to 
 
 ---
 
+## D-32 — The API and dashboard: thin, contract-checked, one process in production
+
+**Decision.** A FastAPI app (`spendguard serve`) over the two stores, and a React 18 + TypeScript + Vite + TanStack Query dashboard served by the same process once built. The API reads batch results and writes one thing, a reviewer's decision. It never runs a detector or the LLM inside a request (D-10).
+
+**Choices, each with its reason:**
+
+- **Store paths are fixed when the app is built**, not read from global settings per request. `spendguard serve --eval-seed 42` serves an evaluation run's stores (the injected database and its evaluation case store) under a banner saying they hold planted anomalies. Operational and evaluation data can never mix in one process.
+- **The evaluation store holds every flagged case, not only the investigated sample.** It then shows what an auditor would see: 511 flagged, a handful investigated, the rest queued. The dashboard's coverage line ("flagged · investigated · queued") is honest about it.
+- **Evidence is served from the audit view, through an explicit field list and a closed response schema.** Three layers, so breaking one does not leak the answer key. That was measured: pointing the evidence query at the raw table still leaked nothing; the leak test failed only when all three were broken.
+- **The contract is checked twice, at compile time and at runtime.** TypeScript types are generated from the OpenAPI schema, never hand-written. Every response is parsed by a Zod schema declared `satisfies z.ZodType<GeneratedType>`. The first compile caught a real mismatch (Zod treats an `unknown` field as optional; the contract says it is required).
+- **Money is a string end to end.** Pydantic serializes `Decimal` as a string, the validator rejects a float, and the dashboard formats the string with Indian grouping without converting it to a number. The rupees shown are exactly the rupees stored.
+- **"Verified" depends on the status alone** (FR-6.9). A note whose citations all passed the mechanical check, but whose semantic check never ran, displays as unverified.
+- **Filters live in the URL**, so a filtered queue can be linked, bookmarked and reached with the back button.
+- **Health does not probe the LLM.** A dashboard polls health; a probe per poll would spend the free tier's daily request quota.
+
+**Found by running it in a browser, not by the tests.** The evaluation table showed D1 for every anomaly type, at F1 0.000 for split purchases, because the report scores every detector against every type. The API now serves only the types a detector declares. A reviewer also could not clear a note: a blank note was sent as "no change", and an explicit empty one was stored as `""`, breaking the null rule. A blank note now clears to null.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |

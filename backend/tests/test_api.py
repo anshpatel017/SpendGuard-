@@ -79,13 +79,23 @@ def _result(case: Case, note: dict[str, Any], con: Any, status: str) -> Investig
         severity_final=case.severity_prelim if note["verdict"] != "likely_false_positive" else 20.0,
         severity_band="high" if note["verdict"] != "likely_false_positive" else "low",
         trace=[
-            TraceStep(0, "model", prompt_tokens=900, completion_tokens=40, note="requested calculator"),
-            TraceStep(1, "tool", tool_name="calculator", tool_args={"expression": "87450*2"},
-                      tool_result={"result": 174900.0}, latency_ms=2),
-            TraceStep(2, "model", prompt_tokens=1200, completion_tokens=300, note="replied with a note"),
+            TraceStep(
+                0, "model", prompt_tokens=900, completion_tokens=40, note="requested calculator"
+            ),
+            TraceStep(
+                1,
+                "tool",
+                tool_name="calculator",
+                tool_args={"expression": "87450*2"},
+                tool_result={"result": 174900.0},
+                latency_ms=2,
+            ),
+            TraceStep(
+                2, "model", prompt_tokens=1200, completion_tokens=300, note="replied with a note"
+            ),
             TraceStep(3, "check", role="verifier", note="3/3 citations exist and match"),
             TraceStep(4, "judge", role="verifier", prompt_tokens=700, note="2/2 claims supported"),
-        ],  # fmt: skip
+        ],
         verification=report,
         first_check=report,
         verification_status=status,
@@ -155,7 +165,9 @@ def test_the_queue_is_highest_severity_first_with_its_note_summary(client: TestC
 
 
 def test_money_leaves_as_a_string(client: TestClient) -> None:
-    item = next(i for i in client.get(f"{API}/cases").json()["items"] if i["anomaly_type"] == "split")
+    item = next(
+        i for i in client.get(f"{API}/cases").json()["items"] if i["anomaly_type"] == "split"
+    )
     assert item["amount_at_risk"] == "360000.00"
 
 
@@ -268,7 +280,11 @@ def test_the_answer_key_never_leaves_the_api(client: TestClient) -> None:
 
 def test_a_single_transaction_can_be_inspected(client: TestClient) -> None:
     row = client.get(f"{API}/transactions/1").json()
-    assert (row["invoice_no"], row["amount"], row["txn_date"]) == ("INV-04471", "87450.00", "2025-04-01")
+    assert (row["invoice_no"], row["amount"], row["txn_date"]) == (
+        "INV-04471",
+        "87450.00",
+        "2025-04-01",
+    )
     assert client.get(f"{API}/transactions/999999").status_code == 404
 
 
@@ -284,6 +300,15 @@ def test_a_reviewer_confirms_a_case_with_a_note(client: TestClient) -> None:
     assert response.json()["status"] == "confirmed"
     assert response.json()["reviewer_note"] == "Recovery initiated."
     assert client.get(f"{API}/cases/{DUPLICATE.case_id}").json()["case"]["status"] == "confirmed"
+
+
+def test_a_reviewer_can_clear_a_note_and_it_becomes_null(client: TestClient) -> None:
+    url = f"{API}/cases/{SPLIT.case_id}/status"
+    client.patch(url, json={"status": "under_review", "reviewer_note": "Asked the officer."})
+    kept = client.patch(url, json={"status": "confirmed"}).json()  # no note: unchanged
+    assert kept["reviewer_note"] == "Asked the officer."
+    cleared = client.patch(url, json={"status": "confirmed", "reviewer_note": "  "}).json()
+    assert cleared["reviewer_note"] is None  # null, never an empty string
 
 
 def test_a_case_dismissed_by_the_agent_stays_findable_after_review(client: TestClient) -> None:
@@ -306,7 +331,9 @@ def test_the_review_action_refuses_bad_input(client: TestClient) -> None:
 # ------------------------------------------------------------------ metrics, runs, health
 
 
-def test_metrics_add_up_and_follow_review_decisions(client: TestClient, paths: dict[str, Any]) -> None:
+def test_metrics_add_up_and_follow_review_decisions(
+    client: TestClient, paths: dict[str, Any]
+) -> None:
     before = client.get(f"{API}/metrics").json()
     assert before["cases_flagged"] == before["cases_investigated"] + before["cases_queued"] == 8
     assert before["cases_investigated"] == 2
@@ -366,18 +393,33 @@ def test_evaluation_reports_what_was_measured_and_nulls_what_was_not(
     metric = {"anomaly_type": "duplicate", "granularity": "case", "precision": 1.0, "recall": 0.9,
               "f1": 0.947, "pr_auc": 0.9, "tp": 9, "fp": 0, "fn": 1}  # fmt: skip
     (eval_dir / "eval-20260101T000000-seed42.json").write_text(
-        json.dumps({
-            "run_id": "eval-20260101T000000-seed42", "db_path": "x/injected_seed42.duckdb",
-            "ground_truth_groups": {"duplicate": 10},
-            "metrics": [{**metric, "detector": "d1"}, {**metric, "detector": "baseline", "f1": 0.3}],
-        }),  # fmt: skip
+        json.dumps(
+            {
+                "run_id": "eval-20260101T000000-seed42",
+                "db_path": "x/injected_seed42.duckdb",
+                "ground_truth_groups": {"duplicate": 10},
+                "metrics": [
+                    {**metric, "detector": "d1"},
+                    {
+                        **metric,
+                        "detector": "d1",
+                        "anomaly_type": "split",
+                        "f1": 0.0,
+                    },  # not D1's type
+                    {**metric, "detector": "baseline", "f1": 0.3},
+                ],
+            }
+        ),  # fmt: skip
         encoding="utf-8",
     )
     (eval_dir / "investigation_seed42.sqlite").write_bytes(
         Path(paths["database_url"].removeprefix("sqlite:///")).read_bytes()
     )
     body = client.get(f"{API}/evaluation", params={"seed": 42}).json()
-    assert [m["detector"] for m in body["detector_metrics"]] == ["d1"]
+    # D1 never emits split cases, so its meaningless 0.000 there is not served.
+    assert [(m["detector"], m["anomaly_type"]) for m in body["detector_metrics"]] == [
+        ("d1", "duplicate")
+    ]
     assert [m["f1"] for m in body["baseline_metrics"]] == [0.3]
     assert body["injected_anomaly_count"] == 10
     agent = body["agent_metrics"]

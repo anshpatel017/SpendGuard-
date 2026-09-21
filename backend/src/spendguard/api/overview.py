@@ -156,6 +156,23 @@ def _latest(directory: Path, pattern: str) -> Path | None:
     return found[-1] if found else None
 
 
+def _owns(detector: str, anomaly_type: str) -> bool:
+    """Does the detector emit this anomaly type at all?
+
+    The evaluation report scores every detector against every type, so D1 has an
+    F1 of 0.000 on split purchases - true, and meaningless, and exactly the
+    number a reader would misread. Only the types a detector declares are served;
+    the pooled "all" row only for a detector that covers several (the baseline).
+    """
+    from spendguard.detectors import REGISTRY
+
+    detector_class = REGISTRY.get(detector)
+    if detector_class is None:
+        return True
+    types = {t.value for t in detector_class.anomaly_types}
+    return anomaly_type in types or (anomaly_type == "all" and len(types) > 1)
+
+
 def _detector_metrics(report: dict[str, Any]) -> list[DetectorMetrics]:
     return [
         DetectorMetrics(
@@ -171,6 +188,7 @@ def _detector_metrics(report: dict[str, Any]) -> list[DetectorMetrics]:
             fn=m["fn"],
         )
         for m in report.get("metrics", [])
+        if _owns(m["detector"], m["anomaly_type"])
     ]
 
 
