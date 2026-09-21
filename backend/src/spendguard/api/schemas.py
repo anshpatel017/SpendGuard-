@@ -262,3 +262,34 @@ class HealthResponse(BaseModel):
     # every time the dashboard checks health. `spendguard check-llm` probes.
     llm_configured: bool
     llm_model: str | None
+
+
+# ------------------------------------------------------------------ live demo
+
+
+class DemoInjectRequest(BaseModel):
+    anomaly_count: int = Field(default=3, ge=1)  # capped server-side at DEMO_MAX_ANOMALIES
+    seed: int | None = None  # random if omitted
+
+
+class DemoInjectResult(BaseModel):
+    injection_group_id: str
+    anomaly_type: AnomalyTypeName
+    injected_row_ids: list[int]
+    amount_at_risk: Decimal  # additive
+    detected: bool  # caught by a case of the same type (the evaluation's matching rule)
+    detected_by: str | None
+    case_id: UUID | None
+    detector_score: float | None
+
+
+class DemoInjectResponse(BaseModel):
+    seed: int
+    dataset_rows: int
+    window_start: date  # additive: the months of data the demo copied
+    window_end: date  # additive
+    requested: int  # additive: after the server-side cap
+    caught: int  # additive
+    other_cases: int  # additive: raised on the copy, matching nothing planted
+    results: list[DemoInjectResult]
+    elapsed_seconds: float

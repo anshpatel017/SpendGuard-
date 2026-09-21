@@ -17,6 +17,8 @@ export type EvaluationResponse = Schemas["EvaluationResponse"];
 export type DetectorMetrics = Schemas["DetectorMetrics"];
 export type HealthResponse = Schemas["HealthResponse"];
 export type StatusUpdateRequest = Schemas["StatusUpdateRequest"];
+export type DemoInjectRequest = Schemas["DemoInjectRequest"];
+export type DemoInjectResponse = Schemas["DemoInjectResponse"];
 
 export type AnomalyType = Case["anomaly_type"];
 export type CaseStatus = Case["status"];

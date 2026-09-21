@@ -2,6 +2,7 @@ import { NavLink, Route, Routes } from "react-router-dom";
 
 import { DatasetBanner } from "./components/DatasetBanner";
 import { CasePage } from "./pages/CasePage";
+import { DemoPage } from "./pages/DemoPage";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { QueuePage } from "./pages/QueuePage";
 
@@ -17,6 +18,7 @@ export function App() {
             Case queue
           </NavLink>
           <NavLink to="/evaluation">Evaluation</NavLink>
+          <NavLink to="/demo">Live demo</NavLink>
         </nav>
         <span className="spacer" />
         <a className="small" href="/docs" target="_blank" rel="noreferrer">
@@ -29,6 +31,7 @@ export function App() {
           <Route path="/" element={<QueuePage />} />
           <Route path="/cases/:caseId" element={<CasePage />} />
           <Route path="/evaluation" element={<EvaluationPage />} />
+          <Route path="/demo" element={<DemoPage />} />
           <Route path="*" element={<div className="empty">Nothing here. <NavLink to="/">Back to the case queue</NavLink>.</div>} />
         </Routes>
       </main>
