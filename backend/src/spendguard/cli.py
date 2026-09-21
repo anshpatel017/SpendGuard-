@@ -8,6 +8,7 @@ spendguard evaluate                 score detectors against the planted anomalie
 spendguard investigate              the Investigator on the top-N cases (or --eval-seed)
 spendguard serve                    the API and dashboard (or --eval-seed for an evaluation run)
 spendguard openapi                  write the API schema the frontend's types are generated from
+spendguard report detection         every seed, clean data, determinism -> docs/results/
 spendguard check-llm                the LLM endpoint answers and can call tools?
 spendguard check-policy             policy.md and config.py agree?
 """
@@ -430,6 +431,49 @@ def openapi(
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     console.print(f"[green]Wrote[/green] {out} ({len(schema['paths'])} paths)")
+
+
+report_app = typer.Typer(help="Regenerate the result tables in docs/results/ (Phase 9).")
+app.add_typer(report_app, name="report")
+
+
+@report_app.command("detection")
+def report_detection(
+    seed: Annotated[
+        list[int] | None,
+        typer.Option(help="Seeds to report. Repeatable. Default: EVALUATION_SEEDS."),
+    ] = None,
+) -> None:
+    """Every detector on every seed, the clean-data check and a determinism check."""
+    from spendguard.eval.report import detection_report
+
+    seeds = seed or settings.evaluation_seeds
+    with console.status(f"Evaluating seeds {', '.join(map(str, seeds))} (about 25 s each)..."):
+        report = detection_report(seeds)
+
+    table = Table(title=f"Detection - seeds {', '.join(map(str, report.seeds))}, per case")
+    for col in ("Anomaly", "Detector", "Precision", "Recall", "F1", "PR-AUC"):
+        table.add_column(col, justify="left" if col in ("Anomaly", "Detector") else "right")
+    for r in report.rows:
+        if r.granularity == "case":
+            table.add_row(
+                r.anomaly_type, r.detector, r.precision.text(), r.recall.text(), r.f1.text(),
+                r.pr_auc.text() if r.pr_auc else "-",
+                style=None if r.detector == "baseline" else "bold",
+            )  # fmt: skip
+    console.print(table)
+    clean = ", ".join(f"{k.upper()} {v}" for k, v in report.clean.cases.items())
+    console.print(f"Clean data ({report.clean.transactions:,} rows): cases {clean}")
+    verdict = "[green]identical[/green]" if report.reproduced else "[red]DIFFERENT[/red]"
+    console.print(f"Seed {report.seeds[0]} detected again: {verdict}")
+    dirty = report.manifest["dirty"]
+    console.print(
+        f"Commit {report.manifest['commit']}"
+        + (" [yellow](uncommitted changes: commit, then re-run for a clean record)[/yellow]"
+           if dirty else "")
+    )  # fmt: skip
+    for path in report.paths:
+        console.print(f"[green]Wrote[/green] {path}")
 
 
 @app.command("check-llm")

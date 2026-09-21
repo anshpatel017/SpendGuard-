@@ -24,6 +24,23 @@ PRODUCTION_DETECTORS: tuple[str, ...] = (
     VendorFlagDetector.name,
 )
 
+
+def owns(detector: str, anomaly_type: str) -> bool:
+    """Does the detector emit this anomaly type at all?
+
+    Evaluation scores every detector against every type, so D1 has an F1 of
+    0.000 on split purchases - true, meaningless, and exactly the number a
+    reader misreads (it happened, on the dashboard). Result tables show only the
+    types a detector declares, and the pooled "all" row only for a detector
+    covering several - the baseline. An unknown name is kept, not hidden.
+    """
+    detector_class = REGISTRY.get(detector)
+    if detector_class is None:
+        return True
+    types = {t.value for t in detector_class.anomaly_types}
+    return anomaly_type in types or (anomaly_type == "all" and len(types) > 1)
+
+
 __all__ = [
     "PRODUCTION_DETECTORS",
     "REGISTRY",
@@ -33,4 +50,5 @@ __all__ = [
     "InflationDetector",
     "SplitDetector",
     "VendorFlagDetector",
+    "owns",
 ]
