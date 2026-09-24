@@ -266,7 +266,7 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
 2. ✅ **Live demo and frozen demo state** (`8d80df2`, D-34).
    - **Live demo:** `POST /demo/inject`, `spendguard demo` and the dashboard's "Live demo" page. It plants anomalies in a temporary copy of the last three months of clean data and catches them in 3–8 s. Misses are shown as misses (2 of 3 caught on rehearsal, as recall predicts). Verified in the running dashboard.
    - **Frozen state:** `spendguard freeze` and `spendguard serve --frozen`, a hashed snapshot served from a fresh copy. Re-freeze once verified notes exist.
-3. ✅ **Ablation code** (D-35). Three arms, each isolating one variable.
+3. ✅ **Ablation code** (`74c4537`, D-35). Three arms, each isolating one variable.
    - **Template notes** (`--ablation template`): a note filled from the detector's output and the rows it flagged, with no model writing it. It cites real rows and copies their values, so its citations pass the deterministic check - and every verdict is `likely_true_positive`, because a template cannot weigh an innocent explanation. That is what the arm isolates: the triage the agent adds, not the citations.
    - **Verifier off** (`--no-verify` in evaluation mode) is now labelled `no-verifier` automatically. It had to be: unlabelled, its unverified notes would have stood as the cases' own notes and quietly replaced the verified numbers the arm is measured against.
    - **Model size** needs no arm - a note records the model that wrote it and evaluation is already per model (D-33).
@@ -281,14 +281,10 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
 
 ## Next Steps
 
-1. **Get a free Gemini API key (you, ~2 minutes).**
-   - Create it at https://aistudio.google.com/apikey.
-   - Paste it into `.env` after `GEMINI_API_KEY=` — never into chat.
-   - Set `LLM_PROVIDER=gemini`, then run `spendguard check-llm`.
-   - Optionally, note the daily request limit (RPD) for `gemini-2.5-flash` at https://aistudio.google.com/rate-limit.
-   - `LLM_PROVIDER=groq` switches back.
-   - With the key in place, the seed-42 sample starts fresh on Gemini (5 cases), because results are per model. The Groq sample still has 4 cases left if you want to finish it: `LLM_PROVIDER=groq`, then `spendguard investigate --eval-seed 42 --per-type 1`.
-2. **Nothing else is blocking.** Steps 4 and 5 (grading kit, California real data) need no LLM and come next; the California CSV is already in `data/raw/`.
-3. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred).
+**Nothing is blocking.** The Gemini key is in `.env` and `LLM_PROVIDER=gemini` resolves; the Kaggle California CSV is in `data/raw/`; steps 4 and 5 need no LLM at all.
+
+1. **Continue with step 4** (grading kit), then step 5 (California real data). Neither spends a token.
+2. **Optional, whenever you like:** the Groq seed-42 sample still has 4 cases left — `LLM_PROVIDER=groq`, then `spendguard investigate --eval-seed 42 --per-type 1`. On Gemini the sample starts fresh (5 cases), because results are per model (D-33).
+3. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred). Neither blocks steps 4 or 5.
 4. **Later, when there is disk space:** install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M` for the fully-local proof; then `LLM_PROVIDER=ollama`.
-5. **Housekeeping:** `main` matches GitHub as of `2c563a7`. Push the Phase 9 step-3 commit when you are ready with `git push`.
+5. **Housekeeping:** `main` is 1 commit ahead of GitHub (`74c4537`). Push when ready with `git push`.
