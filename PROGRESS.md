@@ -266,7 +266,14 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
 2. ✅ **Live demo and frozen demo state** (`8d80df2`, D-34).
    - **Live demo:** `POST /demo/inject`, `spendguard demo` and the dashboard's "Live demo" page. It plants anomalies in a temporary copy of the last three months of clean data and catches them in 3–8 s. Misses are shown as misses (2 of 3 caught on rehearsal, as recall predicts). Verified in the running dashboard.
    - **Frozen state:** `spendguard freeze` and `spendguard serve --frozen`, a hashed snapshot served from a fresh copy. Re-freeze once verified notes exist.
-3. ⏳ **Ablation code:** template notes (no LLM, can run now), Verifier off (exists), model size (provider switch).
+3. ✅ **Ablation code** (D-35). Three arms, each isolating one variable.
+   - **Template notes** (`--ablation template`): a note filled from the detector's output and the rows it flagged, with no model writing it. It cites real rows and copies their values, so its citations pass the deterministic check - and every verdict is `likely_true_positive`, because a template cannot weigh an innocent explanation. That is what the arm isolates: the triage the agent adds, not the citations.
+   - **Verifier off** (`--no-verify` in evaluation mode) is now labelled `no-verifier` automatically. It had to be: unlabelled, its unverified notes would have stood as the cases' own notes and quietly replaced the verified numbers the arm is measured against.
+   - **Model size** needs no arm - a note records the model that wrote it and evaluation is already per model (D-33).
+   - **Kept apart:** an arm's notes never stand as a case's note, never mark it investigated, never enter the agent's metrics, and resume on the arm's own notes. Each arm writes its own report and its own dashboard row, described from the run's own config snapshot rather than a label in the API.
+   - **The Verifier still judges the template arm:** the arm removes the note's author, not its checking, or the citation columns would not be comparable.
+   - **Verified on the real injected seed-42 database, with no API calls:** 5 of 5 notes written, all 35 citations existing and matching (100% deterministic), and the predicted triage profile - 100% of real cases kept, 0% of spurious ones filtered. Those notes are stored `unverified` because the smoke run used `--no-verify`; step 6 re-runs the arm judged, with `--again`.
+   - **Fixed while building it:** a walrus in a comprehension shadowed the evaluation report and blanked the whole endpoint (caught by an existing test), and `test_llm_provider_defaults_to_groq` was reading the developer's `.env`, so it failed the moment this machine switched to Gemini - it now pins the code's default. Reading the generated notes also caught three wordings a panel would have: "at risk" means a different quantity per detector and now says which, identical duplicate amounts read as a list, and a one-day split run printed a date range twice.
 4. ⏳ **Grading kit:** blinded, shuffled notes, a fixed rubric, grade import, inter-grader agreement.
 5. ⏳ **California real data:** mapping, INR conversion, detection, and a review sheet for adjusted precision. Needs the Kaggle CSV.
 6. ⏳ **Agent evaluation on Gemini**, multi-seed plus the ablation arms. Needs the Gemini key.
@@ -280,8 +287,8 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
    - Set `LLM_PROVIDER=gemini`, then run `spendguard check-llm`.
    - Optionally, note the daily request limit (RPD) for `gemini-2.5-flash` at https://aistudio.google.com/rate-limit.
    - `LLM_PROVIDER=groq` switches back.
-2. **Then say "start Phase 9".** No LLM is needed for detector reproducibility, the frozen demo and the live-injection endpoint, MLflow, the ablation code or the grading kit, so those come first. The agent evaluation runs daily alongside them. On Gemini, the seed-42 sample starts fresh (5 cases), because results are per model. The Groq sample still has 4 cases left if you want to finish it: `LLM_PROVIDER=groq`, then `spendguard investigate --eval-seed 42 --per-type 1`.
-3. **Download the Kaggle "Large Purchases by the State of California" CSV** into `data/raw/` — needed for the real-data part of Phase 9.
-4. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred).
-5. **Later, when there is disk space:** install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M` for the fully-local proof; then `LLM_PROVIDER=ollama`.
-6. **Housekeeping:** `main` is 5 commits ahead of GitHub (`0035fe8`, `2fb6f8d`, `567ccd0`, `1bf735a` and this update). Push when ready with `git push`.
+   - With the key in place, the seed-42 sample starts fresh on Gemini (5 cases), because results are per model. The Groq sample still has 4 cases left if you want to finish it: `LLM_PROVIDER=groq`, then `spendguard investigate --eval-seed 42 --per-type 1`.
+2. **Nothing else is blocking.** Steps 4 and 5 (grading kit, California real data) need no LLM and come next; the California CSV is already in `data/raw/`.
+3. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred).
+4. **Later, when there is disk space:** install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M` for the fully-local proof; then `LLM_PROVIDER=ollama`.
+5. **Housekeeping:** `main` matches GitHub as of `2c563a7`. Push the Phase 9 step-3 commit when you are ready with `git push`.

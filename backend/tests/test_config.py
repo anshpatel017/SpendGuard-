@@ -44,8 +44,12 @@ def test_split_windows_are_sorted_and_deduplicated() -> None:
 
 
 def test_llm_provider_defaults_to_groq() -> None:
-    """Development default; switched to Ollama for the local-runtime proof."""
-    assert settings.llm_provider is LLMProvider.GROQ
+    """Development default (D-26). The test pins the code, not whatever .env says.
+
+    Read through ``settings``, this failed the day the dev machine switched to
+    Gemini for the evaluation runs - which is exactly what LLM_PROVIDER is for.
+    """
+    assert Settings.model_fields["llm_provider"].default is LLMProvider.GROQ
 
 
 @pytest.mark.parametrize(

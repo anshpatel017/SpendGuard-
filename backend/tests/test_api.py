@@ -429,6 +429,39 @@ def test_evaluation_reports_what_was_measured_and_nulls_what_was_not(
     assert agent["avg_tool_calls"] == 1.0
 
 
+def test_an_ablation_arm_is_reported_beside_the_main_run_never_inside_it(
+    client: TestClient, paths: dict[str, Any]
+) -> None:
+    """The arms answer "what is the agent worth", so they must never move its numbers."""
+    eval_dir = paths["tmp"] / "eval"
+    eval_dir.mkdir(exist_ok=True)
+    store = eval_dir / "investigation_seed42.sqlite"
+    store.write_bytes(Path(paths["database_url"].removeprefix("sqlite:///")).read_bytes())
+
+    con = build_db(paths["tmp"] / "arm.duckdb", [{"amount": 87450.0, "txn_date": DAY0}] * 2)
+    engine = get_engine(f"sqlite:///{store.as_posix()}")
+    arm = _result(SPLIT, NOTE, con, "unverified")
+    arm.model = "template"
+    save_investigation(engine, "investigate-eval-1-seed42-template", arm, ablation_name="template")
+    record_run(
+        engine, "investigate-eval-1-seed42-template", "investigate", "injected_seed42",
+        {"ablation": "template", "verifier_enabled": False, "model": "scripted"},
+        {"cases": 1}, started_at=_now(),
+    )  # fmt: skip
+    con.close()
+    (eval_dir / "investigate-eval-20260101T000000-seed42-template.json").write_text(
+        json.dumps({"triage": {"all": {"decisive_accuracy": 0.5}}}), encoding="utf-8"
+    )
+
+    body = client.get(f"{API}/evaluation", params={"seed": 42}).json()
+    assert body["agent_metrics"]["notes"] == 2  # the arm's note is not one of the agent's
+    (row,) = body["ablations"]
+    assert row["ablation_name"] == "template" and row["triage_accuracy"] == 0.5
+    # Read from the run, not assumed here: that run had the Verifier off, so the
+    # arm used no model anywhere and the row must not name one.
+    assert row["configuration"] == "notes filled from detector output, no model writes them; no model ran at all"  # fmt: skip
+
+
 # ------------------------------------------------------------------ contract and frontend
 
 

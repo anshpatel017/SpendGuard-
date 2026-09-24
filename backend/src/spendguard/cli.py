@@ -264,18 +264,42 @@ def investigate(
             help="Check every citation and regenerate failures. Default: VERIFIER_ENABLED.",
         ),
     ] = None,
+    ablation: Annotated[
+        str | None,
+        typer.Option(help="Evaluation mode: run an ablation arm, scored and stored apart."),
+    ] = None,
 ) -> None:
     """Investigate prioritized cases and write verified, cited audit notes. Never closes a case."""
     from spendguard.agent.investigator import InvestigationResult
     from spendguard.agent.llm import LLMClient, LLMNotConfiguredError
     from spendguard.cases import Case
-    from spendguard.investigation import evaluate_investigation, run_investigation
+    from spendguard.investigation import (
+        ABLATION_ARMS,
+        NO_VERIFIER_ARM,
+        TEMPLATE_ARM,
+        evaluate_investigation,
+        run_investigation,
+    )
 
+    if ablation is not None and eval_seed is None:
+        console.print("[red]--ablation is evaluation mode only.[/red] Add --eval-seed.")
+        raise typer.Exit(code=1)
+    if ablation is not None and ablation not in ABLATION_ARMS:
+        console.print(f"[red]Unknown arm {ablation!r}.[/red] Known: {', '.join(ABLATION_ARMS)}")
+        raise typer.Exit(code=1)
+    if ablation == NO_VERIFIER_ARM and verify is not False:
+        console.print(f"[red]The {NO_VERIFIER_ARM} arm is what --no-verify does.[/red] Add it.")
+        raise typer.Exit(code=1)
+
+    llm = None
     try:
         llm = LLMClient()
     except LLMNotConfiguredError as exc:
-        console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(code=1) from exc
+        # The template arm writes its notes without a model. Everything else needs one.
+        if ablation != TEMPLATE_ARM:
+            console.print(f"[red]{exc}[/red]")
+            raise typer.Exit(code=1) from exc
+        console.print(f"[yellow]No model configured:[/yellow] {exc}")
 
     badge = {
         "verified": "[green]verified[/green]",
@@ -302,7 +326,16 @@ def investigate(
             f"severity {severity}  {r.tool_calls} tools  {r.seconds:.0f}s{checked}"
         )
 
-    console.print(f"Model: {llm.model} ({llm.provider.value})")
+    if ablation == TEMPLATE_ARM:
+        checking = " Deterministic checks only."
+        if llm is not None and (settings.verifier_enabled if verify is None else verify):
+            checking = f" Verifier judges with {llm.model}."
+        console.print(
+            "Arm: template - notes filled from detector output, no model writes them." + checking
+        )
+    else:
+        assert llm is not None
+        console.print(f"Model: {llm.model} ({llm.provider.value})")
     if eval_seed is not None:
         from spendguard.eval.injection import default_injected_path
 
@@ -316,6 +349,7 @@ def investigate(
             llm=llm,
             on_result=progress,
             verify=verify,
+            ablation=ablation,
         )
     else:
         run = run_investigation(

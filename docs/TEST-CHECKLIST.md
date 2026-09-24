@@ -159,7 +159,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[int]** Status update rejects an invalid transition target. [FR-5.1]
 - [x] **[int]** Metrics endpoint returns flagged, investigated and queued counts that sum consistently. [FR-5.7]
 - [x] **[int]** Requesting an unknown case id returns 404 with a structured error, not a stack trace. [NFR-10]
-- [x] **[int]** Evaluation endpoint returns detector-versus-baseline and ablation tables. [FR-5.8]
+- [x] **[int]** Evaluation endpoint returns detector-versus-baseline and ablation tables. [FR-5.8] *(an arm's row is described from its own run config; its notes never enter the agent's numbers)*
 
 ---
 
@@ -189,8 +189,8 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[int]** Citation validity is reported split into deterministic and semantic. [FR-7.5]
 - [ ] **[int]** Triage accuracy is computed only over investigated cases, and the report states that this sample is severity-biased. [FR-7.6]
 - [x] **[int]** Efficiency metrics — tool calls, tokens, latency — are recorded per case. [FR-7.7]
-- [ ] **[int]** The Verifier-off ablation runs and produces a comparison table. [FR-7.8]
-- [ ] **[int]** The template-notes ablation runs and produces a comparison table. [FR-7.9]
+- [x] **[int]** The Verifier-off ablation runs and produces a comparison table. [FR-7.8] *(`--no-verify` in evaluation mode is the `no-verifier` arm: stored, scored and reported apart, so unverified notes never replace verified ones)*
+- [x] **[int]** The template-notes ablation runs and produces a comparison table. [FR-7.9] *(`--ablation template`; needs no model to write the note, and its citations still pass the deterministic check - the arm's point is the triage column, not the citation column)*
 - [ ] **[int]** Every run is logged to the experiment tracker with its parameters, seeds and results. [FR-7.10] *(logged to DuckDB `eval_results` + JSON/Markdown reports now; MLflow wiring in Phase 10)*
 - [ ] **[int]** Re-running an evaluation with the same seed reproduces the same numbers. [NFR-4]
 - [ ] **[man]** Results are reported across multiple seeds with variation stated. [FR-7.11]
