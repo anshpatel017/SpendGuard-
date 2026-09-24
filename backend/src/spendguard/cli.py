@@ -600,6 +600,143 @@ def report_detection(
         console.print(f"[green]Wrote[/green] {path}")
 
 
+grade_app = typer.Typer(help="Blinded human grading of audit notes (EVALUATION 5.3).")
+app.add_typer(grade_app, name="grade")
+
+
+def _grading_dir(seed: int, out: Path | None) -> Path:
+    return out or settings.grading_dir / f"seed{seed}"
+
+
+@grade_app.command("export")
+def grade_export(
+    seed: Annotated[int, typer.Option(help="Evaluation seed whose notes to grade.")] = (
+        settings.random_seed
+    ),
+    size: Annotated[int | None, typer.Option(help="How many notes. Default: GRADING_SAMPLE.")] = (
+        None
+    ),
+    grader: Annotated[
+        list[str] | None, typer.Option(help="Grader names. Repeatable. Default: GRADING_GRADERS.")
+    ] = None,
+    out: Annotated[Path | None, typer.Option(help="Where to write the batch.")] = None,
+) -> None:
+    """Write the rubric, the blinded notes with their evidence, and one empty sheet per grader."""
+    from spendguard.api.cases import fetch_rows
+    from spendguard.db.duck import connect
+    from spendguard.db.store import get_engine
+    from spendguard.eval.grading import KEY_FILE, GradingError, export
+
+    db, url = _eval_stores(seed)
+    engine = get_engine(url)
+    graders = grader or settings.grading_graders
+    out_dir = _grading_dir(seed, out)
+    try:
+        with connect(db, read_only=True) as con:
+            batch = export(
+                engine,
+                out_dir,
+                seed=seed,
+                size=size or settings.grading_sample_size,
+                graders=graders,
+                load_evidence=lambda ids: {int(r["row_id"]): r for r in fetch_rows(con, ids)},
+            )
+    except GradingError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title=f"Grading batch {batch.batch_id}")
+    table.add_column("Arm")
+    table.add_column("Notes", justify="right")
+    counts: dict[str, int] = {}
+    for note in batch.blinded:
+        counts[note.arm] = counts.get(note.arm, 0) + 1
+    for arm, count in sorted(counts.items()):
+        table.add_row(arm, str(count))
+    console.print(table)
+    if len(batch.blinded) < (size or settings.grading_sample_size):
+        console.print(
+            f"[yellow]Only {len(batch.blinded)} notes exist to grade.[/yellow] "
+            "Investigate more cases and export again."
+        )
+    for path in (batch.out_dir / "rubric.md", batch.out_dir / "notes.md", *batch.sheets):
+        console.print(f"[green]Wrote[/green] {path}")
+    console.print(
+        f"[yellow]Keep {batch.out_dir / KEY_FILE} away from the graders[/yellow] - "
+        "it says which system wrote each note."
+    )
+
+
+@grade_app.command("import")
+def grade_import(
+    sheet: Annotated[
+        Path, typer.Argument(help="A filled grades CSV.", exists=True, dir_okay=False)
+    ],
+    grader: Annotated[
+        str | None, typer.Option(help="Grader name. Default: read from the file name.")
+    ] = None,
+    seed: Annotated[int, typer.Option(help="Evaluation seed.")] = settings.random_seed,
+    out: Annotated[Path | None, typer.Option(help="The batch directory.")] = None,
+) -> None:
+    """Store one grader's filled sheet. Re-importing a corrected sheet replaces their grades."""
+    from spendguard.db.store import get_engine
+    from spendguard.eval.grading import GradingError, import_grades, load_key
+
+    _, url = _eval_stores(seed)
+    name = grader or sheet.stem.removeprefix("grades-")
+    try:
+        key = load_key(_grading_dir(seed, out))
+        stored = import_grades(get_engine(url), sheet, key, name)
+    except GradingError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Imported[/green] {stored} grade(s) from {name}.")
+
+
+@grade_app.command("report")
+def grade_report(
+    seed: Annotated[int, typer.Option(help="Evaluation seed.")] = settings.random_seed,
+    batch: Annotated[
+        str | None, typer.Option(help="Only this batch. Default: every grade.")
+    ] = None,
+) -> None:
+    """Scores by arm with the inter-grader agreement behind them -> docs/results/grading.md."""
+    from spendguard.db.store import get_engine
+    from spendguard.eval.agreement import interpret
+    from spendguard.eval.grading import DIMENSIONS
+    from spendguard.eval.grading_report import collect, write_grading_report
+
+    _, url = _eval_stores(seed)
+    report = collect(get_engine(url), batch=batch)
+    if not report.arms:
+        console.print(
+            "[yellow]No grades imported yet.[/yellow] Run `spendguard grade export`, "
+            "fill a sheet, then `spendguard grade import`."
+        )
+        raise typer.Exit(code=1)
+
+    table = Table(title=f"Note quality - graders {', '.join(report.graders)}")
+    table.add_column("Arm")
+    table.add_column("Notes", justify="right")
+    for name in DIMENSIONS:
+        table.add_column(name.split("_")[0].title(), justify="right")
+    table.add_column("Total", justify="right")
+    for arm in report.arms:
+        cells = [
+            "-" if arm.per_dimension[d] is None else f"{arm.per_dimension[d]:.2f}"
+            for d in DIMENSIONS
+        ]
+        table.add_row(arm.arm, str(arm.notes), *cells, arm.total_text)
+    console.print(table)
+    alpha = report.overall_alpha
+    console.print(
+        f"Inter-grader agreement (Krippendorff's alpha, ordinal): "
+        f"{'-' if alpha is None else f'{alpha:.3f}'} - {interpret(alpha)}"
+    )
+    for path in write_grading_report(report, settings.results_dir):
+        console.print(f"[green]Wrote[/green] {path}")
+
+
 @app.command("check-llm")
 def check_llm() -> None:
     """Verify the configured LLM endpoint answers, and that tool calling works."""

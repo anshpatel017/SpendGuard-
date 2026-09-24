@@ -196,6 +196,13 @@ class Settings(BaseSettings):
     demo_max_anomalies: int = 6
     demo_source_db: Path | None = None  # None: the clean dataset, settings.duckdb_path
 
+    # -------------------------------------------------------- blinded grading
+    # EVALUATION 5.3: around 50 notes, three graders. The pool grows by ~10 notes
+    # a day on a free tier (D-30), so an export takes whatever exists and says so.
+    grading_sample_size: int = 50
+    grading_graders: list[str] = Field(default_factory=lambda: ["a", "b", "c"])
+    grading_dir: Path = PROJECT_ROOT / "data" / "grading"  # sheets and the key; git-ignored
+
     # ----------------------------------------------------------------- runtime
     log_level: str = "INFO"
 

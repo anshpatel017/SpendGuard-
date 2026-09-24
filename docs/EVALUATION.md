@@ -199,6 +199,25 @@ Blinded human rubric on a sample of notes:
 - Rubric fixed in advance and included in the report
 - Inter-grader agreement reported
 
+**As built (Phase 9).** Three commands, and the rubric lives in code so it cannot be revised after the grades are in.
+
+```bash
+spendguard grade export --seed 42            # rubric.md, notes.md, one sheet per grader, key.json
+spendguard grade import grades-a.csv         # by blind id, into the evaluation store
+spendguard grade report --seed 42            # -> docs/results/grading.md
+```
+
+| Concern | How it is handled |
+|---|---|
+| **The rubric** | Five dimensions scored **0, 1 or 2**: factual accuracy, evidence sufficiency, innocent explanation considered, verdict justified by the note alone, actionability. Each score has a written anchor. Three points rather than five, because three graders agree far better on three and an agreement number nobody believes makes the scores worthless. The third dimension is the one a template must score 0 on by construction. |
+| **The sample** | Seeded; spread evenly over the arms first and anomaly types second, so the comparison is not between sample sizes and no arm is flattered by drawing the easy types. |
+| **Blinding** | Notes are pooled, given opaque ids and shuffled per grader. The arm, model, verification badge, run id, note id and case id are never exported. A test reads every file a grader receives and fails if any of them appears; sabotaging the export makes it fail. |
+| **Evidence** | The rows a note cites are printed beside it. Without them a grader can only judge fluency, which is what a language model is best at faking. |
+| **Agreement** | Krippendorff's alpha, **ordinal** — it knows 0 against 2 is a worse disagreement than 0 against 1, which Fleiss' kappa does not. Implemented here and pinned to the published worked example (α nominal 0.691, ordinal 0.807). Exact agreement is reported beside it because it needs no definition. |
+| **Corrections** | Re-importing a grader's sheet replaces their grades. A score off the scale or an unknown blind id is refused, not rounded. |
+
+**One limitation that cannot be engineered away, and is printed in the report:** a template note is formulaic *by definition* — every one restates what the detector matched and every one agrees with it — so a grader working through a batch can come to recognise that arm. Removing the tell would mean making the template not a template. Its scores are an upper bound on how well blinding held, not a fully blind comparison.
+
 ### 5.4 Efficiency
 
 Per case: average tool calls, prompt and completion tokens, wall-clock latency. Also the number of notes regenerated and the number that failed after the retry limit.
