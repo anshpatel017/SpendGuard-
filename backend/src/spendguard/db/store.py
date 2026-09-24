@@ -33,6 +33,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     create_engine,
     delete,
     func,
@@ -175,6 +176,27 @@ class TraceRecord(Base):
     completion_tokens: Mapped[int] = mapped_column(Integer, default=0)
     detail: Mapped[str | None] = mapped_column(Text)
     error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+class NoteGradeRecord(Base):
+    """One grader's rubric scores for one note (EVALUATION 5.3).
+
+    Stored beside the notes rather than in a spreadsheet so a grade can always
+    be traced to the note it judged, and so re-importing a corrected sheet
+    replaces a grade instead of silently adding a second one.
+    """
+
+    __tablename__ = "note_grades"
+    __table_args__ = (UniqueConstraint("note_id", "grader", name="uq_note_grades_note_grader"),)
+
+    grade_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    note_id: Mapped[str] = mapped_column(String(36), index=True)
+    grader: Mapped[str] = mapped_column(String(50), index=True)
+    batch: Mapped[str] = mapped_column(String(80), index=True)  # the export it came from
+    blind_id: Mapped[str] = mapped_column(String(20))  # what the grader actually saw
+    scores: Mapped[dict[str, int]] = mapped_column(JSON)  # dimension -> 0, 1 or 2
+    comment: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 

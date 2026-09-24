@@ -274,7 +274,15 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
    - **The Verifier still judges the template arm:** the arm removes the note's author, not its checking, or the citation columns would not be comparable.
    - **Verified on the real injected seed-42 database, with no API calls:** 5 of 5 notes written, all 35 citations existing and matching (100% deterministic), and the predicted triage profile - 100% of real cases kept, 0% of spurious ones filtered. Those notes are stored `unverified` because the smoke run used `--no-verify`; step 6 re-runs the arm judged, with `--again`.
    - **Fixed while building it:** a walrus in a comprehension shadowed the evaluation report and blanked the whole endpoint (caught by an existing test), and `test_llm_provider_defaults_to_groq` was reading the developer's `.env`, so it failed the moment this machine switched to Gemini - it now pins the code's default. Reading the generated notes also caught three wordings a panel would have: "at risk" means a different quantity per detector and now says which, identical duplicate amounts read as a list, and a one-day split run printed a date range twice.
-4. ⏳ **Grading kit:** blinded, shuffled notes, a fixed rubric, grade import, inter-grader agreement.
+4. ✅ **Grading kit.** `spendguard grade export | import | report`, and the rubric lives in code so it cannot be revised once the grades are in.
+   - **The rubric** (your choice): five dimensions scored 0, 1 or 2 - factual accuracy, evidence sufficiency, innocent explanation considered, verdict justified by the note alone, actionability - each with a written anchor for every score. Three points rather than five, because three graders agree far better on three and an agreement number nobody believes makes the scores worthless. The third dimension is the one a template must score 0 on by construction, which is what makes the ablation visible.
+   - **Blinding is enforced by a test, not by care.** Every file a grader receives is read and the test fails if the arm, model, verification badge, run id, note id or case id appears in it. Proved non-vacuous: adding the arm to one line of the export makes it fail with `notes.md leaks ['template', 'no-verifier']`.
+   - **Graders see the rows a note cites.** Without them they can only grade fluency, which is what a language model is best at faking.
+   - **Agreement is Krippendorff's alpha, ordinal** - it knows 0 against 2 is a worse disagreement than 0 against 1, which Fleiss' kappa does not. Implemented here and pinned to the published worked example (α nominal 0.691, ordinal 0.807), plus the properties relied on: random grading ≈ 0, worse-than-chance < 0, and a two-point gap punished harder than a one-point gap.
+   - **The sample is seeded and spread over the arms first, anomaly types second**, so the comparison is not between sample sizes and no arm is flattered by drawing the easy types.
+   - **Verified end to end** on the real seed-42 store: 7 notes exported across two arms, two sheets filled and imported, the report written. The scores were invented to exercise the pipeline, so they were **deleted afterwards** and `docs/results/grading.md` was removed - a results file holding made-up numbers is the exact failure this project is meant to avoid. The real batch belongs to step 6, when the note pool is big enough.
+   - **One limitation that cannot be engineered away, and is printed in the report:** a template note is formulaic by definition, so a grader working through a batch can come to recognise that arm. Its scores are an upper bound on how well blinding held.
+   - `data/grading/` is git-ignored: `key.json` is what unblinds a batch.
 5. ⏳ **California real data:** mapping, INR conversion, detection, and a review sheet for adjusted precision. Needs the Kaggle CSV.
 6. ⏳ **Agent evaluation on Gemini**, multi-seed plus the ablation arms. Needs the Gemini key.
 7. ⏳ **EVALUATION.md:** every number traced to a command, the headline sentence, the final freeze, the demo walkthrough.
@@ -283,8 +291,8 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
 
 **Nothing is blocking.** The Gemini key is in `.env` and `LLM_PROVIDER=gemini` resolves; the Kaggle California CSV is in `data/raw/`; steps 4 and 5 need no LLM at all.
 
-1. **Continue with step 4** (grading kit), then step 5 (California real data). Neither spends a token.
+1. **Continue with step 5** (California real data), which needs no LLM either.
 2. **Optional, whenever you like:** the Groq seed-42 sample still has 4 cases left — `LLM_PROVIDER=groq`, then `spendguard investigate --eval-seed 42 --per-type 1`. On Gemini the sample starts fresh (5 cases), because results are per model (D-33).
 3. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred). Neither blocks steps 4 or 5.
 4. **Later, when there is disk space:** install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M` for the fully-local proof; then `LLM_PROVIDER=ollama`.
-5. **Housekeeping:** `main` is 1 commit ahead of GitHub (`74c4537`). Push when ready with `git push`.
+5. **Housekeeping:** `main` is 3 commits ahead of GitHub. Push when ready with `git push`.
