@@ -164,13 +164,13 @@ Copy `.env.example` to `.env` (gitignored). Names only, no secrets in the repo:
 - **Stores:** `DATABASE_URL` (defaults to SQLite under `data/processed/`)
 - **API:** `API_HOST`, `API_PORT`
 
-The Groq key is set and verified (`spendguard check-llm`). Outstanding manual steps: a free **Gemini key** into `.env` as `GEMINI_API_KEY` (never paste it in chat), **Ollama + Qwen2.5-3B** before the local-runtime proof, and the **Kaggle California PO dataset** into `data/raw/` before Phase 9. The `agent` extra pulls PyTorch (via sentence-transformers) and is a large download. CI installs only `dev,detect,api`, so tests needing the embedding model or a key skip there rather than fail.
+Groq and Gemini keys are both set (`spendguard check-llm`), and the **Kaggle California PO dataset** is in `data/raw/`. One manual step is left: **Ollama + Qwen2.5-3B**, before the local-runtime proof. The `agent` extra pulls PyTorch (via sentence-transformers) and is a large download. CI installs only `dev,detect,api`, so tests needing the embedding model or a key skip there rather than fail.
 
 ---
 
 ## 7. Important decisions
 
-Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-34). The ones that shape day-to-day work:
+Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-35). The ones that shape day-to-day work:
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
@@ -178,8 +178,7 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-34
 - **D-09** DuckDB (analytical) + SQLite/Postgres (transactional). No Node backend, no Django: DuckDB is embedded and Django's ORM cannot address it.
 - **D-12** `vendor_key` is for **blocking**, never identity. Measured: 0 suppliers split, 10 of 382 keys over-merged.
 - **D-15/16** Currency INR; principal control threshold **₹2,50,000** (GFR 2017 ladder, policy SG-PP-2.2).
-- **D-19/20/21** D1 blocks on **amount + date** (a name typo must not hide a duplicate) and scores
-  pairs with **Fellegi–Sunter by MAP-EM**; D2 takes minimal runs, four policy indicators.
+- **D-19/20/21** D1 blocks on **amount + date** (a name typo must not hide a duplicate) and scores pairs with **Fellegi–Sunter by MAP-EM**; D2 takes minimal runs, four policy indicators.
 - **D-23** D3 ties the baseline on F1, wins on ranking: honest premium purchases share the injected price band, which is why investigation exists. It never reads the description (a fraudster writes it).
 - **D-24** D4 tests each supplier against its *peers*, not against Benford (which accused 61 of 210 real suppliers), combines tests with Fisher, and controls FDR across suppliers.
 - **D-27/28** Policy retrieval is dense (BM25 and hybrid measured and lost), chunked on clause boundaries. Tools: read-only connection, answer-key-free view, validated single SELECT.
@@ -195,4 +194,6 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-34
   a per-day quota ends the run for resumption. Gemini free-tier prompts may train Google's models.
 - **D-34** The demo is two things: a live injection into a bounded copy (never the served data),
   and a hashed frozen state served from a fresh working copy, so a reviewer's clicks never persist.
+- **D-35** Ablation arms (`template`, `no-verifier`) are stored, scored and reported *beside* the main
+  run: their notes never stand as a case's note and never enter the agent's numbers. Model size is no arm.
 - **O-04** implemented as recommended (the number moves with the band), awaiting confirmation. **O-05** open.
