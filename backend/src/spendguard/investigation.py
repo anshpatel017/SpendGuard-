@@ -34,8 +34,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from spendguard.agent.investigator import InvestigationResult, Investigator
-from spendguard.agent.verifier import Verifier, investigate_and_verify
+from spendguard.ablations import ARMS as ABLATION_ARMS
+from spendguard.ablations import NO_VERIFIER as NO_VERIFIER_ARM
+from spendguard.ablations import TEMPLATE as TEMPLATE_ARM
+from spendguard.agent.investigator import InvestigationResult, Investigator, TraceStep
+from spendguard.agent.template import template_note
+from spendguard.agent.verifier import Verifier, investigate_and_verify, release_status
 from spendguard.cases import AnomalyType, Case
 from spendguard.config import settings
 from spendguard.db.duck import connect, table_exists
@@ -131,6 +135,44 @@ def _default_llm() -> Any:
     return LLMClient()
 
 
+def _optional_llm() -> Any:
+    """A client if one is configured, otherwise ``None``.
+
+    Only the template arm uses this. It writes its note without a model, but the
+    Verifier should still judge it, or the comparison is not like for like. With
+    no provider configured the deterministic check runs alone and the semantic
+    column is simply absent - which the report already prints as "-".
+    """
+    from spendguard.agent.llm import LLMNotConfiguredError
+
+    try:
+        return _default_llm()
+    except LLMNotConfiguredError:
+        return None
+
+
+def _template_result(
+    investigator: Investigator, verifier: Verifier, case: Case, *, verify: bool
+) -> InvestigationResult:
+    """The template arm's one case: a note from detector output, then the usual checks."""
+    rows = investigator.evidence(case)
+    result = InvestigationResult(
+        case_id=case.case_id,
+        anomaly_type=case.anomaly_type.value,
+        status="completed",
+        model=TEMPLATE_ARM,
+        note=template_note(case, rows),
+        seen_row_ids={int(r["row_id"]) for r in rows},
+        trace=[TraceStep(0, "template", note="note filled from the detector's own output")],
+    )
+    result.first_check = result.verification = verifier.check(
+        result, semantic=None if verify else False
+    )
+    result.verification_status = release_status(result.verification, enabled=verify)
+    investigator.finalize(case, result)
+    return result
+
+
 def _investigate_all(
     investigator: Investigator,
     verifier: Verifier,
@@ -140,11 +182,17 @@ def _investigate_all(
     on_result: ProgressFn | None,
     *,
     verify: bool,
+    ablation: str | None = None,
 ) -> list[InvestigationResult]:
     results = []
     for i, case in enumerate(cases, start=1):
-        result = investigate_and_verify(investigator, verifier, case, enabled=verify)
-        save_investigation(engine, run_id, result)  # saved as it goes: a crash loses one case
+        result = (
+            _template_result(investigator, verifier, case, verify=verify)
+            if ablation == TEMPLATE_ARM
+            else investigate_and_verify(investigator, verifier, case, enabled=verify)
+        )
+        # saved as it goes: a crash loses one case
+        save_investigation(engine, run_id, result, ablation_name=ablation)
         results.append(result)
         if on_result:
             on_result(i, len(cases), case, result)
@@ -285,6 +333,7 @@ def evaluate_investigation(
     llm: Any | None = None,
     on_result: ProgressFn | None = None,
     verify: bool | None = None,
+    ablation: str | None = None,
 ) -> InvestigationRun:
     """Evaluation mode: sampled cases on an injected database, scored for triage.
 
@@ -292,20 +341,36 @@ def evaluate_investigation(
     from this run or an earlier one; the newest such note counts. Notes by other
     models stay in the store but never enter this model's numbers. ``include_investigated``
     re-investigates the whole sample, for example after a prompt change.
+
+    ``ablation`` names an arm (EVALUATION section 6). Its notes are stored apart
+    and never stand as a case's own note, and its triage is scored on its own
+    notes alone. The reserved name ``template`` replaces the agent with a note
+    filled from the detector's output, which needs no model to write.
     """
     from spendguard.eval.injection import default_injected_path
 
     verify = settings.verifier_enabled if verify is None else verify
+    if ablation is None and not verify:
+        # Verifier off is an arm whether or not it was named one. Left unlabelled,
+        # its notes would stand as the main run's and quietly replace the numbers
+        # the Verifier produced - the very thing the ablation is measured against.
+        ablation = NO_VERIFIER_ARM
+    if ablation is not None and ablation not in ABLATION_ARMS:
+        raise ValueError(f"unknown ablation {ablation!r}; known arms: {', '.join(ABLATION_ARMS)}")
+    if ablation == NO_VERIFIER_ARM and verify:
+        raise ValueError(f"the {NO_VERIFIER_ARM} arm needs --no-verify")
     started = datetime.now(UTC).replace(tzinfo=None)
     t0 = time.perf_counter()
     db_path = db_path or default_injected_path(seed)
     report_dir = report_dir or settings.processed_data_dir / "eval"
     report_dir.mkdir(parents=True, exist_ok=True)
     engine = get_engine(f"sqlite:///{(report_dir / f'investigation_seed{seed}.sqlite').as_posix()}")
-    run_id = f"investigate-eval-{started:%Y%m%dT%H%M%S}-seed{seed}"
+    arm = f"-{ablation}" if ablation else ""
+    run_id = f"investigate-eval-{started:%Y%m%dT%H%M%S}-seed{seed}{arm}"
     dataset = f"injected_seed{seed}"
 
-    llm = llm or _default_llm()
+    if llm is None:
+        llm = _optional_llm() if ablation == TEMPLATE_ARM else _default_llm()
     with connect(db_path, read_only=True) as con:
         groups = load_ground_truth(con)
         cases = [c for name in PRODUCTION_DETECTORS for c in REGISTRY[name]().detect(con)]
@@ -315,14 +380,14 @@ def evaluate_investigation(
         # investigated - and the dashboard's coverage line is honest about it.
         save_cases(engine, run_id, dataset, cases)
         # Per model: switching provider starts that model's sample afresh (D-33).
-        model = str(getattr(llm, "model", "unknown"))
-        done_before = {
-            c.case_id for c in chosen if latest_note(engine, c.case_id, model_name=model)
-        }
+        model = TEMPLATE_ARM if ablation == TEMPLATE_ARM else str(getattr(llm, "model", "unknown"))
+        arm_of = {"model_name": model, "ablation_name": ablation}
+        done_before = {c.case_id for c in chosen if latest_note(engine, c.case_id, **arm_of)}
         pending = [c for c in chosen if include_investigated or c.case_id not in done_before]
         results = _investigate_all(
-            Investigator(llm, con), Verifier(llm, con), pending, engine, run_id, on_result,
-            verify=verify,
+            Investigator(llm, con, model_name=model),
+            Verifier(llm, con, semantic=False if llm is None else None),
+            pending, engine, run_id, on_result, verify=verify, ablation=ablation,
         )  # fmt: skip
 
     # A case counts once: its newest note, or this run's failure if it has no note.
@@ -330,7 +395,7 @@ def evaluate_investigation(
     failed_now = {r.case_id for r in results if r.note is None and not r.quota_exhausted}
     items = []
     for case in chosen:
-        stored = latest_note(engine, case.case_id, model_name=model)
+        stored = latest_note(engine, case.case_id, **arm_of)
         if stored is not None:
             items.append(TriageItem(case.anomaly_type.value, truth[case.case_id], stored.verdict))
         elif case.case_id in failed_now:
@@ -352,7 +417,12 @@ def evaluate_investigation(
         run_id,
         "investigate",
         dataset,
-        config={**_config_snapshot(llm, verify), "seed": seed, "per_type": per_type},
+        config={
+            **_config_snapshot(llm, verify),
+            "seed": seed,
+            "per_type": per_type,
+            "ablation": ablation,
+        },
         summary={
             **run.summary(),
             "sampled": run.sampled,
@@ -361,7 +431,9 @@ def evaluate_investigation(
         },
         started_at=started,
     )
-    run.report_paths = write_triage_report(run, report_dir, seed=seed, per_type=per_type)
+    run.report_paths = write_triage_report(
+        run, report_dir, seed=seed, per_type=per_type, ablation=ablation
+    )
     return run
 
 
@@ -381,7 +453,7 @@ def _config_snapshot(llm: Any, verify: bool, **extra: Any) -> dict[str, Any]:
 
 
 def write_triage_report(
-    run: InvestigationRun, out_dir: Path, *, seed: int, per_type: int
+    run: InvestigationRun, out_dir: Path, *, seed: int, per_type: int, ablation: str | None = None
 ) -> tuple[Path, Path]:
     cases = [
         {
@@ -408,6 +480,7 @@ def write_triage_report(
         "run_id": run.run_id,
         "seed": seed,
         "per_type": per_type,
+        "ablation": ablation,
         "sampled": run.sampled,
         "investigated_so_far": run.investigated_so_far,
         "summary": run.summary(),
@@ -418,7 +491,8 @@ def write_triage_report(
     json_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
     lines = [
-        f"# Investigation triage - `{run.run_id}`",
+        f"# Investigation triage - `{run.run_id}`"
+        + (f"\n\nAblation arm: **{ablation}**." if ablation else ""),
         "",
         f"Seed {seed}, up to {per_type} real and {per_type} spurious cases per type. "
         "Real = matched to a planted anomaly; spurious = touching none. "

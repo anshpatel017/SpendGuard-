@@ -485,6 +485,34 @@ On any failure the objections go back to the Investigator, which revises, up to 
 
 ---
 
+## D-35 - Ablation arms are stored, scored and reported beside the main run, never inside it
+
+EVALUATION section 6 asks for three ablations. Two need a name; the third does not.
+
+- **`template`** - the agent is replaced by a note filled from the detector's output and the rows
+  it flagged. No model writes it. It cites real rows and copies their values, so it should score
+  *high* on citation validity; what it cannot do is weigh an innocent explanation, so every verdict
+  is `likely_true_positive`. The arm therefore isolates exactly one thing: the triage the agent adds.
+- **`no-verifier`** - the Investigator's first draft is released unchecked. In evaluation mode this
+  is labelled automatically from `--no-verify`, because an unlabelled run would have quietly replaced
+  the verified notes with unverified ones and moved the very numbers it is measured against. The
+  deterministic check still runs, or the arm could not be measured; nothing is enforced or regenerated.
+- **Model size** needs no arm. A note records the model that wrote it and evaluation is already
+  scored per model (D-33), so a smaller model is another run, not another arm.
+
+**How an arm is kept apart.** Its notes carry `ablation_name`; they never stand as a case's own note,
+never mark a case investigated and never enter the agent's metrics. `latest_note` is filtered by arm,
+so an arm resumes on its own notes and skips the agent's. Each arm writes its own report
+(`investigate-eval-<stamp>-seed<seed>-<arm>.md`) and its own dashboard row, described from the run's
+own config snapshot rather than a label written in the API - a hard-coded label would keep saying
+"Verifier off" long after someone ran the arm with the Verifier on.
+
+**The Verifier still judges the template arm.** The arm removes the note's *author*, not its checking;
+checking one arm and not the other would make the citation columns incomparable. Without a configured
+provider the deterministic check runs alone and the semantic column is reported as absent.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |

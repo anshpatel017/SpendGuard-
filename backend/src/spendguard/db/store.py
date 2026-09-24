@@ -454,15 +454,24 @@ def save_investigation(
 
 
 def latest_note(
-    engine: Engine, case_id: str, *, model_name: str | None = None
+    engine: Engine,
+    case_id: str,
+    *,
+    model_name: str | None = None,
+    ablation_name: str | None = None,
 ) -> AuditNoteRecord | None:
     """The note that currently stands for a case: newest, ablations excluded.
 
     With ``model_name``, the newest note by that model - so an evaluation of one
-    model is never scored on notes another model wrote.
+    model is never scored on notes another model wrote. With ``ablation_name``,
+    the newest note of that arm instead: an ablation is scored against its own
+    notes, and its notes never stand as the case's own.
     """
-    query = select(AuditNoteRecord).where(
-        AuditNoteRecord.case_id == case_id, AuditNoteRecord.is_ablation.is_(False)
+    query = select(AuditNoteRecord).where(AuditNoteRecord.case_id == case_id)
+    query = (
+        query.where(AuditNoteRecord.ablation_name == ablation_name)
+        if ablation_name is not None
+        else query.where(AuditNoteRecord.is_ablation.is_(False))
     )
     if model_name is not None:
         query = query.where(AuditNoteRecord.model_name == model_name)

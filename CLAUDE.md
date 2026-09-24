@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete · 671 backend + 29 frontend tests passing · Phase 9 next (evaluation, real data, freeze).
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–3 of 7 done) · 712 backend + 29 frontend tests passing.
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -47,28 +47,28 @@ SpendGuard/
 │   │   ├── config.py           SINGLE source of truth for every tunable value
 │   │   ├── policy_check.py     parses policy.md thresholds; fails build on drift
 │   │   ├── cases.py            Case model, AnomalyType, severity (D-02, D-08)
-│   │   ├── cli.py              generate · ingest · detect · inject · evaluate ·
-│   │   │                    investigate · serve · openapi · check-llm · check-policy
+│   │   ├── cli.py              generate · ingest · detect · inject · evaluate · investigate
+│   │   │                    report · demo · freeze · serve · openapi · check-llm · check-policy
 │   │   ├── detection.py        `spendguard detect` orchestration → case store
 │   │   ├── investigation.py    `spendguard investigate`: top-N from the store, or eval mode
+│   │   ├── ablations.py        arm names · demo.py live injection · freeze.py hashed snapshot
 │   │   ├── db/duck.py          DuckDB schema, audit_transactions view, writers
 │   │   ├── db/store.py         case store, review workflow, notes · citations · traces
 │   │   ├── pipeline/           synthetic generator, ingestion, vendor normalization
-│   │   ├── detectors/          base · baseline · d1_duplicates · d2_splits
-│   │   │                    d3_inflation · d4_vendor
-│   │   ├── eval/               injection harness · matching · metrics · runner · triage
+│   │   ├── detectors/          base · baseline · d1_duplicates · d2_splits · d3_inflation · d4_vendor
+│   │   ├── eval/               injection harness · matching · metrics · runner · triage · report
 │   │   ├── agent/              llm (provider switch) · tools (the six) · policy (RAG)
 │   │   │                    note (schema) · prompts · investigator (the loop)
 │   │   │                    checks (deterministic) · verifier (judge + revise loop)
+│   │   │                    template (the no-agent ablation arm)
 │   │   └── api/                app (factory, errors, serves the build) · schemas · deps
 │   │                        cases (queue, detail, review) · overview (metrics, eval…)
-│   └── tests/                  mirrors src; 671 tests (+7 live, opt-in)
+│   └── tests/                  mirrors src; 712 tests (+7 live, opt-in)
 ├── frontend/                   React dashboard · openapi.json (committed contract)
-│   └── src/                    api (generated schema.d.ts, validate, client, hooks)
-│                               pages · components · lib (format, verification)
-├── docs/                       DESIGN · REQUIREMENTS · ARCHITECTURE · DATA-SCHEMA
-│                               API-CONTRACT · EVALUATION · TEST-CHECKLIST
-│                               DECISIONS (binding) · PHASE-PLAN
+│   └── src/                    api (generated schema.d.ts, validate, client, hooks) · pages
+│                               components · lib (format, verification)
+├── docs/                       DESIGN · REQUIREMENTS · ARCHITECTURE · DATA-SCHEMA · results/
+│                               API-CONTRACT · EVALUATION · TEST-CHECKLIST · DECISIONS · PHASE-PLAN
 ├── policy/policy.md            authored procurement policy; the RAG corpus
 └── data/                       raw · processed · frozen (all gitignored)
 ```
@@ -124,7 +124,11 @@ spendguard inject --seed 42          # plant known anomalies in a copy -> ground
 spendguard evaluate --seed 42 --detector baseline --detector d1 --detector d2 --detector d3 --detector d4
 spendguard investigate --top 10      # investigate + verify the 10 highest-severity open cases
 spendguard investigate --eval-seed 42 --per-type 2   # triage + citation validity on planted anomalies
-spendguard investigate --no-verify   # the Verifier-off ablation (FR-7.8)
+spendguard investigate --eval-seed 42 --ablation template   # the no-agent ablation arm
+spendguard investigate --eval-seed 42 --no-verify           # the Verifier-off arm (FR-7.8)
+spendguard report detection          # detector tables with provenance -> docs/results/
+spendguard demo --count 3            # live injection into a bounded copy, then detect (D-34)
+spendguard freeze --seed 42          # hash and snapshot the demo state; `serve --frozen` serves it
 spendguard serve                     # API + built dashboard at http://127.0.0.1:8000
 spendguard serve --eval-seed 42      # the same, over an evaluation run (planted anomalies)
 spendguard openapi                   # export the API schema -> frontend/openapi.json
@@ -132,8 +136,7 @@ spendguard check-llm                 # endpoint answers, and tool calling works
 spendguard check-policy              # policy.md and config.py agree?
 ```
 
-Frontend (`frontend/`): `npm install` · `npm run dev` (Vite :5173, proxies `/api`) · `npm test` ·
-`npm run typecheck` · `npm run build` (served by `spendguard serve`) · `npm run gen:api`.
+Frontend (`frontend/`): `npm install` · `npm run dev` (Vite :5173, proxies `/api`) · `npm test` · `npm run typecheck` · `npm run build` (served by `spendguard serve`) · `npm run gen:api`.
 
 The venv is at `.venv`; with it active the bare `spendguard` command works, otherwise use `./.venv/Scripts/spendguard.exe`.
 
@@ -167,26 +170,21 @@ The Groq key is set and verified (`spendguard check-llm`). Outstanding manual st
 
 ## 7. Important decisions
 
-Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-33). The ones that shape day-to-day work:
+Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-34). The ones that shape day-to-day work:
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
-- **D-05** Detection covers 100% of rows; **investigation is top-N by severity** (LLM-bound: 1–3 min
-  per case on the Groq free tier, measured in Phase 6).
+- **D-05** Detection covers 100% of rows; **investigation is top-N by severity** (LLM-bound: 1–3 min per case on the Groq free tier, measured in Phase 6).
 - **D-09** DuckDB (analytical) + SQLite/Postgres (transactional). No Node backend, no Django: DuckDB is embedded and Django's ORM cannot address it.
 - **D-12** `vendor_key` is for **blocking**, never identity. Measured: 0 suppliers split, 10 of 382 keys over-merged.
 - **D-15/16** Currency INR; principal control threshold **₹2,50,000** (GFR 2017 ladder, policy SG-PP-2.2).
 - **D-19/20/21** D1 blocks on **amount + date** (a name typo must not hide a duplicate) and scores
   pairs with **Fellegi–Sunter by MAP-EM**; D2 takes minimal runs, four policy indicators.
-- **D-23** D3 ties the baseline on F1, wins on ranking: honest premium purchases share the injected
-  price band, which is why investigation exists. It never reads the description (a fraudster writes it).
-- **D-24** D4 tests each supplier against its *peers*, not against Benford (which accused 61 of 210
-  real suppliers), combines tests with Fisher, and controls FDR across suppliers.
-- **D-27/28** Policy retrieval is dense (BM25 and hybrid measured and lost), chunked on clause
-  boundaries. Tools: read-only connection, answer-key-free view, validated single SELECT.
-- **D-29** Notes are structured claims (`row_ids` + checkable `facts`), so the Verifier checks
-  data, not prose. The prompt shows one example of the case's type and asks for the innocent
-  explanation first.
+- **D-23** D3 ties the baseline on F1, wins on ranking: honest premium purchases share the injected price band, which is why investigation exists. It never reads the description (a fraudster writes it).
+- **D-24** D4 tests each supplier against its *peers*, not against Benford (which accused 61 of 210 real suppliers), combines tests with Fisher, and controls FDR across suppliers.
+- **D-27/28** Policy retrieval is dense (BM25 and hybrid measured and lost), chunked on clause boundaries. Tools: read-only connection, answer-key-free view, validated single SELECT.
+- **D-29** Notes are structured claims (`row_ids` + checkable `facts`), so the Verifier checks data,
+  not prose. The prompt shows one case-type example and asks for the innocent explanation first.
 - **D-30** Groq free tier: **200k tokens/day (~10 investigations)**. The client honours 429 waits,
   trims the bulkiest old tool results to fit the budget; a spent quota stops the run, next resumes.
 - **D-31** Verifier: deterministic checks (row exists, values match at stated precision, clause exists,
@@ -195,5 +193,6 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-33
   list and a closed schema; contract checked at compile time and runtime; health never probes the LLM.
 - **D-33** Gemini free tier for evaluation runs, Ollama later; evaluation numbers are per model;
   a per-day quota ends the run for resumption. Gemini free-tier prompts may train Google's models.
-- **O-04** implemented as recommended (the number moves with the band), awaiting confirmation.
-  **O-05** open.
+- **D-34** The demo is two things: a live injection into a bounded copy (never the served data),
+  and a hashed frozen state served from a fresh working copy, so a reviewer's clicks never persist.
+- **O-04** implemented as recommended (the number moves with the band), awaiting confirmation. **O-05** open.
