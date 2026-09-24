@@ -14,6 +14,8 @@ from fastapi import APIRouter, Query
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
+from spendguard.ablations import ARMS as ABLATION_ARMS
+from spendguard.ablations import describe as describe_arm
 from spendguard.api.cases import fetch_rows, money, to_row, with_latest_note
 from spendguard.api.deps import Duck, Stores, not_found
 from spendguard.api.schemas import (
@@ -176,8 +178,16 @@ def _detector_metrics(report: dict[str, Any]) -> list[DetectorMetrics]:
     ]
 
 
+def _triage_accuracy(report: Path | None) -> float | None:
+    if report is None:
+        return None
+    triage: dict[str, Any] = json.loads(report.read_text(encoding="utf-8")).get("triage", {})
+    accuracy: float | None = triage.get("all", {}).get("decisive_accuracy")
+    return accuracy
+
+
 def _agent_metrics(
-    store_path: Path, triage_report: Path | None
+    store_path: Path, triage_report: Path | None, arm_reports: dict[str, Path] | None = None
 ) -> tuple[AgentMetrics, list[AblationRow]]:
     """Aggregated over the evaluation store: every released note, newest per case."""
     empty = AgentMetrics(
@@ -196,6 +206,16 @@ def _agent_metrics(
     engine = get_engine(f"sqlite:///{store_path.as_posix()}")
     with Session(engine) as session:
         notes = session.scalars(select(AuditNoteRecord)).all()
+        # Each arm's own run record says what it changed, so the table describes
+        # the configuration that actually ran rather than a label written here.
+        arm_config: dict[str, dict[str, Any]] = {}
+        for run in sorted(
+            session.scalars(select(RunRecord).where(RunRecord.kind == "investigate")).all(),
+            key=lambda r: r.started_at,
+        ):
+            name = (run.config or {}).get("ablation")
+            if name:
+                arm_config[name] = run.config or {}
         per_note = {
             note_id: (tools, tokens, latency)
             for note_id, tools, tokens, latency in session.execute(
@@ -226,18 +246,13 @@ def _agent_metrics(
                   sum(n.citations_checked or 0 for n in judged)),
         )  # fmt: skip
 
-    triage = None
-    if triage_report is not None:
-        all_types = json.loads(triage_report.read_text(encoding="utf-8")).get("triage", {})
-        triage = all_types.get("all", {}).get("decisive_accuracy")
-
     stats = [per_note[n.note_id] for n in released if n.note_id in per_note]
     deterministic, semantic = validity(released)
     agent = AgentMetrics(
         notes=len(released),
         citation_validity_deterministic=deterministic,
         citation_validity_semantic=semantic,
-        triage_accuracy=triage,
+        triage_accuracy=_triage_accuracy(triage_report),
         avg_tool_calls=_rate(sum(s[0] or 0 for s in stats), len(stats)),
         avg_tokens=_rate(sum(s[1] or 0 for s in stats), len(stats)),
         avg_latency_seconds=_rate(sum(s[2] or 0 for s in stats) / 1000, len(stats)),
@@ -246,17 +261,18 @@ def _agent_metrics(
             1 for n in released if n.verification_status == "failed_after_retries"
         ),
     )
+    arm_reports = arm_reports or {}
     ablations = []
     for name in sorted({n.ablation_name for n in notes if n.is_ablation and n.ablation_name}):
         det, sem = validity([n for n in notes if n.ablation_name == name])
         ablations.append(
             AblationRow(
                 ablation_name=name,
-                configuration=name,
+                configuration=describe_arm(arm_config.get(name)),
                 citation_validity_deterministic=det,
                 citation_validity_semantic=sem,
-                triage_accuracy=None,
-                note_quality_score=None,
+                triage_accuracy=_triage_accuracy(arm_reports.get(name)),
+                note_quality_score=None,  # the blinded rubric, graded by people
             )
         )
     return agent, ablations
@@ -270,7 +286,13 @@ def evaluation(store: Stores, seed: int = settings.random_seed) -> EvaluationRes
     metrics_ = _detector_metrics(report)
     agent, ablations = _agent_metrics(
         store.eval_dir / f"investigation_seed{seed}.sqlite",
+        # The main run's report ends at the seed; an arm's carries the arm's name.
         _latest(store.eval_dir, f"investigate-eval-*-seed{seed}.json"),
+        {
+            arm: arm_report
+            for arm in ABLATION_ARMS
+            if (arm_report := _latest(store.eval_dir, f"investigate-eval-*-seed{seed}-{arm}.json"))
+        },
     )
     groups = report.get("ground_truth_groups")
     return EvaluationResponse(

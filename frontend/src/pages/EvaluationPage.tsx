@@ -132,16 +132,20 @@ export function EvaluationPage() {
 
             <Card title="Ablations">
               {e.ablations.length === 0 ? (
-                <div className="empty">No ablation runs yet. <code>spendguard investigate --no-verify</code> produces the Verifier-off arm.</div>
+                <div className="empty">
+                  No ablation runs yet. <code>spendguard investigate --eval-seed 42 --ablation template</code> writes notes from
+                  detector output alone; adding <code>--no-verify</code> to an evaluation run produces the Verifier-off arm.
+                </div>
               ) : (
                 <table>
                   <thead>
-                    <tr><th>Ablation</th><th className="num">Citations valid</th><th className="num">Supported (model-judged)</th><th className="num">Triage</th></tr>
+                    <tr><th>Ablation</th><th>Configuration</th><th className="num">Citations valid</th><th className="num">Supported (model-judged)</th><th className="num">Triage</th></tr>
                   </thead>
                   <tbody>
                     {e.ablations.map((row) => (
                       <tr key={row.ablation_name}>
                         <td>{row.ablation_name}</td>
+                        <td className="muted">{row.configuration}</td>
                         <td className="num">{formatPercent(row.citation_validity_deterministic, 1)}</td>
                         <td className="num">{formatPercent(row.citation_validity_semantic, 1)}</td>
                         <td className="num">{formatPercent(row.triage_accuracy, 0)}</td>

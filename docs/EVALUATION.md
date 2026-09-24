@@ -221,6 +221,14 @@ Mandatory. Ablations are what distinguish a project that built something from a 
 
 Each ablation runs on the same cases, the same seed, and the same dataset as the main run. Only the named variable changes.
 
+**As built (Phase 9).** Each arm draws the same seeded sample as the main run and is stored beside it, never inside it: an arm's notes carry `ablation_name`, never stand as a case's own note, never mark a case investigated, and are scored only against the arm's own notes. Each arm writes its own report, `investigate-eval-<stamp>-seed<seed>-<arm>.{md,json}`, and appears as its own row on the dashboard's evaluation page, described from the run's own config snapshot.
+
+| Arm | Command | Notes |
+|---|---|---|
+| Verifier off | `spendguard investigate --eval-seed 42 --no-verify` | Labelled `no-verifier` automatically in evaluation mode. The *deterministic* check still runs — otherwise the arm could not be measured — but nothing is enforced and nothing is regenerated, and the notes are released `unverified`. |
+| Template notes | `spendguard investigate --eval-seed 42 --ablation template` | Needs no model to write: the note is filled from the detector's output and the rows it flagged. The Verifier still checks and judges it, so the comparison is like for like. Every verdict is `likely_true_positive` by construction — the template cannot weigh an innocent explanation, which is precisely what the triage column measures. |
+| Model size | `LLM_PROVIDER=… spendguard investigate --eval-seed 42` | No arm name: a note records the model that wrote it and evaluation is scored per model (D-33), so a smaller model is another run, not another arm. |
+
 ---
 
 ## 7. Reproducibility
