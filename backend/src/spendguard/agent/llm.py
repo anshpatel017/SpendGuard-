@@ -130,6 +130,14 @@ class LLMClient:
     # has run out ends the run instead of hanging it.
     MAX_RATE_LIMIT_WAITS = 6
     MAX_WAIT_SECONDS = 65.0
+    # "This model is currently experiencing high demand" is a 503, and on a free
+    # tier it is common and temporary. Backing off 1s then 2s and giving up - the
+    # ordinary retry schedule - loses a case that would have succeeded a minute
+    # later, which matters when an evaluation runs unattended for hours. These get
+    # their own, longer schedule; a provider that is genuinely down still ends the
+    # run, it just takes ~2 minutes to conclude that rather than 3 seconds.
+    OVERLOADED_STATUSES = (500, 502, 503, 504)
+    OVERLOADED_BACKOFF = (5.0, 15.0, 45.0, 60.0)
 
     def __init__(
         self,
@@ -186,7 +194,7 @@ class LLMClient:
             request["tools"] = tools
             request["tool_choice"] = tool_choice
 
-        failures = waits = 0
+        failures = waits = overloaded = 0
         while True:
             started = time.perf_counter()  # latency of the call that succeeds, not the waits
             try:
@@ -217,6 +225,16 @@ class LLMClient:
                         error = LLMQuotaExhaustedError if daily else LLMCallError
                         raise error(f"{self.model} rate limit not clearing: {exc}") from exc
                     pause = asked + 0.5
+                    self.rate_limit_wait_seconds += pause
+                    time.sleep(pause)
+                    continue
+                if exc.status_code in self.OVERLOADED_STATUSES:
+                    if overloaded >= len(self.OVERLOADED_BACKOFF):
+                        raise LLMCallError(
+                            f"{self.model} overloaded after {overloaded} waits: {exc}"
+                        ) from exc
+                    pause = self.OVERLOADED_BACKOFF[overloaded]
+                    overloaded += 1
                     self.rate_limit_wait_seconds += pause
                     time.sleep(pause)
                     continue

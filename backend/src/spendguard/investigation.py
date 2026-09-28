@@ -520,7 +520,7 @@ def write_triage_report(
         f"{s['tool_calls']} tool calls, {s['prompt_tokens']:,} prompt tokens, "
         f"{s['unseen_citations']} citations of rows the agent never saw. "
         f"{s['seconds']:.0f}s in total, {s['rate_limit_wait_seconds']:.0f}s of it waiting on "
-        "rate limits.",
+        "the provider - rate limits and overload backoff.",
     ]
     v = s["verification"]
     lines += [

@@ -376,7 +376,7 @@ def investigate(
     console.print(
         f"\n{s['completed']}/{s['cases']} notes written - verdicts {s['verdicts']} - "
         f"{s['tool_calls']} tool calls, {s['prompt_tokens']:,} prompt tokens, "
-        f"{s['seconds']:.0f}s ({s['rate_limit_wait_seconds']:.0f}s waiting on rate limits)"
+        f"{s['seconds']:.0f}s ({s['rate_limit_wait_seconds']:.0f}s waiting on the provider)"
     )
 
     def pct(value: object) -> str:
@@ -903,6 +903,42 @@ def review_report(
                       str(d.unclear), precision, span)  # fmt: skip
     console.print(table)
     for path in write_review_report(report, settings.results_dir, facts):
+        console.print(f"[green]Wrote[/green] {path}")
+
+
+@report_app.command("agent")
+def report_agent(
+    seed: Annotated[
+        list[int] | None, typer.Option(help="Seeds to report. Default: EVALUATION_SEEDS.")
+    ] = None,
+) -> None:
+    """Citation validity, triage and cost per model and arm, across seeds."""
+    from spendguard.eval.agent_report import agent_report, write_agent_report
+
+    report = agent_report(seed or settings.evaluation_seeds)
+    if not report.results:
+        console.print(
+            "[yellow]No investigations stored yet.[/yellow] Run `spendguard investigate "
+            "--eval-seed 42` first."
+        )
+        raise typer.Exit(code=1)
+
+    table = Table(title="Agent results")
+    for col in ("Seed", "Model", "Arm", "Notes", "Citations valid", "Judged", "Triage"):
+        table.add_column(col, justify="left" if col in ("Model", "Arm") else "right")
+    for r in sorted(report.results, key=lambda r: (r.seed, r.arm, r.model)):
+        pct = lambda v: "-" if v is None else f"{v:.0%}"  # noqa: E731
+        table.add_row(str(r.seed), r.model, r.arm, str(r.notes),
+                      pct(r.deterministic_valid), pct(r.semantic_valid),
+                      pct(r.triage_accuracy))  # fmt: skip
+    console.print(table)
+    short = [r for r in report.results if r.sampled and r.notes < r.sampled]
+    if short:
+        console.print(
+            f"[yellow]{len(short)} arm(s) short of their sample[/yellow] - rates will move "
+            "as the rest arrive."
+        )
+    for path in write_agent_report(report, settings.results_dir):
         console.print(f"[green]Wrote[/green] {path}")
 
 
