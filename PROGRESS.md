@@ -283,7 +283,14 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
    - **Verified end to end** on the real seed-42 store: 7 notes exported across two arms, two sheets filled and imported, the report written. The scores were invented to exercise the pipeline, so they were **deleted afterwards** and `docs/results/grading.md` was removed - a results file holding made-up numbers is the exact failure this project is meant to avoid. The real batch belongs to step 6, when the note pool is big enough.
    - **One limitation that cannot be engineered away, and is printed in the report:** a template note is formulaic by definition, so a grader working through a batch can come to recognise that arm. Its scores are an upper bound on how well blinding held.
    - `data/grading/` is git-ignored: `key.json` is what unblinds a batch.
-5. ⏳ **California real data:** mapping, INR conversion, detection, and a review sheet for adjusted precision. Needs the Kaggle CSV.
+5. ✅ **California real data.** 346,018 purchase order line items ingested (336,995 loaded, 6.7 s), all four detectors run, and a review kit for the precision that unlabelled data allows.
+   - **Three mapping judgements, each written into `california_po.yaml`** because a reader has to be able to check them: `invoice_no` is deliberately **unmapped** (the obvious candidate is a *document* id, and mapping it would have handed D1's exact-match stage 11,842 fabricated pairs before any scoring ran); `officer_id` holds the **department**, since the file names no person; `item_category` is UNSPSC **Family**, not Class (too thin) or Segment (too coarse).
+   - **Finding 1 - D3's core assumption fails on a real taxonomy.** A typical synthetic item sits within 11% of its category median; a typical California item sits **5.63× away**. The same z-threshold that means "twice the going rate" on one dataset means "1,031,569× the median" on the other, so D3 flags **1 row in 333,291**. Re-grouping at every level available shows the taxonomy is the problem, not the threshold: even the finest 8-digit UNSPSC code needs a 9,550× markup, and only comparing the *same item description* gets it to 41-100× - covering 23-35% of rows, not all. Nothing was re-tuned (convention 6). **This is the evidence O-05 was waiting for**, and it is now recorded there.
+   - **Finding 2 - a duplicate detector on line-item data needs the document boundary.** 5,973 of D1's 12,257 flags (**48.7%**) pair two line items of the *same* purchase order. The synthetic generator emits one row per transaction, so this failure mode cannot appear there. Raised as **O-07** rather than fixed quietly: giving detectors a document id is a schema decision, not a tuning one.
+   - **Finding 3 - the pinned rate is doing visible work.** At ₹60/USD, **49.8%** of line items land at or above the ₹2,50,000 approval threshold, against a median line of $3,600. The rate is pinned, dated and stated in the mapping for exactly this reason.
+   - **The review kit** (`spendguard review export | import | report`): the sample is drawn and recorded *before* any verdict exists; `unclear` is a first-class answer kept out of the ratio; every ratio carries a **Wilson** interval, pinned in tests against the values the normal approximation gets wrong; reviewers see the **document number** that detectors never see. Verdicts land in `flag_reviews`, apart from the operational review workflow (D-04), so a measurement cannot be disturbed by someone working the queue.
+   - **Also fixed:** `spendguard detect --store` now exists - without it a second dataset's cases landed on top of the operational ones. And a real item description of six lines of contract prose was silently destroying the review table; cells are now flattened, pipe-escaped and truncated, with a test that counts cells per row.
+   - `data/review/` is git-ignored.
 6. ⏳ **Agent evaluation on Gemini**, multi-seed plus the ablation arms. Needs the Gemini key.
 7. ⏳ **EVALUATION.md:** every number traced to a command, the headline sentence, the final freeze, the demo walkthrough.
 
@@ -291,8 +298,8 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
 
 **Nothing is blocking.** The Gemini key is in `.env` and `LLM_PROVIDER=gemini` resolves; the Kaggle California CSV is in `data/raw/`; steps 4 and 5 need no LLM at all.
 
-1. **Continue with step 5** (California real data), which needs no LLM either.
+1. **Continue with step 6** (agent evaluation on Gemini), then step 7 (final numbers and freeze).
 2. **Optional, whenever you like:** the Groq seed-42 sample still has 4 cases left — `LLM_PROVIDER=groq`, then `spendguard investigate --eval-seed 42 --per-type 1`. On Gemini the sample starts fresh (5 cases), because results are per model (D-33).
 3. **Confirm O-04** (implemented as recommended) and decide **O-05** (D3 pseudo-categories core or deferred). Neither blocks steps 4 or 5.
 4. **Later, when there is disk space:** install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M` for the fully-local proof; then `LLM_PROVIDER=ollama`.
-5. **Housekeeping:** `main` is 3 commits ahead of GitHub. Push when ready with `git push`.
+5. **Housekeeping:** `main` is 5 commits ahead of GitHub. Push when ready with `git push`.

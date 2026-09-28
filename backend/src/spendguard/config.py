@@ -203,6 +203,14 @@ class Settings(BaseSettings):
     grading_graders: list[str] = Field(default_factory=lambda: ["a", "b", "c"])
     grading_dir: Path = PROJECT_ROOT / "data" / "grading"  # sheets and the key; git-ignored
 
+    # --------------------------------------------- real-data flag review (FR-7.12)
+    # Real procurement data has no labels, so precision is estimated from a sample
+    # of flags judged by people, reported with an interval (EVALUATION 5.1).
+    review_per_detector: int = 15
+    review_reviewers: list[str] = Field(default_factory=lambda: ["a", "b", "c"])
+    review_max_rows: int = 12  # rows shown per case; a D4 case can hold hundreds
+    review_dir: Path = PROJECT_ROOT / "data" / "review"
+
     # ----------------------------------------------------------------- runtime
     log_level: str = "INFO"
 

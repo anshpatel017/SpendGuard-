@@ -194,7 +194,9 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [ ] **[int]** Every run is logged to the experiment tracker with its parameters, seeds and results. [FR-7.10] *(logged to DuckDB `eval_results` + JSON/Markdown reports now; MLflow wiring in Phase 10)*
 - [ ] **[int]** Re-running an evaluation with the same seed reproduces the same numbers. [NFR-4]
 - [ ] **[man]** Results are reported across multiple seeds with variation stated. [FR-7.11]
-- [ ] **[man]** Top-k unlabeled flags are manually reviewed so precision can be reported raw and adjusted. [FR-7.12]
+- [x] **[int]** Top-k unlabeled flags can be reviewed so precision is reported raw and adjusted. [FR-7.12] *(`spendguard review export/import/report`; the sample is seeded and recorded before any verdict, unclear verdicts stay out of the ratio, and every ratio carries a Wilson interval pinned in tests)*
+- [ ] **[man]** A real review batch is filled by three reviewers and reported. [FR-7.12]
+- [x] **[int]** A second dataset ingests, detects and stores without touching the operational store. [FR-1.3] *(California: 336,995 rows in 6.7 s via `california_po.yaml` and `detect --store`)*
 - [x] **[int]** Notes are graded blind against a rubric fixed in advance, with inter-grader agreement reported. [EVALUATION 5.3] *(`spendguard grade export/import/report`; a test reads every file a grader receives and fails if the arm, model, badge or ids leak - verified by sabotaging the export)*
 - [x] **[unit]** The agreement statistic is correct, not merely plausible. [EVALUATION 5.3] *(Krippendorff's alpha pinned to the published worked example at α nominal 0.691 and ordinal 0.807, plus the properties relied on: noise ≈ 0, worse-than-chance < 0, ordinal punishes a two-point gap harder than a one-point gap)*
 - [ ] **[man]** A real grading batch is filled by three graders and reported. [EVALUATION 5.3] *(needs the note pool from step 6)*

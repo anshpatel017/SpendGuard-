@@ -17,7 +17,7 @@ spendguard check-policy             policy.md and config.py agree?
 
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 from rich.console import Console
@@ -113,6 +113,10 @@ def detect(
         list[str] | None, typer.Option(help="Detector(s) to run. Repeatable. Default: all.")
     ] = None,
     db: Annotated[Path | None, typer.Option(help="DuckDB to scan. Default: the clean one.")] = None,
+    store: Annotated[
+        Path | None,
+        typer.Option(help="Case store for the results. Default: the operational one."),
+    ] = None,
     reset: Annotated[bool, typer.Option(help="Clear the case store first.")] = False,
 ) -> None:
     """Scan 100% of transactions and store every case for review."""
@@ -121,8 +125,11 @@ def detect(
     from spendguard.cases import Case
     from spendguard.detection import run_detection
 
+    # A second dataset needs a second store, or its cases land on top of the
+    # operational ones and the dashboard shows two datasets as if they were one.
+    url = f"sqlite:///{store.as_posix()}" if store else None
     with console.status("Scanning every transaction..."):
-        run = run_detection(db, detector, reset=reset)
+        run = run_detection(db, detector, store_url=url, reset=reset)
 
     if not run.cases:
         console.print(
@@ -734,6 +741,168 @@ def grade_report(
         f"{'-' if alpha is None else f'{alpha:.3f}'} - {interpret(alpha)}"
     )
     for path in write_grading_report(report, settings.results_dir):
+        console.print(f"[green]Wrote[/green] {path}")
+
+
+review_app = typer.Typer(help="Human review of flags on unlabelled real data (FR-7.12).")
+app.add_typer(review_app, name="review")
+
+
+def _review_rows(con: Any, row_ids: list[int]) -> dict[int, dict[str, Any]]:
+    """Evidence rows for a human reviewer, including the source document number.
+
+    The audit view hides `source_row_ref` from *detectors* - on an injected
+    database its absence is itself part of the answer key. A person judging a
+    flag is not a detector, and on line-item data they cannot tell a repeated
+    line of one purchase order from a genuine duplicate record without it.
+    """
+    from spendguard.api.cases import fetch_rows
+
+    rows = {int(r["row_id"]): dict(r) for r in fetch_rows(con, row_ids)}
+    for row_id, ref in con.execute(
+        "SELECT row_id, source_row_ref FROM transactions WHERE row_id IN (SELECT unnest(?))",
+        [row_ids],
+    ).fetchall():
+        if int(row_id) in rows:
+            rows[int(row_id)]["source_row_ref"] = ref
+    return rows
+
+
+def _real_stores(db: Path | None, store: Path | None) -> tuple[Path, str]:
+    db = db or settings.processed_data_dir / "california.duckdb"
+    store = store or settings.processed_data_dir / "california_cases.sqlite"
+    if not db.exists() or not store.exists():
+        console.print(
+            f"[red]No real-data stores.[/red] Expected {db.name} and {store.name}. Run "
+            "`spendguard ingest … --mapping california_po --db …` then `spendguard detect "
+            "--db … --store …`."
+        )
+        raise typer.Exit(code=1)
+    return db, f"sqlite:///{store.as_posix()}"
+
+
+@review_app.command("export")
+def review_export(
+    db: Annotated[Path | None, typer.Option(help="The DuckDB the cases were found in.")] = None,
+    store: Annotated[Path | None, typer.Option(help="The case store holding the flags.")] = None,
+    per_detector: Annotated[
+        int | None, typer.Option(help="Flags per detector. Default: REVIEW_PER_DETECTOR.")
+    ] = None,
+    strategy: Annotated[
+        str, typer.Option(help="`top` (highest severity, what an auditor sees) or `random`.")
+    ] = "top",
+    seed: Annotated[int, typer.Option(help="Sampling seed.")] = settings.random_seed,
+    reviewer: Annotated[list[str] | None, typer.Option(help="Reviewer names. Repeatable.")] = None,
+    out: Annotated[Path | None, typer.Option(help="Where to write the batch.")] = None,
+) -> None:
+    """Draw a fixed sample of flags and write the evidence for people to judge."""
+    from spendguard.db.duck import connect
+    from spendguard.db.store import get_engine
+    from spendguard.eval.review import KEY_FILE, ReviewError, export
+
+    duck, url = _real_stores(db, store)
+    out_dir = out or settings.review_dir
+    try:
+        with connect(duck, read_only=True) as con:
+            batch = export(
+                get_engine(url), out_dir,
+                per_detector=per_detector or settings.review_per_detector,
+                seed=seed, reviewers=reviewer or settings.review_reviewers,
+                strategy=strategy, dataset=duck.stem,
+                load_evidence=lambda ids: _review_rows(con, ids),
+            )  # fmt: skip
+    except ReviewError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    table = Table(title=f"Review batch {batch.batch_id}")
+    table.add_column("Detector")
+    table.add_column("Sampled", justify="right")
+    counts: dict[str, int] = {}
+    for case in batch.sample:
+        counts[case.detector] = counts.get(case.detector, 0) + 1
+    for name, count in sorted(counts.items()):
+        table.add_row(name, str(count))
+    console.print(table)
+    for path in (batch.out_dir / "how-to-review.md", batch.out_dir / "cases.md", *batch.sheets):
+        console.print(f"[green]Wrote[/green] {path}")
+    console.print(f"[dim]Sample recorded in {batch.out_dir / KEY_FILE}.[/dim]")
+
+
+@review_app.command("import")
+def review_import(
+    sheet: Annotated[
+        Path, typer.Argument(help="A filled review CSV.", exists=True, dir_okay=False)
+    ],
+    reviewer: Annotated[
+        str | None, typer.Option(help="Reviewer name. Default: from the file name.")
+    ] = None,
+    store: Annotated[Path | None, typer.Option(help="The case store holding the flags.")] = None,
+    db: Annotated[Path | None, typer.Option(help="The DuckDB the cases were found in.")] = None,
+    out: Annotated[Path | None, typer.Option(help="The batch directory.")] = None,
+) -> None:
+    """Store one reviewer's verdicts. Re-importing a corrected sheet replaces them."""
+    from spendguard.db.store import get_engine
+    from spendguard.eval.review import ReviewError, import_reviews, load_sample
+
+    _, url = _real_stores(db, store)
+    name = reviewer or sheet.stem.removeprefix("reviews-")
+    try:
+        sample = load_sample(out or settings.review_dir)
+        stored = import_reviews(get_engine(url), sheet, sample, name)
+    except ReviewError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    console.print(f"[green]Imported[/green] {stored} verdict(s) from {name}.")
+
+
+@review_app.command("report")
+def review_report(
+    store: Annotated[Path | None, typer.Option(help="The case store holding the flags.")] = None,
+    db: Annotated[Path | None, typer.Option(help="The DuckDB the cases were found in.")] = None,
+    out: Annotated[Path | None, typer.Option(help="The batch directory.")] = None,
+) -> None:
+    """Adjusted precision per detector, with the interval -> docs/results/real-data.md."""
+    from spendguard.db.duck import connect
+    from spendguard.db.store import get_engine
+    from spendguard.eval.review import collect, load_sample, write_review_report
+
+    duck, url = _real_stores(db, store)
+    report = collect(get_engine(url))
+    try:
+        sample = load_sample(out or settings.review_dir)
+        report.strategy = sample.get("strategy")
+    except Exception:  # noqa: BLE001 - the batch directory is optional for a report
+        report.strategy = None
+    if not report.detectors:
+        console.print(
+            "[yellow]No flags reviewed yet.[/yellow] Run `spendguard review export`, "
+            "fill a sheet, then `spendguard review import`."
+        )
+        raise typer.Exit(code=1)
+
+    with connect(duck, read_only=True) as con:
+        found = con.execute(
+            "SELECT count(*), coalesce(sum(amount), 0) FROM audit_transactions"
+        ).fetchone()
+    rows, total = (int(found[0]), float(found[1])) if found else (0, 0.0)
+    facts = {
+        "Dataset": duck.stem,
+        "Transactions": f"{rows:,}",
+        "Total value": settings.money(total),
+        "Flags reviewed": sum(d.reviewed for d in report.detectors),
+    }
+
+    table = Table(title="Adjusted precision on real data")
+    for col in ("Detector", "Flagged", "Reviewed", "Plausible", "Unclear", "Precision", "95% CI"):
+        table.add_column(col, justify="left" if col == "Detector" else "right")
+    for d in report.detectors:
+        span = "-" if d.interval is None else f"{d.interval[0]:.0%}-{d.interval[1]:.0%}"
+        precision = "-" if d.adjusted_precision is None else f"{d.adjusted_precision:.0%}"
+        table.add_row(d.detector, f"{d.flagged_total:,}", str(d.reviewed), str(d.plausible),
+                      str(d.unclear), precision, span)  # fmt: skip
+    console.print(table)
+    for path in write_review_report(report, settings.results_dir, facts):
         console.print(f"[green]Wrote[/green] {path}")
 
 

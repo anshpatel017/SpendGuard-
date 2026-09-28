@@ -200,6 +200,27 @@ class NoteGradeRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
+class FlagReviewRecord(Base):
+    """One reviewer's judgement of one flagged case on unlabelled real data (FR-7.12).
+
+    Kept apart from `CaseRecord.status`, which is the operational review workflow
+    (D-04) and belongs to whoever is working the queue. This is a measurement: a
+    sample drawn for estimating precision, which must stay fixed even if someone
+    later works the same case in the dashboard.
+    """
+
+    __tablename__ = "flag_reviews"
+    __table_args__ = (UniqueConstraint("case_id", "reviewer", name="uq_flag_reviews_case_person"),)
+
+    review_id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    reviewer: Mapped[str] = mapped_column(String(50), index=True)
+    batch: Mapped[str] = mapped_column(String(80), index=True)
+    verdict: Mapped[str] = mapped_column(String(20), index=True)  # see review.VERDICTS
+    comment: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
 class StoreMismatchError(RuntimeError):
     """The store already holds cases for a different dataset."""
 

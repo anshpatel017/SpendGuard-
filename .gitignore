@@ -34,6 +34,7 @@ data/demo/
 # Grading batches: key.json says which system wrote each note, so a committed
 # batch unblinds every grade in it.
 data/grading/
+data/review/
 *.csv
 *.parquet
 *.duckdb
