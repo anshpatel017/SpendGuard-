@@ -157,6 +157,68 @@ Three injection seeds, 50k-row development dataset, per case, **mean ± sample s
 
 **Clean-data check.** On the same dataset with no planted anomalies: D1, D2 and D4 raise **0** cases. D3 raises 154 of 49,900 rows (0.3%), the honest premium and urgent purchases.
 
+### 4.0c Real data — Large Purchases by the State of California (Phase 9)
+
+346,018 purchase order **line items**, FY 2012-13 to 2014-15, published as open data. 336,995 loaded; 9,023 dropped with named reasons (8,957 non-positive amounts, 36 missing supplier, 30 unparseable). Mapping: `backend/mappings/california_po.yaml`.
+
+```bash
+spendguard ingest "data/raw/PURCHASE ORDER DATA EXTRACT 2012-2015_0.csv"   --mapping california_po --db data/processed/california.duckdb
+spendguard detect --db data/processed/california.duckdb   --store data/processed/california_cases.sqlite
+```
+
+| | |
+|---|---|
+| Transactions | 336,995 |
+| Period | 2012-07-02 to 2015-06-30 |
+| Suppliers (normalized keys) | 23,700 from 24,578 names |
+| Departments | 111 |
+| Item categories (UNSPSC Family) | 410 |
+| Value | ₹90,84,72,22,52,210.89 at the pinned rate |
+| Ingestion | 6.7 s |
+
+| Detector | Cases | High | Medium | Low | Time |
+|---|---:|---:|---:|---:|---:|
+| D1 duplicate | 12,257 | 2,606 | 9,040 | 611 | 525 s |
+| D2 split | 1,566 | 1,493 | 73 | 0 | 4 s |
+| D3 inflation | **1** | 0 | 1 | 0 | 29 s |
+| D4 vendor flag | 321 | 35 | 53 | 233 | 14 s |
+
+**These counts are not precision.** Nothing in this dataset is labelled. What they are is the input to the review in 4.1, and to three findings that synthetic data could not have produced.
+
+#### Finding 1 — D3's core assumption fails on a real taxonomy
+
+D3 compares a line's unit price to the median for its category. That needs items in a category to be priced comparably. Measured on the log unit price:
+
+| Dataset | Within-category spread (median MAD, as a price ratio) | A z of 5.5 then means | Flagged |
+|---|---:|---:|---:|
+| Synthetic (49,814 rows, 67 categories) | **1.11×** | 2× the category median | 124 |
+| California (333,291 rows, 343 categories) | **5.63×** | **1,031,569×** the category median | 1 |
+
+A typical synthetic item sits within 11% of its category median; a typical California item sits 5.6× away from it. The threshold that means "twice the going rate" on one dataset means "a million times" on the other, so D3 flags one row in 333,291.
+
+**The taxonomy is the problem, not the threshold.** Re-grouping the same prices at every level available:
+
+| Grouping | Groups (≥20 rows) | Rows covered | A z of 5.5 means | Flagged |
+|---|---:|---:|---:|---:|
+| UNSPSC Segment (57) | 56 | 333,845 | 15,716,019× | 0 |
+| UNSPSC Family — *as mapped* | 343 | 333,327 | 1,029,813× | 1 |
+| UNSPSC Class | 1,180 | 326,793 | 171,343× | 20 |
+| UNSPSC 8-digit code | 2,419 | 286,914 | 9,550× | 1,822 |
+| Exact item description | 1,235 | 77,370 | **100×** | 2,014 |
+| Exact item description, ≥5 rows | 5,895 | 117,683 | **41×** | 4,219 |
+
+Even the finest published code still requires a 9,550× markup. Only comparing **the same item to itself** produces a usable norm — and it covers 23–35% of rows, not all of them. Nothing here was re-tuned: thresholds stay where the development seed put them (convention 6). This is the evidence open issue **O-05** was waiting for, and the decision it needs is recorded there.
+
+#### Finding 2 — a duplicate detector on line-item data needs the document boundary
+
+Of D1's 12,257 flags, **5,973 (48.7%) pair two line items of the *same* purchase order**. Those are one order written across two lines, not two records. The remaining 6,284 span different orders and are the ones worth an auditor's time.
+
+The synthetic generator emits one row per transaction, so no purchase-order grouping exists in it and this failure mode could not appear. The purchase order number is carried as `source_row_ref` — deliberately **not** mapped to `invoice_no`, which would have handed D1's exact-match stage 11,842 fabricated pairs before any scoring ran. Reviewers are shown it in a `document` column; detectors are not. Whether detectors should get a first-class document id is a design question this finding raises and does not answer.
+
+#### Finding 3 — the pinned conversion rate is doing visible work
+
+At the pinned ₹60/USD, **49.8% of line items sit at or above the ₹2,50,000 approval threshold**, against a median line of $3,600. An Indian public-sector control threshold applied to US state procurement classifies half of everything as a significant purchase, which is why the rate is pinned, dated and stated in the mapping rather than buried. Any conclusion that would change at ₹55 or ₹65 is not a conclusion.
+
 ### 4.1 The unlabeled-flag problem
 
 Real procurement data already contains genuine duplicates, splits and inflated prices that nobody injected. When a detector correctly finds one, it scores as a false positive, because it is not in the ground-truth set. **Every detector's precision is therefore systematically understated.**
@@ -168,6 +230,22 @@ This is not a bug to hide; it is a property to state and quantify:
 - State the review protocol and the value of k
 
 Doing this converts a weakness into evidence of methodological care.
+
+**As built (Phase 9).**
+
+```bash
+spendguard review export --per-detector 15 --strategy top   # sample + evidence + sheets
+spendguard review import data/review/reviews-a.csv          # verdicts, by case id
+spendguard review report                                    # -> docs/results/real-data.md
+```
+
+| Concern | How it is handled |
+|---|---|
+| **The sample** | Drawn *before* any verdict exists, seeded, and written to `sample.json` with the strategy and seed. `top` takes the highest-severity flags per detector — what an auditor works through, and what FR-7.12 asks for; `random` gives the unbiased estimate over everything flagged. The report always says which ran, and the `top` caveat is printed. |
+| **The verdicts** | `plausible`, `implausible`, `unclear`. Anything else is refused, not rounded. **Unclear is a first-class answer**, excluded from the ratio and reported beside it: a reviewer forced to pick would guess, and a guess lands in the precision figure where nobody can find it later. |
+| **Disagreement** | Majority verdict per case; a tie counts as unclear, and every disagreement is listed in the report. |
+| **The interval** | Wilson's, always shown. 8 of 10 plausible is not 80% — it is 49%–94%, and with samples this small that width *is* the finding. The textbook normal interval gives 100% ± 0 for 10 of 10 and bounds outside [0, 1]; both are pinned in tests. |
+| **Evidence** | Reviewers see each case's rows **including the source document number**, which detectors never see. Without it, on line-item data, a repeated line of one purchase order is indistinguishable from a duplicate record — and 48.7% of D1's real-data flags are exactly that. |
 
 ---
 
