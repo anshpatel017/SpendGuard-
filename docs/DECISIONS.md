@@ -513,6 +513,53 @@ provider the deterministic check runs alone and the semantic column is reported 
 
 ---
 
+## D-36 - The grading rubric, the agreement statistic, and the tell that cannot be removed
+
+EVALUATION 5.3 fixed the *process* - around 50 notes, three graders, blinded, agreement
+reported - but not the rubric. Three decisions settled it.
+
+**Five dimensions, scored 0-1-2** (chosen by the user, 2026-09-25): factual accuracy,
+evidence sufficiency, innocent explanation considered, verdict justified by the note alone,
+actionability. Each score has a written anchor, and the rubric lives in `eval/grading.py`
+so it cannot be revised once grades are in.
+
+- *Why five and not three:* the report can then say **where** the agent wins, not merely that
+  it does. "Innocent explanation considered" is the dimension a template must score 0 on by
+  construction, which is what makes the ablation visible rather than asserted (D-35).
+- *Why 0-1-2 and not a 1-5 Likert:* three graders agree far better on three points than on
+  five, and a low agreement number makes every score in the table worthless. Resolution was
+  traded for reliability on purpose.
+
+**Krippendorff's alpha, ordinal, not Fleiss' kappa.** Percent agreement rewards a rubric where
+everyone answers 2; Cohen's kappa handles two coders only; Fleiss' handles three but treats the
+scale as nominal, so scoring 0 where someone scored 2 counts the same as scoring 1 - wrong for
+an ordinal rubric. Alpha takes any number of coders, tolerates a skipped note, and accepts an
+ordinal difference function. It is implemented here (no new dependency) and pinned to the
+published worked example, alpha nominal 0.691 and ordinal 0.807, plus the properties relied on:
+random grading is about 0, worse-than-chance is below 0, and a two-point gap is punished harder
+than a one-point gap. Exact agreement is reported beside it because it needs no definition.
+
+**Blinding is enforced by a test, not by care.** The arm, model, verification badge, run id,
+note id and case id are never exported; a test reads every file a grader receives and fails if
+any appears. It was verified by sabotage: adding the arm to one line of the export makes it fail.
+Graders are shown the rows each note cites, because without them they can only grade fluency -
+which is exactly what a language model is best at faking.
+
+**One tell cannot be removed, so it is printed in the report.** A template note is formulaic by
+definition: every one restates what the detector matched, and every one agrees with it. A grader
+working through a batch can come to recognise that arm. Removing the tell would mean making the
+template not a template, which is the thing under test. That arm's scores are an upper bound on
+how well blinding held, not a fully blind comparison. The graders are also the project's own
+authors; the agreement number is what makes that checkable.
+
+**Grades live beside the notes** (`note_grades` in the evaluation store), not in a spreadsheet,
+so a grade always traces to the note it judged and a corrected sheet replaces rather than
+duplicates. A score off the scale or an unknown blind id is refused, never rounded: a typo in a
+grade becomes a wrong number in the report, and the report is the deliverable. `data/grading/`
+is git-ignored - `key.json` is what unblinds a batch.
+
+---
+
 ## Open issues
 
 | ID | Issue | Status |
