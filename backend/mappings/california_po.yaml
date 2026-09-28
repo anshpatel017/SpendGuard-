@@ -1,0 +1,68 @@
+# Large Purchases by the State of California, 2012-2015 (FY 2012-13 to 2014-15).
+#
+# 346,018 purchase order LINE ITEMS - not payments, and not one row per order:
+# a purchase order averages 1.73 lines and one has 602. Everything SpendGuard
+# reports on this dataset is therefore about *transaction records*, never about
+# payments (CLAUDE.md wording discipline).
+#
+# Three mapping decisions are judgements, not transcription. Each is recorded
+# here because a reader of the results has to be able to check them.
+#
+# 1. `invoice_no` is deliberately UNMAPPED. The obvious candidate, "Purchase
+#    Order Number", is a *document* id: every line of one order carries it, so
+#    7,305 groups covering 19,147 rows share a supplier, an amount and a number
+#    legitimately. D1's exact-match stage groups on exactly that triple, so
+#    mapping it would have handed the detector 11,842 fabricated duplicate pairs
+#    before any scoring ran. It would also let the agent cite SG-PP-4.1, the
+#    unique-invoice rule, against data the rule does not govern. The PO number
+#    is kept as `source_row_ref` instead: auditable, and hidden from every
+#    detector by the audit view. D1 still works, through its scored path.
+#
+# 2. `officer_id` holds the DEPARTMENT, not a person. The file names no
+#    individual. A department is the right unit for the split-purchase control -
+#    it is the budget holder whose orders would be split - but anything written
+#    about "the officer" on this dataset means the department, and the dataset
+#    card says so.
+#
+# 3. `item_category` is "Family Title" (412 values, median 206 rows), not
+#    "Class Title" (2,361 values, median 20 rows) or "Segment Title" (57 values,
+#    median 3,665). D3 needs enough rows per category to establish a price norm
+#    and enough categories for that norm to mean something. Class is too thin at
+#    the median to support a robust z-score; Segment lumps unlike items together.
+#
+# "Creation Date" is used rather than "Purchase Date": it is complete, where
+# Purchase Date is missing on 5.0% of rows.
+
+dataset: california_po
+description: >-
+  Large Purchases by the State of California, FY 2012-13 to 2014-15, published
+  as open data. Purchase order line items, USD, converted to INR at a pinned
+  rate. Real procurement with no labels: detector output here is measured by
+  human review of a sample, never against a ground truth (FR-7.12).
+
+# Decision D-15: a non-INR source converts at a rate pinned here, never a live
+# one, so a result reproduces years later. The rate below is a deliberate round
+# assumption for the middle of the data's span (the USD/INR rate moved roughly
+# from 55 to 64 across 2012-2015), NOT a figure taken from a rate provider. It
+# exists so amounts can be read against the INR policy thresholds at all. Any
+# conclusion that would change under a rate of 55 or 65 is not a conclusion.
+source_currency: USD
+fx_rate_to_inr: 60.0
+fx_rate_date: 2014-01-01
+
+date_formats:
+  - "%m/%d/%Y"
+
+# The purchase order number: auditable, and hidden from detectors - see note 1.
+source_row_ref: "Purchase Order Number"
+
+columns:
+  vendor_name: "Supplier Name"
+  invoice_no: null # see note 1 - this dataset has no invoice numbers
+  amount: "Total Price"
+  txn_date: "Creation Date"
+  officer_id: "Department Name" # see note 2 - a department, not a person
+  item_desc: "Item Description"
+  item_category: "Family Title" # see note 3
+  quantity: "Quantity"
+  unit_price: "Unit Price"

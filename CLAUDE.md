@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–4 of 7 done) · 739 backend + 29 frontend tests passing.
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done) · 759 backend + 29 frontend tests passing.
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -58,13 +58,14 @@ SpendGuard/
 │   │   ├── detectors/          base · baseline · d1_duplicates · d2_splits · d3_inflation · d4_vendor
 │   │   ├── eval/               injection · matching · metrics · runner · triage · report
 │   │   │                    grading (blinded rubric) · grading_report · agreement (alpha)
+│   │   │                    review (real-data flags, Wilson interval)
 │   │   ├── agent/              llm (provider switch) · tools (the six) · policy (RAG)
 │   │   │                    note (schema) · prompts · investigator (the loop)
 │   │   │                    checks (deterministic) · verifier (judge + revise loop)
 │   │   │                    template (the no-agent ablation arm)
 │   │   └── api/                app (factory, errors, serves the build) · schemas · deps
 │   │                        cases (queue, detail, review) · overview (metrics, eval…)
-│   └── tests/                  mirrors src; 739 tests (+7 live, opt-in)
+│   └── tests/                  mirrors src; 759 tests (+7 live, opt-in)
 ├── frontend/                   React dashboard · openapi.json (committed contract)
 │   └── src/                    api (generated schema.d.ts, validate, client, hooks) · pages
 │                               components · lib (format, verification)
@@ -120,7 +121,7 @@ SpendGuard/
 ```bash
 spendguard generate                  # seeded synthetic INR dataset -> data/raw/
 spendguard ingest <csv>              # clean, normalize, load DuckDB + dataset card
-spendguard detect                    # D1-D4 over 100% of rows -> case store
+spendguard detect [--db X --store Y] # D1-D4 over 100% of rows -> case store
 spendguard inject --seed 42          # plant known anomalies in a copy -> ground truth
 spendguard evaluate --seed 42 --detector baseline --detector d1 --detector d2 --detector d3 --detector d4
 spendguard investigate --top 10      # investigate + verify the 10 highest-severity open cases
@@ -129,6 +130,7 @@ spendguard investigate --eval-seed 42 --ablation template   # the no-agent ablat
 spendguard investigate --eval-seed 42 --no-verify           # the Verifier-off arm (FR-7.8)
 spendguard report detection          # detector tables with provenance -> docs/results/
 spendguard grade export|import|report --seed 42   # blinded rubric grading -> docs/results/
+spendguard review export|import|report            # real-data flags, adjusted precision
 spendguard demo --count 3            # live injection into a bounded copy, then detect (D-34)
 spendguard freeze --seed 42          # hash and snapshot the demo state; `serve --frozen` serves it
 spendguard serve                     # API + built dashboard at http://127.0.0.1:8000
@@ -172,7 +174,7 @@ Groq and Gemini keys are both set (`spendguard check-llm`), and the **Kaggle Cal
 
 ## 7. Important decisions
 
-Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-36). The ones that shape day-to-day work:
+Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-36; open O-03, O-05, O-07). The ones that shape day-to-day work:
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
@@ -190,9 +192,7 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-36
 - **D-32** API/dashboard: store paths fixed per app (`--eval-seed`); evidence via the audit view, a field list and a closed schema; contract checked at compile time and runtime; health never probes the LLM.
 - **D-33** Gemini free tier for evaluation runs, Ollama later; numbers are per model, and a per-day quota ends the run for resumption. Gemini free-tier prompts may train Google's models.
 - **D-34** The demo is two things: a live injection into a bounded copy (never the served data), and a hashed frozen state served from a fresh copy, so a reviewer's clicks never persist.
-- **D-35** Ablation arms (`template`, `no-verifier`) are stored, scored and reported *beside* the main
-  run: their notes never stand as a case's note and never enter the agent's numbers. Model size is no arm.
-- **D-36** Grading rubric: five dimensions scored **0-1-2** (three points, because three graders agree
-  on three); agreement is **ordinal Krippendorff's alpha**, pinned to published values; blinding is
-  enforced by a test, and the template arm's unavoidable tell is printed in the report.
+- **D-35** Ablation arms (`template`, `no-verifier`) are stored, scored and reported *beside* the main run: their notes never stand as a case's note and never enter the agent's numbers.
+- **D-36** Grading rubric: five dimensions scored **0-1-2**; agreement is **ordinal Krippendorff's alpha**, pinned to published values; blinding is enforced by a test, and the template arm's unavoidable tell is printed in the report.
+- **Real data (EVALUATION 4.0c):** on California PO line items D3's taxonomy gives no price norm (a typical item sits 5.63× from its category median, vs 1.11× synthetic) and 48.7% of D1's flags pair two lines of one order. Evidence for **O-05** and **O-07**; nothing was re-tuned.
 - **O-04** implemented as recommended (the number moves with the band), awaiting confirmation. **O-05** open.
