@@ -270,6 +270,27 @@ def test_triage_sampling_leaves_out_redundant_alerts_and_is_seeded() -> None:
     assert sample_for_triage(cases, [group], per_type=2, seed=7) == (chosen, truth)
 
 
+def test_widening_the_sample_keeps_every_case_already_investigated() -> None:
+    """Investigations are quota-bound, so a sample is built up over days (D-30).
+
+    If widening it re-drew, deciding to go from one case per type to two would
+    throw away most of the tokens already spent. Measured on the real seed-42
+    data before this was fixed: 1 of 5 cases survived, four were orphaned.
+    """
+    group = TruthGroup("g1", AnomalyType.SPLIT, frozenset({1, 2, 3}), "acme", 300_000.0)
+    cases = [
+        _case([1, 2, 3], kind="split", score=0.95),
+        *[_case([10 + i, 20 + i], kind="split") for i in range(6)],
+    ]
+
+    samples = [
+        {c.case_id for c in sample_for_triage(cases, [group], per_type=k, seed=7)[0]}
+        for k in (1, 2, 3)
+    ]
+    assert samples[0] < samples[1] < samples[2], "a wider sample must contain the narrower one"
+    assert len(samples[0]) == 2 and len(samples[2]) == 4  # 1 real + 6 spurious in the pools
+
+
 # ------------------------------------------------------------------ orchestration
 
 
