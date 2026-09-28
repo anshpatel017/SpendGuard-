@@ -463,7 +463,7 @@ On any failure the objections go back to the Investigator, which revises, up to 
 **Caveats, stated.**
 - **Data use:** Gemini's free tier may use prompts to improve Google's products. Acceptable for the synthetic data and the public California dataset; never for an organization's confidential records. That is what the Ollama run is for.
 - **Limits:** the free-tier limits are shown per account in AI Studio, not in public documentation. They are measured on first use, not assumed.
-- **Model:** the default is `gemini-2.5-flash` (stable, described as best price-performance). Newer 3.x Flash models exist; `GEMINI_MODEL` changes it. Prompts were developed on Qwen (D-26), so the first Gemini runs are also a test of how well they transfer.
+- **Model:** the default was `gemini-2.5-flash`. **Superseded - see D-37:** that model is no longer served to new keys, and every Gemini model that is fails multi-turn tool calling through the OpenAI-compatible endpoint. The evaluation runs on Groq instead. The provider switch itself is unchanged and still correct.
 
 ---
 
@@ -557,6 +557,50 @@ so a grade always traces to the note it judged and a corrected sheet replaces ra
 duplicates. A score off the scale or an unknown blind id is refused, never rounded: a typo in a
 grade becomes a wrong number in the report, and the report is the deliverable. `data/grading/`
 is git-ignored - `key.json` is what unblinds a batch.
+
+---
+
+## D-37 - Gemini cannot run the Investigator, and `check-llm` now proves it in ten seconds
+
+**The plan in D-33 rested on a premise that turned out to be false.** Gemini's free tier
+was chosen for the Phase 9 evaluation because it offers more quota than Groq's 200k
+tokens a day. When the run finally started, every Gemini model available to the key
+failed - not on quota, on capability.
+
+| Model family | What happened |
+|---|---|
+| `gemini-2.5-flash`, `-flash-lite` | HTTP 404, "no longer available to new users" - although both are still listed by the models endpoint for this key |
+| `gemini-3.1`/`3.5`/`3.8-flash*` | HTTP 400, "Function call is missing a `thought_signature` in functionCall parts" |
+
+The second is the real blocker. Gemini 3.x issues a thought signature with every
+function call and requires it back when the conversation is replayed. The
+OpenAI-compatible schema has nowhere to put it, so the **first** tool call succeeds and
+the **second turn fails** - which is every turn after the first in a tool-calling loop.
+A seed-42 run produced 0 notes from 3 attempts: one 400, one 503, one 429.
+
+**Why this was not caught earlier.** `spendguard check-llm` asked for one tool call and
+stopped there, so it called Gemini healthy. The failure then surfaced hours later, inside
+an evaluation. The check now completes a **second turn**: it hands the assistant's tool
+call and a result back and requires the model to continue. That is the shape the
+Investigator actually uses, it costs two calls, and it would have caught this in ten
+seconds. A model that replies in prose instead of calling the tool now also fails the
+check rather than printing a warning.
+
+**Consequence:** the evaluation runs on **Groq** (`qwen/qwen3.8-27b`), which passes both
+checks, at 200k tokens a day - about ten investigations, accumulated across days (D-30).
+D-33's provider switch is unchanged and still correct; only its recommendation moves.
+Restoring Gemini would mean carrying provider-specific thought signatures through a
+deliberately provider-agnostic client, and is not attempted here.
+
+**The wider point, for the third time.** D-26 lost `llama-3.3-70b-versatile` to
+retirement; D-33 chose Gemini; this entry loses Gemini to an API change. Free-tier model
+availability is not a stable foundation, which is the argument for the Ollama local-runtime
+proof rather than a reason to postpone it.
+
+**Also from this run:** a 503 "this model is currently experiencing high demand" used to
+back off 1s then 2s and give up, losing a case that would have succeeded a minute later.
+An overloaded provider now gets its own schedule (5s, 15s, 45s, 60s). A provider that is
+genuinely down still ends the run, in about two minutes rather than three seconds.
 
 ---
 

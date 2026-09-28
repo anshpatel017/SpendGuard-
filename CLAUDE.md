@@ -31,7 +31,7 @@ SpendGuard audits **100% of an organization's procurement transactions**, detect
 | Planned | MLflow (Phase 9) |
 | Tooling | pytest, ruff, mypy, Vitest, GitHub Actions |
 
-**LLM plan (forced by hardware):** the dev machine has a 4 GB RTX 2050 and no disk space for Ollama yet. `LLM_PROVIDER` switches in one line (D-33): **Groq** `qwen/qwen3.8-27b` for development (D-26), **Gemini** `gemini-2.5-flash` free tier for the Phase 9 evaluation (more quota), **Ollama** Qwen2.5-3B later for the "fully local" proof. `spendguard check-llm` verifies chat and tool calling.
+**LLM plan (forced by hardware):** the dev machine has a 4 GB RTX 2050 and no disk space for Ollama yet. `LLM_PROVIDER` switches in one line (D-33): **Groq** `qwen/qwen3.8-27b` for development *and* the Phase 9 evaluation (D-26), **Ollama** Qwen2.5-3B later for the "fully local" proof. **Gemini is out (D-37):** every model its free tier serves fails multi-turn tool calling. `spendguard check-llm` verifies chat, tool calling **and a second turn** - the turn Gemini failed.
 
 ---
 
@@ -174,7 +174,7 @@ Groq and Gemini keys are both set (`spendguard check-llm`), and the **Kaggle Cal
 
 ## 7. Important decisions
 
-Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-36; open O-03, O-05, O-07). The ones that shape day-to-day work:
+Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-37; open O-03, O-05, O-07). The ones that shape day-to-day work:
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
@@ -190,7 +190,7 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-36
 - **D-30** Groq free tier: **200k tokens/day (~10 investigations)**. The client honours 429 waits and trims the bulkiest old tool results to fit the budget; a spent quota stops the run, next resumes.
 - **D-31** Verifier: deterministic checks (row exists, values match at stated precision, clause exists, no "duplicate payment"), then a fresh-context LLM judge; failures revised, best draft released.
 - **D-32** API/dashboard: store paths fixed per app (`--eval-seed`); evidence via the audit view, a field list and a closed schema; contract checked at compile time and runtime; health never probes the LLM.
-- **D-33** Gemini free tier for evaluation runs, Ollama later; numbers are per model, and a per-day quota ends the run for resumption. Gemini free-tier prompts may train Google's models.
+- **D-33/37** Numbers are per model and a per-day quota ends a run for resumption. Gemini was chosen for evaluation, then dropped: every model it serves rejects a replayed tool call (no `thought_signature`), so the run is on Groq. `check-llm` now tests a second turn.
 - **D-34** The demo is two things: a live injection into a bounded copy (never the served data), and a hashed frozen state served from a fresh copy, so a reviewer's clicks never persist.
 - **D-35** Ablation arms (`template`, `no-verifier`) are stored, scored and reported *beside* the main run: their notes never stand as a case's note and never enter the agent's numbers.
 - **D-36** Grading rubric: five dimensions scored **0-1-2**; agreement is **ordinal Krippendorff's alpha**, pinned to published values; blinding is enforced by a test, and the template arm's unavoidable tell is printed in the report.
