@@ -139,7 +139,8 @@ class Settings(BaseSettings):
 
     gemini_api_key: str = "not-set"
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    gemini_model: str = "gemini-2.5-flash"
+    # 2.5-flash was retired for new keys mid-Phase 9; Google's 404 named this successor.
+    gemini_model: str = "gemini-3.8-flash"
 
     ollama_base_url: str = "http://localhost:11434/v1"
     ollama_model: str = "qwen2.5:3b-instruct-q4_K_M"
