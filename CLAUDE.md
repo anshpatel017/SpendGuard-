@@ -125,10 +125,11 @@ spendguard detect [--db X --store Y] # D1-D4 over 100% of rows -> case store
 spendguard inject --seed 42          # plant known anomalies in a copy -> ground truth
 spendguard evaluate --seed 42 --detector baseline --detector d1 --detector d2 --detector d3 --detector d4
 spendguard investigate --top 10      # investigate + verify the 10 highest-severity open cases
-spendguard investigate --eval-seed 42 --per-type 2   # triage + citation validity on planted anomalies
+spendguard investigate --eval-seed 42 --per-type 3   # triage + citation validity on planted anomalies
+spendguard investigate --matrix      # walk AGENT_EVAL_PLAN, stop on quota, resume tomorrow
 spendguard investigate --eval-seed 42 --ablation template   # the no-agent ablation arm
 spendguard investigate --eval-seed 42 --no-verify           # the Verifier-off arm (FR-7.8)
-spendguard report detection          # detector tables with provenance -> docs/results/
+spendguard report detection|agent    # result tables with provenance -> docs/results/
 spendguard grade export|import|report --seed 42   # blinded rubric grading -> docs/results/
 spendguard review export|import|report            # real-data flags, adjusted precision
 spendguard demo --count 3            # live injection into a bounded copy, then detect (D-34)

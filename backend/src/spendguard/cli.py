@@ -275,6 +275,10 @@ def investigate(
         str | None,
         typer.Option(help="Evaluation mode: run an ablation arm, scored and stored apart."),
     ] = None,
+    matrix: Annotated[
+        bool,
+        typer.Option(help="Work through AGENT_EVAL_PLAN, stopping when the daily quota runs out."),
+    ] = False,
 ) -> None:
     """Investigate prioritized cases and write verified, cited audit notes. Never closes a case."""
     from spendguard.agent.investigator import InvestigationResult
@@ -343,6 +347,9 @@ def investigate(
     else:
         assert llm is not None
         console.print(f"Model: {llm.model} ({llm.provider.value})")
+    if matrix:
+        _run_matrix(llm, progress, again)
+        return
     if eval_seed is not None:
         from spendguard.eval.injection import default_injected_path
 
@@ -428,6 +435,54 @@ def _eval_stores(seed: int) -> tuple[Path, str]:
         )
         raise typer.Exit(code=1)
     return db, f"sqlite:///{store.as_posix()}"
+
+
+def _run_matrix(llm: Any, progress: Any, again: bool) -> None:
+    """Work through the planned runs in order, stopping the moment quota runs out.
+
+    The matrix takes days at ~10 investigations a day (D-30), so the useful
+    property is that running this again tomorrow continues where it stopped:
+    every run skips the cases that already have a note by the same model and arm,
+    and the sample is nested, so nothing already paid for is re-drawn.
+    """
+    from spendguard.eval.injection import default_injected_path
+    from spendguard.investigation import evaluate_investigation
+
+    table = Table(title="Agent evaluation plan")
+    for col in ("Seed", "Per type", "Arm", "Result"):
+        table.add_column(col, justify="left" if col == "Arm" else "right")
+
+    for step in settings.agent_eval_plan:
+        seed, per_type, arm, label = step.seed, step.per_type, step.arm, step.label
+        if not default_injected_path(seed).exists():
+            table.add_row(str(seed), str(per_type), label, "[yellow]no injected database[/yellow]")
+            continue
+        console.print()
+        console.print(f"[bold]seed {seed}, {per_type} per type, arm {label}[/bold]")
+        run = evaluate_investigation(
+            seed,
+            per_type=per_type,
+            include_investigated=again,
+            llm=None if arm == "template" else llm,
+            on_result=progress,
+            verify=False if arm == "no-verifier" else None,
+            ablation=arm,
+        )
+        s = run.summary()
+        done = f"{run.investigated_so_far}/{run.sampled}"
+        if run.quota_stopped:
+            table.add_row(str(seed), str(per_type), label, f"[yellow]{done}, quota[/yellow]")
+            console.print(table)
+            console.print(
+                "[yellow]The provider's daily quota is spent.[/yellow] Run the same command "
+                "tomorrow; it continues from here."
+            )
+            return
+        table.add_row(str(seed), str(per_type), label, f"{done} ({s['completed']} this run)")
+
+    console.print(table)
+    console.print("[green]Every planned run is complete.[/green] `spendguard report agent` writes "
+                  "the table.")  # fmt: skip
 
 
 @app.command()
