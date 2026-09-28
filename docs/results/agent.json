@@ -1,0 +1,119 @@
+{
+  "manifest": {
+    "generated_at": "2026-09-28 17:38 UTC",
+    "commit": "8813f31",
+    "dirty": true,
+    "python": "3.13.5",
+    "packages": {
+      "duckdb": "1.5.5",
+      "polars": "1.44.1",
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "scikit-learn": "1.9.1",
+      "rapidfuzz": "3.14.6"
+    },
+    "settings": {}
+  },
+  "seeds": [
+    42,
+    7,
+    2026
+  ],
+  "results": [
+    {
+      "seed": 42,
+      "model": "qwen/qwen3.8-27b",
+      "arm": "agent",
+      "notes": 2,
+      "sampled": 6,
+      "citations_checked": 12,
+      "deterministic_valid": 1.0,
+      "semantic_valid": 0.8333,
+      "first_draft_valid": 1.0,
+      "regenerated": 1,
+      "released": {
+        "failed_after_retries": 1,
+        "unverified": 1
+      },
+      "triage": {
+        "cases": 2,
+        "real": 1,
+        "spurious": 1,
+        "confusion": {
+          "real": {
+            "likely_true_positive": 1,
+            "likely_false_positive": 0,
+            "inconclusive": 0,
+            "failed": 0
+          },
+          "spurious": {
+            "likely_true_positive": 1,
+            "likely_false_positive": 0,
+            "inconclusive": 0,
+            "failed": 0
+          }
+        },
+        "real_kept": 1.0,
+        "real_wrongly_dismissed": 0.0,
+        "spurious_filtered": 0.0,
+        "inconclusive": 0.0,
+        "failed": 0.0,
+        "decisive_accuracy": 0.5
+      },
+      "avg_tool_calls": 6.0,
+      "avg_tokens": 21670.0,
+      "avg_seconds": 38.2695,
+      "quota_stopped": true,
+      "triage_accuracy": 0.5,
+      "real_kept": 1.0,
+      "spurious_filtered": 0.0
+    },
+    {
+      "seed": 42,
+      "model": "template",
+      "arm": "template",
+      "notes": 5,
+      "sampled": 5,
+      "citations_checked": 35,
+      "deterministic_valid": 1.0,
+      "semantic_valid": null,
+      "first_draft_valid": 1.0,
+      "regenerated": 0,
+      "released": {
+        "unverified": 5
+      },
+      "triage": {
+        "cases": 5,
+        "real": 4,
+        "spurious": 1,
+        "confusion": {
+          "real": {
+            "likely_true_positive": 4,
+            "likely_false_positive": 0,
+            "inconclusive": 0,
+            "failed": 0
+          },
+          "spurious": {
+            "likely_true_positive": 1,
+            "likely_false_positive": 0,
+            "inconclusive": 0,
+            "failed": 0
+          }
+        },
+        "real_kept": 1.0,
+        "real_wrongly_dismissed": 0.0,
+        "spurious_filtered": 0.0,
+        "inconclusive": 0.0,
+        "failed": 0.0,
+        "decisive_accuracy": 0.8
+      },
+      "avg_tool_calls": 0.0,
+      "avg_tokens": 0.0,
+      "avg_seconds": 0.0034,
+      "quota_stopped": false,
+      "triage_accuracy": 0.8,
+      "real_kept": 1.0,
+      "spurious_filtered": 0.0
+    }
+  ]
+}
