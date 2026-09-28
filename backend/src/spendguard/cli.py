@@ -945,7 +945,7 @@ def report_agent(
 @app.command("check-llm")
 def check_llm() -> None:
     """Verify the configured LLM endpoint answers, and that tool calling works."""
-    from spendguard.agent.llm import LLMClient, LLMNotConfiguredError
+    from spendguard.agent.llm import LLMCallError, LLMClient, LLMNotConfiguredError
 
     try:
         client = LLMClient()
@@ -989,6 +989,48 @@ def check_llm() -> None:
         console.print(
             "[yellow]Warning:[/yellow] the model replied in prose instead of calling the tool."
         )
+        raise typer.Exit(code=1)
+
+    # One tool call is not enough. The Investigator hands the call and its result
+    # back and keeps going, and that second turn is where a provider can refuse:
+    # every Gemini 3.x model rejects a replayed tool call that carries no
+    # `thought_signature`, which the OpenAI-compatible schema has nowhere to put.
+    # A check that stops at turn one calls such a provider healthy and the
+    # failure surfaces hours later, mid-evaluation (D-37).
+    import json as _json
+
+    conversation: list[dict[str, Any]] = [
+        {"role": "user", "content": "Look up the supplier with key 'sharma'. Use the tool."},
+        {
+            "role": "assistant",
+            "content": reply.content or "",
+            "tool_calls": [
+                {
+                    "id": call.id,
+                    "type": "function",
+                    "function": {"name": call.name, "arguments": call.raw_arguments},
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": call.id,
+            "content": _json.dumps({"vendor_key": "sharma", "transactions": 42}),
+        },
+    ]
+    try:
+        second = client.chat(conversation, tools=[probe])
+    except LLMCallError as exc:
+        console.print(
+            f"[red]x[/red] The model cannot continue after a tool call: {exc}. "
+            "[yellow]This provider cannot run the Investigator[/yellow], even though a single "
+            "call works. Switch LLM_PROVIDER."
+        )
+        raise typer.Exit(code=1) from exc
+    console.print(
+        "[green]Multi-turn tool calling works[/green] — "
+        f"it read the result and replied {(second.content or '').strip()[:60]!r}"
+    )
 
 
 @app.command("check-policy")
