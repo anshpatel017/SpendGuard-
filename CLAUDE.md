@@ -172,7 +172,7 @@ Groq and Gemini keys are both set (`spendguard check-llm`), and the **Kaggle Cal
 
 ## 7. Important decisions
 
-Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-35). The ones that shape day-to-day work:
+Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-36). The ones that shape day-to-day work:
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
@@ -184,15 +184,15 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-35
 - **D-23** D3 ties the baseline on F1, wins on ranking: honest premium purchases share the injected price band, which is why investigation exists. It never reads the description (a fraudster writes it).
 - **D-24** D4 tests each supplier against its *peers*, not against Benford (which accused 61 of 210 real suppliers), combines tests with Fisher, and controls FDR across suppliers.
 - **D-27/28** Policy retrieval is dense (BM25 and hybrid measured and lost). Tools: read-only connection, answer-key-free view, validated single SELECT.
-- **D-29** Notes are structured claims (`row_ids` + checkable `facts`), so the Verifier checks data,
-  not prose. The prompt shows one case-type example and asks for the innocent explanation first.
+- **D-29** Notes are structured claims (`row_ids` + checkable `facts`), so the Verifier checks data, not prose. The prompt shows one case-type example and asks for the innocent explanation first.
 - **D-30** Groq free tier: **200k tokens/day (~10 investigations)**. The client honours 429 waits and trims the bulkiest old tool results to fit the budget; a spent quota stops the run, next resumes.
 - **D-31** Verifier: deterministic checks (row exists, values match at stated precision, clause exists, no "duplicate payment"), then a fresh-context LLM judge; failures revised, best draft released.
 - **D-32** API/dashboard: store paths fixed per app (`--eval-seed`); evidence via the audit view, a field list and a closed schema; contract checked at compile time and runtime; health never probes the LLM.
-- **D-33** Gemini free tier for evaluation runs, Ollama later; evaluation numbers are per model;
-  a per-day quota ends the run for resumption. Gemini free-tier prompts may train Google's models.
-- **D-34** The demo is two things: a live injection into a bounded copy (never the served data),
-  and a hashed frozen state served from a fresh working copy, so a reviewer's clicks never persist.
+- **D-33** Gemini free tier for evaluation runs, Ollama later; numbers are per model, and a per-day quota ends the run for resumption. Gemini free-tier prompts may train Google's models.
+- **D-34** The demo is two things: a live injection into a bounded copy (never the served data), and a hashed frozen state served from a fresh copy, so a reviewer's clicks never persist.
 - **D-35** Ablation arms (`template`, `no-verifier`) are stored, scored and reported *beside* the main
   run: their notes never stand as a case's note and never enter the agent's numbers. Model size is no arm.
+- **D-36** Grading rubric: five dimensions scored **0-1-2** (three points, because three graders agree
+  on three); agreement is **ordinal Krippendorff's alpha**, pinned to published values; blinding is
+  enforced by a test, and the template arm's unavoidable tell is printed in the report.
 - **O-04** implemented as recommended (the number moves with the band), awaiting confirmation. **O-05** open.
