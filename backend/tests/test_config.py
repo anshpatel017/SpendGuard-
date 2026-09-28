@@ -39,6 +39,25 @@ def test_thresholds_are_ordered() -> None:
     )
 
 
+def test_the_agent_evaluation_plan_names_only_real_seeds_and_arms() -> None:
+    """The plan is walked unattended over days; a typo in it wastes a day of quota."""
+    from spendguard.ablations import ARMS
+
+    plan = settings.agent_eval_plan
+    assert plan, "the reported agent results come from this plan"
+    assert all(step.seed in settings.evaluation_seeds for step in plan)
+    assert all(step.arm is None or step.arm in ARMS for step in plan)
+    assert all(step.per_type >= 1 for step in plan)
+    # The development seed is reported thoroughly and with every arm; the
+    # held-out seeds narrowly, on the main arm only (CLAUDE.md convention 6).
+    dev = [s for s in plan if s.seed == settings.random_seed]
+    assert {s.arm for s in dev} == {None, *ARMS}
+    assert all(s.arm is None for s in plan if s.seed != settings.random_seed)
+    assert all(
+        s.per_type <= min(d.per_type for d in dev) for s in plan if s.seed != settings.random_seed
+    )
+
+
 def test_split_windows_are_sorted_and_deduplicated() -> None:
     assert settings.split_windows_all == [3, 7, 14]
 
