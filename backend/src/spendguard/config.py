@@ -15,7 +15,7 @@ from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/src/spendguard/config.py -> backend/src -> backend -> project root
@@ -34,6 +34,20 @@ class SeverityBand(StrEnum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
+
+
+class PlannedRun(BaseModel):
+    """One run of the agent evaluation matrix: a seed, a sample width, an arm."""
+
+    model_config = ConfigDict(frozen=True)
+
+    seed: int
+    per_type: int
+    arm: str | None = None  # None is the main run; otherwise an ablation arm name
+
+    @property
+    def label(self) -> str:
+        return self.arm or "agent"
 
 
 class Settings(BaseSettings):
@@ -211,6 +225,23 @@ class Settings(BaseSettings):
     review_reviewers: list[str] = Field(default_factory=lambda: ["a", "b", "c"])
     review_max_rows: int = 12  # rows shown per case; a D4 case can hold hundreds
     review_dir: Path = PROJECT_ROOT / "data" / "review"
+
+    # ------------------------------------------------- the agent evaluation plan
+    # Which (seed, cases per type, arm) runs make up the reported agent results.
+    # Written down because they take days: a free tier allows ~10 investigations
+    # a day (D-30), so the matrix is worked through a little at a time and
+    # `investigate --matrix` walks it in this order, stopping when quota runs out.
+    # Development seed 42 is reported thoroughly and with every arm; the held-out
+    # seeds narrowly, on the main arm only, which is what they are for.
+    agent_eval_plan: list[PlannedRun] = Field(
+        default_factory=lambda: [
+            PlannedRun(seed=42, per_type=3),
+            PlannedRun(seed=42, per_type=3, arm="template"),
+            PlannedRun(seed=42, per_type=3, arm="no-verifier"),
+            PlannedRun(seed=7, per_type=1),
+            PlannedRun(seed=2026, per_type=1),
+        ]
+    )
 
     # ----------------------------------------------------------------- runtime
     log_level: str = "INFO"
