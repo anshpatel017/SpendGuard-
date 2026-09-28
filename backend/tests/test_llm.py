@@ -15,6 +15,7 @@ from spendguard.agent.llm import (
     LLMClient,
     LLMNotConfiguredError,
     LLMQuotaExhaustedError,
+    LLMRequestTooLargeError,
     _parse_arguments,
     retry_after_seconds,
 )
@@ -210,6 +211,27 @@ def test_a_limit_that_never_clears_is_a_failure_not_a_quota(
     with pytest.raises(LLMCallError, match="not clearing") as caught:
         llm.chat([{"role": "user", "content": "x"}])
     assert not isinstance(caught.value, LLMQuotaExhaustedError)
+
+
+def test_a_429_that_says_the_request_is_too_big_is_not_retried(client: Any) -> None:
+    """Groq caps *output* tokens per minute and refuses a request that would exceed it.
+
+    Waiting never clears that - the request cannot succeed as sent - so retrying
+    only spends more calls against the same quota. Found mid-run on the seed-42
+    evaluation: LLM_MAX_TOKENS was 2048 against a free-tier ceiling of 1,000.
+    """
+    import openai
+
+    message = (
+        "Request too large for model `qwen/qwen3.8-27b` on output tokens per minute "
+        "(OTPM): Limit 1000, Requested 1025. The request's expected output tokens "
+        "exceed the enforced limit; reduce max_tokens and try again."
+    )
+    llm, stub = client([openai.APIStatusError(message, response=_response(429), body=None)] * 4)
+    with pytest.raises(LLMRequestTooLargeError, match="LLM_MAX_TOKENS"):
+        llm.chat([{"role": "user", "content": "x"}])
+    assert len(stub.requests) == 1  # asked once, then stopped
+    assert llm.rate_limit_wait_seconds == 0.0  # and never waited, because waiting is futile
 
 
 def test_a_refused_request_is_not_retried(client: Any) -> None:

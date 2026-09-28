@@ -164,7 +164,12 @@ class Settings(BaseSettings):
     llm_model: str = ""
     llm_api_key: str = ""
     llm_temperature: float = 0.1
-    llm_max_tokens: int = 2048
+    # Groq's free tier enforces an *output* tokens-per-minute ceiling of 1,000, and
+    # rejects a request whose expected output exceeds it - 429 "reduce max_tokens",
+    # which no amount of waiting fixes. This is the output-side twin of the 413
+    # input limit in D-30. Kept below 1,000 so a note is never refused before it is
+    # written; a note that needs more than this is too long for an auditor anyway.
+    llm_max_tokens: int = 900
     llm_timeout_seconds: int = 120
 
     agent_max_steps: int = 12
