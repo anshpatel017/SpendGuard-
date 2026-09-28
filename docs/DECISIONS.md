@@ -597,6 +597,15 @@ retirement; D-33 chose Gemini; this entry loses Gemini to an API change. Free-ti
 availability is not a stable foundation, which is the argument for the Ollama local-runtime
 proof rather than a reason to postpone it.
 
+**A third free-tier ceiling, found mid-run (Groq).** The tier enforces an *output*
+tokens-per-minute limit of 1,000 and refuses any request whose expected output exceeds it -
+429, "reduce max_tokens". `LLM_MAX_TOKENS` was 2048, so notes were being refused before
+they were written, and the generic 429 path retried three times before giving up: three
+more calls spent on a request that could never succeed. The cap is now 900, and a 429 whose
+message says the request is too large raises at once with the setting to change, rather than
+retrying. This is the output-side twin of the 413 input limit in D-30; the shape of the
+lesson is the same, which is why both are recorded.
+
 **Also from this run:** a 503 "this model is currently experiencing high demand" used to
 back off 1s then 2s and give up, losing a case that would have succeeded a minute later.
 An overloaded provider now gets its own schedule (5s, 15s, 45s, 60s). A provider that is

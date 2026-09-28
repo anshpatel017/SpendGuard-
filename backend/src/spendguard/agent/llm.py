@@ -121,6 +121,10 @@ def _parse_arguments(raw: str) -> dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {"value": parsed}
 
 
+# "Request too large ... reduce max_tokens": the request cannot succeed as sent.
+_OUTPUT_TOO_LARGE = re.compile(r"reduce\s+max_tokens|request too large", re.I)
+
+
 class LLMClient:
     """Thin wrapper over the OpenAI SDK, pointed wherever configuration says."""
 
@@ -207,6 +211,15 @@ class LLMClient:
                     ) from exc
                 if exc.status_code not in self.RETRY_STATUSES:
                     raise LLMCallError(f"{self.model} refused the request: {exc}") from exc
+                # A 429 that says the *request* is too big is a configuration
+                # problem, not congestion: Groq refuses a request whose expected
+                # output exceeds the per-minute ceiling, and waiting never clears
+                # it. Retrying three times just spends three more calls.
+                if exc.status_code == 429 and _OUTPUT_TOO_LARGE.search(str(exc)):
+                    raise LLMRequestTooLargeError(
+                        f"{self.model}: the provider refused the request's expected output size. "
+                        f"Lower LLM_MAX_TOKENS (currently {settings.llm_max_tokens}): {exc}"
+                    ) from exc
                 asked = retry_after_seconds(exc) if exc.status_code == 429 else None
                 daily = exc.status_code == 429 and is_daily_quota(exc)
                 if daily and asked is None:
