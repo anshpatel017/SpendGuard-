@@ -299,8 +299,19 @@ def sample_for_triage(
     type's label - count as detection false positives, but an investigator is
     right to call them genuine, so they are left out of both pools rather than
     scored against the agent.
+
+    **The sample is nested in ``per_type``.** Each pool is shuffled once, from a
+    seed that depends on the pool and not on how many cases are being drawn, and
+    the first ``per_type`` are taken. So the sample for 2 contains the sample for
+    1, and widening a sample later keeps every case already investigated.
+
+    The obvious ``rng.sample(pool, per_type)`` does not have that property:
+    measured on seed 42, going from 1 to 2 per type kept **1 of 5** cases and
+    orphaned the other four. That matters here more than it looks. Investigations
+    are quota-bound at roughly ten a day (D-30), so a sample is built up over
+    days - and under the old draw, deciding to widen it threw away most of the
+    tokens already spent.
     """
-    rng = random.Random(seed)
     chosen: list[Case] = []
     truth: dict[str, bool] = {}
     for kind in AnomalyType:
@@ -316,7 +327,10 @@ def sample_for_triage(
             key=lambda c: c.case_id,
         )
         for pool, is_real in ((real, True), (spurious, False)):
-            for case in rng.sample(pool, min(per_type, len(pool))):
+            order = list(pool)
+            # A seed per pool, so one type's draw never shifts another's.
+            random.Random(f"{seed}-{kind.value}-{is_real}").shuffle(order)
+            for case in order[:per_type]:
                 chosen.append(case)
                 truth[case.case_id] = is_real
     chosen.sort(key=lambda c: (-c.severity_prelim, c.case_id))
