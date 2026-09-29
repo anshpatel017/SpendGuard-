@@ -162,6 +162,10 @@ class InvestigationResult:
     first_check: VerificationReport | None = None  # the first draft's report, for reporting
     verification_status: str = "unverified"
     retry_count: int = 0
+    # Tool use for the *whole* investigation, revisions included. It lived inside
+    # `_gather` first, which meant every revision handed the model a fresh budget:
+    # a case that had already made 24 calls could make 24 more, twice over.
+    tools_used: Counter[str] = field(default_factory=Counter, repr=False)
 
     @property
     def verdict(self) -> Verdict | None:
@@ -182,6 +186,11 @@ class InvestigationResult:
     @property
     def completion_tokens(self) -> int:
         return sum(s.completion_tokens for s in self.trace)
+
+    @property
+    def tokens_spent(self) -> int:
+        """Everything this case has cost the provider so far, revisions included."""
+        return self.prompt_tokens + self.completion_tokens
 
     @property
     def unseen_citations(self) -> list[int]:
@@ -489,12 +498,21 @@ class Investigator:
         box = ToolBox(self.con, policy_index=self.policy_index)
         tools = box.schemas()
         parse_failures = 0
-        used: Counter[str] = Counter()
 
         def record(**kwargs: Any) -> None:
             _record(result, **kwargs)
 
         for _ in range(self.max_steps):
+            if result.tokens_spent >= settings.agent_max_case_tokens:
+                # One case must not be able to spend the day. Measured: a single
+                # inflation case reached 214,892 tokens across four days - more
+                # than a whole day's quota (D-30) - and never wrote a note, while
+                # sitting first in the sample and starving every case behind it.
+                record(
+                    kind="context_trim",
+                    note=f"case budget reached ({result.tokens_spent:,} tokens); writing the note",
+                )
+                break
             try:
                 reply = self._turn(messages, tools, record)
             except ContextFullError:
@@ -515,7 +533,7 @@ class Investigator:
             if reply.wants_tool:
                 messages.append(_assistant_message(reply))
                 for call in reply.tool_calls:
-                    self._run_tool(call, box, messages, record, result, used)
+                    self._run_tool(call, box, messages, record, result, result.tools_used)
                 continue
 
             messages.append({"role": "assistant", "content": reply.content})
