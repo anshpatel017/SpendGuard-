@@ -27,6 +27,7 @@ from __future__ import annotations
 import contextlib
 import json
 import time
+from collections import Counter
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -57,6 +58,38 @@ MAX_SHRINKS = 2
 # Deliberately low (compact JSON tokenizes densely) so the first estimate errs high.
 INITIAL_CHARS_PER_TOKEN = 3.0
 MAX_ELIDED_ROW_IDS = 30
+
+
+def over_budget(name: str, used: Counter[str]) -> dict[str, Any] | None:
+    """Refuse a tool the agent has leant on too hard, instead of running it again.
+
+    ``agent_max_steps`` bounds model *turns*, not tool calls, and one turn can ask
+    for several tools at once - so nothing bounded tool use. A real inflation case
+    called ``calculator`` 58 times across 19 turns, produced no note, and died on
+    the context budget having spent two minutes and a slice of the day's quota. At
+    roughly ten investigations a day (D-30) one runaway case is expensive.
+
+    The refusal is an ordinary tool result, not an exception (convention 7): the
+    model reads it, and can still write its note from the evidence it has. It also
+    names the count, because "you have called this 8 times" is a far stronger
+    signal to stop than a bare refusal.
+    """
+    if used[name] >= settings.agent_max_calls_per_tool:
+        return {
+            "error": (
+                f"You have called {name} {used[name]} times in this investigation, which is "
+                "the limit for one tool. Do not call it again - write the note from the "
+                "evidence you already have."
+            )
+        }
+    if sum(used.values()) >= settings.agent_max_tool_calls:
+        return {
+            "error": (
+                f"You have made {sum(used.values())} tool calls in this investigation, which "
+                "is the limit. Write the note now from the evidence you already have."
+            )
+        }
+    return None
 
 
 class ContextFullError(LLMCallError):
@@ -444,6 +477,7 @@ class Investigator:
         box = ToolBox(self.con, policy_index=self.policy_index)
         tools = box.schemas()
         parse_failures = 0
+        used: Counter[str] = Counter()
 
         def record(**kwargs: Any) -> None:
             _record(result, **kwargs)
@@ -469,7 +503,7 @@ class Investigator:
             if reply.wants_tool:
                 messages.append(_assistant_message(reply))
                 for call in reply.tool_calls:
-                    self._run_tool(call, box, messages, record, result)
+                    self._run_tool(call, box, messages, record, result, used)
                 continue
 
             messages.append({"role": "assistant", "content": reply.content})
@@ -492,9 +526,13 @@ class Investigator:
         messages: list[dict[str, Any]],
         record: Any,
         result: InvestigationResult,
+        used: Counter[str] | None = None,
     ) -> None:
         began = time.perf_counter()
-        output = box.run(call.name, call.arguments)
+        refusal = over_budget(call.name, used) if used is not None else None
+        output = refusal if refusal is not None else box.run(call.name, call.arguments)
+        if used is not None:
+            used[call.name] += 1
         _row_ids_in(output, result.seen_row_ids)
         record(
             kind="tool",
