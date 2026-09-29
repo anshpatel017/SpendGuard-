@@ -140,3 +140,43 @@ def test_a_document_with_no_sourced_table_fails_loudly(tmp_path: Path) -> None:
 def test_the_real_evaluation_document_agrees_with_the_committed_results() -> None:
     """The one that matters: docs/EVALUATION.md against docs/results/, as committed."""
     assert find_disagreements() == []
+
+
+def test_a_metric_the_document_writes_as_a_dash_does_not_skip_the_whole_row(
+    tmp_path: Path,
+) -> None:
+    """The pooled suite row quotes no PR-AUC, and requiring every cell to parse
+    silently skipped that row - and with it the system-level F1, the most quoted
+    number in the project."""
+    path = tmp_path / "EVALUATION.md"
+    path.write_text(
+        DOCUMENT.replace(
+            "| duplicate | **D1** | **1.000 ± 0.000** | **0.903 ± 0.016** | "
+            "**0.949 ± 0.009** | **0.903 ± 0.016** |",
+            "| all | **spendguard** | **1.000 ± 0.000** | **0.903 ± 0.016** | "
+            "**0.911 ± 0.009** | - |",
+        ),
+        encoding="utf-8",
+    )
+    results = tmp_path / "results"
+    results.mkdir(parents=True, exist_ok=True)
+    (results / "detection.json").write_text(
+        json.dumps(
+            {
+                "aggregate": [
+                    {
+                        "anomaly_type": "all",
+                        "detector": "spendguard",
+                        "granularity": "case",
+                        "precision": {"mean": 1.0, "sd": 0.0},
+                        "recall": {"mean": 0.903, "sd": 0.016},
+                        "f1": {"mean": 0.689, "sd": 0.009},
+                        "pr_auc": None,  # pooling a ranking across four scorers is meaningless
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (problem,) = find_disagreements(path, results)
+    assert problem.metric == "f1" and problem.quoted == 0.911 and problem.generated == 0.689

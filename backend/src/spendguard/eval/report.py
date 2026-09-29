@@ -35,6 +35,12 @@ from spendguard.eval.metrics import ALL, DetectionMetrics
 from spendguard.eval.runner import EvaluationRun, run_evaluation
 
 REPORTED_DETECTORS: tuple[str, ...] = ("baseline", *PRODUCTION_DETECTORS)
+# The four detectors scored as one system. The per-detector table deliberately has
+# no pooled row for them (`owns`): D1 has an F1 of 0.000 on splits, true and
+# meaningless. But "SpendGuard against the baseline" is a real question, and the
+# baseline already has an `all` row to be compared against - so the suite gets one
+# too, pooled from each detector's own type.
+SUITE = "spendguard"
 TYPE_ORDER: tuple[str, ...] = (*(t.value for t in AnomalyType), ALL)
 PACKAGES = ("duckdb", "polars", "numpy", "scipy", "scikit-learn", "rapidfuzz")
 # Settings that decide what the detectors flag - recorded with every report.
@@ -110,6 +116,42 @@ class AggregateRow:
     pr_auc: Spread | None
 
 
+def _suite_metrics(run: EvaluationRun, granularity: str) -> DetectionMetrics | None:
+    """The four detectors as one system: counts pooled, then precision and recall.
+
+    Pooled from **counts**, never by averaging the four F1 scores. Averaging
+    ratios weights a detector with eight vendor cases the same as one with two
+    hundred duplicates, which would quietly flatter whichever detector had the
+    smallest workload.
+    """
+    own = [
+        m
+        for m in run.metrics
+        if m.detector in PRODUCTION_DETECTORS
+        and m.granularity == granularity
+        and owns(m.detector, m.anomaly_type)
+        and m.anomaly_type != ALL
+    ]
+    if len(own) != len(PRODUCTION_DETECTORS):
+        return None
+    tp, fp, fn = (sum(getattr(m, f) for m in own) for f in ("tp", "fp", "fn"))
+    precision = tp / (tp + fp) if tp + fp else 0.0
+    recall = tp / (tp + fn) if tp + fn else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
+    return DetectionMetrics(
+        detector=SUITE,
+        anomaly_type=ALL,
+        granularity=granularity,
+        tp=tp,
+        fp=fp,
+        fn=fn,
+        precision=precision,
+        recall=recall,
+        f1=f1,
+        pr_auc=None,  # a pooled ranking across four independent scorers is not meaningful
+    )
+
+
 def aggregate(runs: Sequence[EvaluationRun]) -> list[AggregateRow]:
     """Mean and spread across seeds, for the types each detector owns."""
     rows = []
@@ -143,6 +185,19 @@ def aggregate(runs: Sequence[EvaluationRun]) -> list[AggregateRow]:
                         ),
                     )
                 )
+        suite = [m for run in runs if (m := _suite_metrics(run, granularity)) is not None]
+        if len(suite) == len(runs):
+            rows.append(
+                AggregateRow(
+                    anomaly_type=ALL,
+                    detector=SUITE,
+                    granularity=granularity,
+                    precision=Spread.of([m.precision for m in suite]),
+                    recall=Spread.of([m.recall for m in suite]),
+                    f1=Spread.of([m.f1 for m in suite]),
+                    pr_auc=None,
+                )
+            )
     return rows
 
 

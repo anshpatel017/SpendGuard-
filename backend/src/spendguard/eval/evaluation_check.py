@@ -169,7 +169,12 @@ def _check_row(
     anomaly = cells[0].strip("* ").lower()
     detector = cells[1].strip("* ").lower()
     figures = [_figure(c) for c in cells[2 : 2 + len(METRICS)]]
-    if any(f is None for f in figures):
+    # A cell may legitimately be "-": the pooled suite row quotes no PR-AUC,
+    # because one ranking across four independent scorers is not meaningful.
+    # Requiring *every* cell to parse silently skipped that whole row - and with
+    # it the system-level F1, the most quoted number in the project. A row counts
+    # as a metrics row if any cell is a figure; the "-" cells are skipped below.
+    if not any(f is not None for f in figures):
         return []  # a header or a prose row, not a metrics row
 
     known = generated.get((anomaly, detector))
@@ -182,7 +187,8 @@ def _check_row(
 
     problems = []
     for metric, figure in zip(METRICS, figures, strict=True):
-        assert figure is not None
+        if figure is None:
+            continue  # "-": the document does not quote this metric for this row
         quoted = figure[0]
         value = known.get(metric)
         if value is None or abs(value - quoted) > TOLERANCE:

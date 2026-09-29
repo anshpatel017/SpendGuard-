@@ -1088,6 +1088,31 @@ def check_llm() -> None:
     )
 
 
+@report_app.command("headline")
+def report_headline() -> None:
+    """The one sentence that gets quoted, generated from the results files."""
+    from spendguard.eval.headline import build, write_headline
+
+    headline = build()
+    console.print()
+    console.print(headline.sentence())
+    console.print()
+    table = Table(title="Where each figure comes from")
+    for col in ("Figure", "Value", "Source"):
+        table.add_column(col)
+    for figure in headline.figures:
+        style = None if figure.measured else "yellow"
+        table.add_row(figure.name, figure.value, figure.source, style=style)
+    console.print(table)
+    if not headline.complete:
+        console.print(
+            "[yellow]Some figures are not measured yet.[/yellow] The sentence says so rather "
+            "than leaving a gap to fill in from memory."
+        )
+    for path in write_headline(headline, settings.results_dir):
+        console.print(f"[green]Wrote[/green] {path}")
+
+
 @app.command("check-evaluation")
 def check_evaluation() -> None:
     """Verify every sourced figure in docs/EVALUATION.md matches the file that generated it."""

@@ -71,6 +71,10 @@ class Settings(BaseSettings):
     # Generated result tables, committed: every number in docs/EVALUATION.md is
     # copied from here, and each file names the command and commit that made it.
     results_dir: Path = PROJECT_ROOT / "docs" / "results"
+    # Fewest notes the headline sentence will quote a citation-validity *rate* from.
+    # Below it the figure is reported as provisional with its sample size attached:
+    # "100%" from three notes is the kind of number a panel is right to attack.
+    headline_min_notes: int = 20
 
     # ------------------------------------------------------- reproducibility
     random_seed: int = 42
