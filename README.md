@@ -1,5 +1,7 @@
 # SpendGuard
 
+[![CI](https://github.com/anshpatel017/SpendGuard-/actions/workflows/ci.yml/badge.svg)](https://github.com/anshpatel017/SpendGuard-/actions/workflows/ci.yml)
+
 **A multi-agent system for evidence-grounded detection and investigation of procurement spend anomalies.**
 
 > Existing tools flag suspicious transactions. SpendGuard investigates them and hands the auditor a finished, verified case file.

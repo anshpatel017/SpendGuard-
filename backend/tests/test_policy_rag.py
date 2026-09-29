@@ -158,6 +158,11 @@ def test_lookup_by_id(index) -> None:  # type: ignore[no-untyped-def]
 
 @pytest.mark.slow
 def test_the_index_is_cached_on_disk(tmp_path: Path) -> None:
+    # This one builds a real index, so it needs the heavy half of the agent
+    # extra. Every other test here guards for that; this one was missed, and
+    # so failed in CI rather than skipping.
+    pytest.importorskip("sentence_transformers", reason="agent extras not installed")
+    pytest.importorskip("faiss", reason="agent extras not installed")
     from spendguard.agent.policy import PolicyIndex
 
     first = PolicyIndex(cache_dir=tmp_path)
