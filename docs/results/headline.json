@@ -1,0 +1,51 @@
+{
+  "manifest": {
+    "generated_at": "2026-09-29 10:00 UTC",
+    "commit": "087b998",
+    "dirty": true,
+    "python": "3.13.5",
+    "packages": {
+      "duckdb": "1.5.5",
+      "polars": "1.44.1",
+      "numpy": "2.5.3",
+      "scipy": "1.18.1",
+      "scikit-learn": "1.9.1",
+      "rapidfuzz": "3.14.6"
+    },
+    "settings": {}
+  },
+  "sentence": "On 50,963 seeded synthetic transactions carrying 508 planted anomalies, across 3 seeds, SpendGuard's four detectors reach a pooled per-case **F1 of 0.689 \u00b1 0.006** against a rule-based baseline at **0.205 \u00b1 0.007**. Citation validity is **provisional**: 100.0% over only 3 note(s), below the 20 this project will quote a rate from. The sample fills at roughly ten investigations a day. Value implicated in real spend: not yet measured - run `spendguard review report`.",
+  "complete": false,
+  "figures": [
+    {
+      "name": "transactions",
+      "value": "50,963",
+      "source": "detection.json"
+    },
+    {
+      "name": "planted anomalies",
+      "value": "508",
+      "source": "detection.json"
+    },
+    {
+      "name": "SpendGuard F1 (per case)",
+      "value": "0.689 \u00b1 0.006",
+      "source": "detection.json"
+    },
+    {
+      "name": "baseline F1 (per case)",
+      "value": "0.205 \u00b1 0.007",
+      "source": "detection.json"
+    },
+    {
+      "name": "citation validity (rule-checked)",
+      "value": "100.0% over 3 note(s)",
+      "source": "agent.json - provisional, sample still filling"
+    },
+    {
+      "name": "value implicated",
+      "value": "not yet measured",
+      "source": "real-data.json is absent"
+    }
+  ]
+}

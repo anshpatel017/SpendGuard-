@@ -1,8 +1,8 @@
 {
   "manifest": {
-    "generated_at": "2026-09-21 19:17 UTC",
-    "commit": "10639cc",
-    "dirty": false,
+    "generated_at": "2026-09-29 09:54 UTC",
+    "commit": "087b998",
+    "dirty": true,
     "python": "3.13.5",
     "packages": {
       "duckdb": "1.5.5",
@@ -36,7 +36,7 @@
   "runs": [
     {
       "seed": 42,
-      "run_id": "eval-20260921T191607-seed42",
+      "run_id": "eval-20260929T095318-seed42",
       "transactions": 50907,
       "ground_truth_groups": {
         "duplicate": 200,
@@ -649,7 +649,7 @@
     },
     {
       "seed": 7,
-      "run_id": "eval-20260921T191619-seed7",
+      "run_id": "eval-20260929T095328-seed7",
       "transactions": 50953,
       "ground_truth_groups": {
         "duplicate": 200,
@@ -1262,7 +1262,7 @@
     },
     {
       "seed": 2026,
-      "run_id": "eval-20260921T191630-seed2026",
+      "run_id": "eval-20260929T095336-seed2026",
       "transactions": 50963,
       "ground_truth_groups": {
         "duplicate": 200,
@@ -2065,6 +2065,24 @@
       }
     },
     {
+      "anomaly_type": "all",
+      "detector": "spendguard",
+      "granularity": "case",
+      "precision": {
+        "mean": 0.6855119183386987,
+        "sd": 0.005670296061104491
+      },
+      "recall": {
+        "mean": 0.692257217847769,
+        "sd": 0.006013878864771433
+      },
+      "f1": {
+        "mean": 0.6888663194716869,
+        "sd": 0.005688883633591152
+      },
+      "pr_auc": null
+    },
+    {
       "anomaly_type": "duplicate",
       "detector": "baseline",
       "granularity": "row",
@@ -2223,6 +2241,24 @@
       "f1": {
         "mean": 0.2876466544510758,
         "sd": 0.01680935890302751
+      },
+      "pr_auc": null
+    },
+    {
+      "anomaly_type": "all",
+      "detector": "spendguard",
+      "granularity": "row",
+      "precision": {
+        "mean": 0.8600903460129041,
+        "sd": 0.007783269456422945
+      },
+      "recall": {
+        "mean": 0.657915804872054,
+        "sd": 0.029839080613153206
+      },
+      "f1": {
+        "mean": 0.7453506646323248,
+        "sd": 0.02115786005924359
       },
       "pr_auc": null
     }

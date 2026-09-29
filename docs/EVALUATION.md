@@ -156,6 +156,10 @@ Three injection seeds, 50k-row development dataset, per case, **mean ± sample s
 | inflation | **D3** | 0.369 ± 0.008 | 0.484 ± 0.009 | 0.419 ± 0.009 | **0.280 ± 0.010** |
 | vendor_flag | baseline | 0.414 ± 0.049 | 0.625 ± 0.125 | 0.497 ± 0.075 | 0.263 ± 0.082 |
 | vendor_flag | **D4** | **1.000 ± 0.000** | **0.750 ± 0.125** | **0.853 ± 0.082** | **0.750 ± 0.125** |
+| all | baseline | 0.153 ± 0.005 | 0.310 ± 0.011 | 0.205 ± 0.007 | 0.047 ± 0.003 |
+| all | **spendguard** | **0.686 ± 0.006** | **0.692 ± 0.006** | **0.689 ± 0.006** | - |
+
+**The two `all` rows are the system-level comparison**, and they are pooled from *counts*, not by averaging the four detectors' F1 scores — averaging ratios would weight D4's eight vendor cases the same as D1's two hundred duplicates and quietly flatter whichever detector had the least work. There is deliberately no pooled PR-AUC: a single ranking across four independent scorers is not a meaningful quantity. Per-detector pooled rows are also absent on purpose — D1 has an F1 of 0.000 on splits, true and meaningless.
 
 **D3 does not beat the baseline on F1, and the report must say so.** It finishes marginally below (0.419 vs 0.432) while ranking substantially better (PR-AUC +43%). Legitimate premium and urgent purchases occupy the same price band as the injected markups, so no price statistic separates them — the reason the investigation layer exists (decision D-23).
 
@@ -346,9 +350,24 @@ Each ablation runs on the same cases, the same seed, and the same dataset as the
 
 ## 8. Headline result format
 
+The sentence originally specified here read:
+
 > On **N** real transactions with **M** injected anomalies, SpendGuard achieved **F1 = X** against a rule-based baseline at **Y**, with **Z%** hard citation validity, and flagged **V** of value implicated in suspicious real spend.
 
-Every number in that sentence must trace to a logged run.
+**As built, that sentence would be misleading, and it is not the one used.** Injection runs on the *seeded synthetic* dataset — the only one with an answer key. The real California data is never injected into, because it already contains genuine anomalies nobody planted (§4.1). One sentence covering both reads as though the F1 had been achieved on real procurement. It was not. The generated sentence names the two datasets separately.
+
+**Every number in it traces to a logged run, by construction:** it is generated, not typed.
+
+```bash
+spendguard report headline        # -> docs/results/headline.md
+```
+
+> **Source:** [`docs/results/headline.md`](results/headline.md). Do not edit the sentence by hand — it is the most-copied figure in the project and therefore the most likely to be quoted from a run that has since been re-done. The file lists, for each figure, the results file it came from.
+
+Two rules the generator enforces:
+
+- **A figure from too few notes is withheld, not rounded.** Citation validity over three notes is not a rate, and "100%" from three notes is the kind of number a panel is right to attack. Below `HEADLINE_MIN_NOTES` (20) it is reported as provisional with its sample size attached.
+- **An unmeasured figure says so.** It never leaves a gap for someone to fill from memory.
 
 ---
 

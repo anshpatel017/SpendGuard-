@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 787 backend + 29 frontend tests passing.
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 798 backend + 29 frontend tests passing.
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -59,14 +59,14 @@ SpendGuard/
 │   │   ├── eval/               injection · matching · metrics · runner · triage · report
 │   │   │                    grading (blinded rubric) · grading_report · agreement (alpha)
 │   │   │                    review (real-data flags, Wilson interval)
-│   │   │                    agent_report · evaluation_check (figures vs results)
+│   │   │                    agent_report · headline · evaluation_check (figures vs results)
 │   │   ├── agent/              llm (provider switch) · tools (the six) · policy (RAG)
 │   │   │                    note (schema) · prompts · investigator (the loop)
 │   │   │                    checks (deterministic) · verifier (judge + revise loop)
 │   │   │                    template (the no-agent ablation arm)
 │   │   └── api/                app (factory, errors, serves the build) · schemas · deps
 │   │                        cases (queue, detail, review) · overview (metrics, eval…)
-│   └── tests/                  mirrors src; 787 tests (+7 live, opt-in)
+│   └── tests/                  mirrors src; 798 tests (+7 live, opt-in)
 ├── frontend/                   React dashboard · openapi.json (committed contract)
 │   └── src/                    api (generated schema.d.ts, validate, client, hooks) · pages
 │                               components · lib (format, verification)
@@ -129,7 +129,7 @@ spendguard evaluate --seed 42 --detector baseline --detector d1 --detector d2 --
 spendguard investigate --top 10      # investigate + verify the 10 highest-severity open cases
 spendguard investigate --matrix      # walk AGENT_EVAL_PLAN (seeds x arms), stop on quota, resume
 spendguard investigate --eval-seed 42 --ablation template|--no-verify  # the ablation arms
-spendguard report detection|agent    # result tables with provenance -> docs/results/
+spendguard report detection|agent|headline  # result tables + the quoted sentence -> docs/results/
 spendguard grade export|import|report --seed 42   # blinded rubric grading -> docs/results/
 spendguard review export|import|report            # real-data flags, adjusted precision
 spendguard demo --count 3            # live injection into a bounded copy, then detect (D-34)
