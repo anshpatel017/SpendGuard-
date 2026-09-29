@@ -45,6 +45,7 @@ from spendguard.config import settings
 from spendguard.db.duck import connect, table_exists
 from spendguard.db.store import (
     CaseRecord,
+    attempts_by_case,
     cases_to_investigate,
     get_engine,
     latest_note,
@@ -398,6 +399,14 @@ def evaluate_investigation(
         arm_of = {"model_name": model, "ablation_name": ablation}
         done_before = {c.case_id for c in chosen if latest_note(engine, c.case_id, **arm_of)}
         pending = [c for c in chosen if include_investigated or c.case_id not in done_before]
+        # Least-attempted first. A case that has failed before keeps its place in
+        # the severity order otherwise, and since the sample is worked through over
+        # days against a daily quota it would be retried first every single day -
+        # spending the quota and starving every case behind it. Measured: one case
+        # was attempted on four consecutive days, took 214,892 tokens, and no other
+        # case in the sample was ever reached.
+        attempts = attempts_by_case(engine, [c.case_id for c in pending])
+        pending.sort(key=lambda c: (attempts.get(c.case_id, 0), -c.severity_prelim, c.case_id))
         results = _investigate_all(
             Investigator(llm, con, model_name=model),
             Verifier(llm, con, semantic=False if llm is None else None),

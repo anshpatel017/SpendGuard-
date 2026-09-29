@@ -165,7 +165,7 @@ Copy `.env.example` to `.env` (gitignored). Names only, no secrets in the repo:
 - **Reproducibility:** `RANDOM_SEED`
 - **Currency:** `CURRENCY` (INR)
 - **Policy thresholds:** `APPROVAL_THRESHOLD`, `DIRECT_PURCHASE_CEILING`, `LIMITED_TENDER_CEILING`, `DUPLICATE_AMOUNT_TOLERANCE`, `DUPLICATE_DATE_WINDOW_DAYS`, `SPLIT_WINDOW_DAYS`, `PREPAYMENT_LOOKBACK_DAYS`, `NEW_VENDOR_DAYS`, `PRICE_HISTORY_MONTHS`
-- **LLM (Phase 5+):** `LLM_PROVIDER`; `GROQ_API_KEY`/`GROQ_MODEL`, `GEMINI_API_KEY`/`GEMINI_MODEL`, `OLLAMA_MODEL`; optional `LLM_MODEL`/`LLM_BASE_URL`/`LLM_API_KEY` overrides; `LLM_TEMPERATURE`, `AGENT_MAX_STEPS`, `AGENT_MAX_TOOL_CALLS`, `AGENT_MAX_CALLS_PER_TOOL`, `AGENT_CONTEXT_TOKENS`, `VERIFIER_ENABLED`, `VERIFIER_SEMANTIC_CHECK`, `VERIFIER_MAX_RETRIES`, `INVESTIGATE_TOP_N`
+- **LLM (Phase 5+):** `LLM_PROVIDER`; `GROQ_API_KEY`/`GROQ_MODEL`, `GEMINI_API_KEY`/`GEMINI_MODEL`, `OLLAMA_MODEL`; optional `LLM_MODEL`/`LLM_BASE_URL`/`LLM_API_KEY` overrides; `LLM_TEMPERATURE`, `AGENT_MAX_STEPS`, `AGENT_MAX_CASE_TOKENS`, `AGENT_MAX_TOOL_CALLS`, `AGENT_MAX_CALLS_PER_TOOL`, `AGENT_CONTEXT_TOKENS`, `VERIFIER_ENABLED`, `VERIFIER_SEMANTIC_CHECK`, `VERIFIER_MAX_RETRIES`, `INVESTIGATE_TOP_N`
 - **Stores:** `DATABASE_URL` (defaults to SQLite under `data/processed/`)
 - **API:** `API_HOST`, `API_PORT`
 
@@ -188,7 +188,7 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-37
 - **D-24** D4 tests each supplier against its *peers*, not against Benford (which accused 61 of 210 real suppliers), combines tests with Fisher, and controls FDR across suppliers.
 - **D-27/28** Policy retrieval is dense (BM25 and hybrid lost). Tools: read-only connection, answer-key-free view, validated single SELECT.
 - **D-29** Notes are structured claims (`row_ids` + checkable `facts`), so the Verifier checks data, not prose. The prompt shows one case-type example and asks for the innocent explanation first.
-- **D-30** Groq free tier ~10 investigations/day. The client honours 429 waits and trims the bulkiest old tool results; a spent quota stops the run, the next resumes.
+- **D-30** Groq free tier ~10 investigations/day. The client honours 429 waits and trims the bulkiest old tool results; a spent quota stops the run, the next resumes. **One case is capped at `AGENT_MAX_CASE_TOKENS`** and repeat failures go last: one case once took 214k tokens and starved the sample for four days.
 - **D-31** Verifier: deterministic checks (row exists, values match, clause exists, no "duplicate payment"), then a fresh-context LLM judge; failures revised, best draft released.
 - **D-32** API/dashboard: store paths fixed per app (`--eval-seed`); evidence via the audit view, a field list and a closed schema; contract checked at compile time and runtime; health never probes the LLM.
 - **D-33/37** Numbers are per model; a per-day quota ends a run for resumption. Gemini was dropped (it rejects replayed tool calls), so the run is on Groq; `check-llm` tests a second turn. Free-tier ceilings are plural: input 413, output 1,000/min, 200k/day.

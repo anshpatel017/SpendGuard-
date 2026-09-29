@@ -186,6 +186,11 @@ class Settings(BaseSettings):
     # day's quota gone. These bound it. Exceeding one is answered with an ordinary
     # tool error the model can read (convention 7), not an exception, so it can
     # still write its note from what it already gathered.
+    # The ceiling for one whole case, revisions included. A successful note has
+    # cost 2,000-23,000 tokens; one pathological case reached 214,892 and wrote
+    # nothing. Without this, a single case can spend an entire day's quota (D-30)
+    # and - because it sits first in the sample - starve every case behind it.
+    agent_max_case_tokens: int = 30_000
     agent_max_tool_calls: int = 24
     agent_max_calls_per_tool: int = 8
     # Tool results are truncated before going back to the model. Every turn resends
