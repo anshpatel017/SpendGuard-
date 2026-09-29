@@ -43,12 +43,21 @@ track = [
     "mlflow>=2.16",
 ]
 
-# Phase 5-7: agents and policy retrieval. Heavy - installed only when needed.
-agent = [
+# Phase 5-7, the light half: the LLM client and token counting. A few megabytes.
+# Split out from `agent` because CI could not install the heavy half, which meant
+# the 24 tests covering rate limits, quota handling and retries never ran there -
+# CI was red from Phase 5 to Phase 9 and nobody noticed.
+llm = [
     "openai>=1.50",
+    "tiktoken>=0.8",
+]
+
+# Phase 5-7, the heavy half: policy retrieval, which pulls PyTorch through
+# sentence-transformers. Installed only when needed.
+agent = [
+    "spendguard[llm]",
     "sentence-transformers>=3.1",
     "faiss-cpu>=1.8",
-    "tiktoken>=0.8",
 ]
 
 # Phase 8: API
