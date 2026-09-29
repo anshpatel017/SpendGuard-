@@ -14,6 +14,7 @@ from spendguard.db.store import (
     CaseStatus,
     RunRecord,
     StoreMismatchError,
+    cases_to_investigate,
     get_engine,
     save_cases,
     set_status,
@@ -107,3 +108,29 @@ def test_detect_refuses_a_database_with_planted_anomalies(
 def test_unknown_detector_is_a_clear_error(store: str, ingested: IngestResult) -> None:
     with pytest.raises(KeyError, match="Unknown detector"):
         run_detection(ingested.db_path, ["d9"], store_url=store)
+
+
+def test_the_store_creates_its_own_directory_like_duckdb_does(tmp_path: Path) -> None:
+    """A fresh clone has no `data/processed/`: it is git-ignored, so it exists on
+    every machine that has run the pipeline and on none that has just cloned.
+
+    SQLite will not create a missing directory, while DuckDB already does - and
+    that asymmetry is how CI failed unnoticed from Phase 5 to Phase 9. Even asking
+    the API for its OpenAPI schema builds the case store, so the contract test died
+    on `unable to open database file` on every runner while passing on every laptop.
+    """
+    missing = tmp_path / "data" / "processed" / "nested"
+    assert not missing.exists()
+
+    engine = get_engine(f"sqlite:///{(missing / 'cases.sqlite').as_posix()}")
+    save_cases(engine, "run-1", "dataset", [_case([1, 2])])
+
+    assert (missing / "cases.sqlite").exists()
+    assert cases_to_investigate(engine)
+
+
+def test_an_in_memory_store_needs_no_directory() -> None:
+    """The pattern must not try to mkdir for ':memory:' or a server-backed URL."""
+    engine = get_engine("sqlite:///:memory:")
+    save_cases(engine, "run-1", "dataset", [_case([1, 2])])
+    assert cases_to_investigate(engine)

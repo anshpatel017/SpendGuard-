@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 from spendguard.agent.checks import check_citations
 from spendguard.agent.investigator import InvestigationResult, TraceStep
 from spendguard.agent.note import InvestigatorNote
-from spendguard.api import create_app
+from spendguard.api import canonical_openapi, create_app
 from spendguard.cases import AnomalyType, Case
 from spendguard.db.store import (
     CaseStatus,
@@ -469,7 +469,7 @@ def test_the_committed_openapi_schema_matches_the_api() -> None:
     """The frontend's types are generated from frontend/openapi.json. Drift fails here first."""
     committed = Path(__file__).resolve().parents[2] / "frontend" / "openapi.json"
     assert committed.exists(), "run `spendguard openapi` and commit frontend/openapi.json"
-    assert json.loads(committed.read_text(encoding="utf-8")) == create_app().openapi(), (
+    assert json.loads(committed.read_text(encoding="utf-8")) == canonical_openapi(create_app()), (
         "The API changed: run `spendguard openapi`, then `npm run gen:api` in frontend/"
     )
 

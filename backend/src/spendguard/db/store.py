@@ -18,11 +18,13 @@ Swapping to PostgreSQL is a one-line change to ``DATABASE_URL``.
 from __future__ import annotations
 
 import json
+import re
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
@@ -225,8 +227,29 @@ class StoreMismatchError(RuntimeError):
     """The store already holds cases for a different dataset."""
 
 
+# "sqlite:///path/to.db" but not ":memory:" and not a server-backed URL.
+_SQLITE_FILE = re.compile(r"^sqlite(?:\+\w+)?:///(?!:memory:)(?P<path>.+)$")
+
+
+def _ensure_parent(url: str) -> None:
+    """Create the directory a file-backed SQLite store lives in.
+
+    SQLite will not create one, and the default store sits under ``data/``, which
+    is git-ignored - so it exists on every machine that has ever run the pipeline
+    and on none that has just cloned. DuckDB already does this (``db/duck.py``),
+    and that asymmetry is exactly how CI failed unnoticed from Phase 5 to Phase 9:
+    `create_app()` opens the case store, so even asking the API for its OpenAPI
+    schema needed a directory a fresh checkout does not have.
+    """
+    found = _SQLITE_FILE.match(url)
+    if found:
+        Path(found.group("path")).expanduser().parent.mkdir(parents=True, exist_ok=True)
+
+
 def get_engine(url: str | None = None) -> Engine:
-    engine = create_engine(url or settings.database_url)
+    url = url or settings.database_url
+    _ensure_parent(url)
+    engine = create_engine(url)
     Base.metadata.create_all(engine)
     return engine
 

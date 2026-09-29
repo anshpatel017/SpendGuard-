@@ -580,9 +580,9 @@ def openapi(
     """Write the OpenAPI schema. The frontend generates its types from it (API-CONTRACT §4)."""
     import json
 
-    from spendguard.api import create_app
+    from spendguard.api import canonical_openapi, create_app
 
-    schema = create_app().openapi()
+    schema = canonical_openapi(create_app())
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(schema, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     console.print(f"[green]Wrote[/green] {out} ({len(schema['paths'])} paths)")

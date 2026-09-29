@@ -2014,7 +2014,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Validation Error"
           }
         },
         "summary": "List Cases",
@@ -2061,7 +2061,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Validation Error"
           }
         },
         "summary": "Case Detail",
@@ -2130,7 +2130,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Validation Error"
           }
         },
         "summary": "Case Evidence",
@@ -2187,7 +2187,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Validation Error"
           }
         },
         "summary": "Update Status",
@@ -2242,7 +2242,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Validation Error"
           }
         },
         "summary": "Inject Demo",
@@ -2296,7 +2296,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Validation Error"
           }
         },
         "summary": "Evaluation",
@@ -2338,7 +2338,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Validation Error"
           }
         },
         "summary": "Health",
@@ -2380,7 +2380,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Validation Error"
           }
         },
         "summary": "Metrics",
@@ -2440,7 +2440,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Validation Error"
           }
         },
         "summary": "Runs",
@@ -2486,7 +2486,7 @@
                 }
               }
             },
-            "description": "Unprocessable Content"
+            "description": "Validation Error"
           }
         },
         "summary": "Transaction",
