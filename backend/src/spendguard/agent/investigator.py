@@ -60,6 +60,18 @@ INITIAL_CHARS_PER_TOKEN = 3.0
 MAX_ELIDED_ROW_IDS = 30
 
 
+def _retry_instruction(exc: NoteParseError, truncated: bool) -> str:
+    """What to send back after a note failed to parse."""
+    if not truncated:
+        return f"{exc} Fix it and reply again."
+    return (
+        "Your reply was cut off at the length limit before the note was complete, which is "
+        "why it is missing fields - the structure was right, there was simply no room. "
+        "Reply again with a shorter note: keep every claim and its row ids and facts, but "
+        "write the finding and the recommended action in one or two sentences each."
+    )
+
+
 def over_budget(name: str, used: Counter[str]) -> dict[str, Any] | None:
     """Refuse a tool the agent has leant on too hard, instead of running it again.
 
@@ -511,10 +523,16 @@ class Investigator:
                 return parse_note(reply.content), None
             except NoteParseError as exc:
                 parse_failures += 1
-                record(kind="parse_error", error=str(exc))
+                record(kind="parse_error", error=str(exc), note=reply.finish_reason)
                 if parse_failures > MAX_PARSE_RETRIES:
                     return None, f"Gave up after {parse_failures} malformed notes: {exc}"
-                messages.append({"role": "user", "content": f"{exc} Fix it and reply again."})
+                # A reply stopped at the token ceiling parses as *every field
+                # missing*, which reads like the model ignoring the schema. Telling
+                # it to "fix the note" then asks for the same too-long note again.
+                # Saying it was cut off is the only feedback it can act on.
+                messages.append(
+                    {"role": "user", "content": _retry_instruction(exc, reply.truncated)}
+                )
 
         note = self._forced_final(messages, tools, record)
         return (note, None) if note else (None, "No valid note within the step limit.")

@@ -606,6 +606,20 @@ message says the request is too large raises at once with the setting to change,
 retrying. This is the output-side twin of the 413 input limit in D-30; the shape of the
 lesson is the same, which is why both are recorded.
 
+**Capping output below the ceiling made things worse, not better (self-inflicted).** The
+fix above set `LLM_MAX_TOKENS` to 900 to stay under Groq's 1,000-token output ceiling. But
+real notes had been reaching **1,016-1,026** completion tokens, so 900 did not make them fit -
+it truncated them. A note cut off mid-JSON parses as *every field missing*, which reads like a
+model ignoring its schema, and the retry said "fix the note", which asked for the same
+too-long note again. Three retries, three identical failures, a whole day's quota and zero
+notes. A visible refusal had been traded for silent truncation, which is strictly worse.
+
+Now: the cap sits just under the ceiling (990); a reply stopped at it is detected from
+`finish_reason`, recorded on the parse error, and answered with feedback the model can act
+on - "your reply was cut off; keep every claim and its facts, shorten the prose". The general
+lesson is about diagnosis rather than limits: **the symptom pointed at the wrong cause**, and
+two days of failures looked like a model that could not follow a schema.
+
 **A runaway agent is a quota problem, not just a quality one.** The first case of the
 first Groq matrix run called `calculator` **58 times** across 19 turns, produced no note,
 and died on the context budget having spent two minutes and a slice of the day's tokens.

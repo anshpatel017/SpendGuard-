@@ -164,12 +164,15 @@ class Settings(BaseSettings):
     llm_model: str = ""
     llm_api_key: str = ""
     llm_temperature: float = 0.1
-    # Groq's free tier enforces an *output* tokens-per-minute ceiling of 1,000, and
+    # Groq's free tier enforces an *output* tokens-per-minute ceiling of 1,000 and
     # rejects a request whose expected output exceeds it - 429 "reduce max_tokens",
-    # which no amount of waiting fixes. This is the output-side twin of the 413
-    # input limit in D-30. Kept below 1,000 so a note is never refused before it is
-    # written; a note that needs more than this is too long for an auditor anyway.
-    llm_max_tokens: int = 900
+    # which no amount of waiting fixes. The output-side twin of the 413 input limit
+    # (D-30). But real notes have needed up to ~1,030 tokens, so capping below the
+    # ceiling does not make them fit - it truncates them, and a note cut off
+    # mid-JSON parses as *every field missing*. Sitting just under the ceiling
+    # keeps the most notes intact; the ones that still overrun are detected from
+    # `finish_reason` and asked for again, shorter, rather than failing as malformed.
+    llm_max_tokens: int = 990
     llm_timeout_seconds: int = 120
 
     agent_max_steps: int = 12

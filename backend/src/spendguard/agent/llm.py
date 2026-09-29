@@ -63,6 +63,16 @@ class LLMResponse:
         return bool(self.tool_calls)
 
     @property
+    def truncated(self) -> bool:
+        """The provider stopped this reply at the token ceiling, mid-sentence.
+
+        Worth its own flag because the symptom is so misleading: a note cut off
+        part-way parses as *every field missing*, which reads like the model
+        ignoring the schema rather than running out of room.
+        """
+        return self.finish_reason == "length"
+
+    @property
     def total_tokens(self) -> int:
         return self.prompt_tokens + self.completion_tokens
 

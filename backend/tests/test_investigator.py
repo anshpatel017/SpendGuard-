@@ -82,6 +82,7 @@ class ScriptedModel:
             prompt_tokens=sent // 3,
             completion_tokens=20,
             latency_seconds=0.01,
+            finish_reason=turn.finish_reason,  # carried through: "length" means truncated
         )
 
 
@@ -447,3 +448,54 @@ def test_an_ordinary_investigation_never_meets_the_budget(
     result = investigator(con, model).investigate(case)
     assert result.note is not None
     assert not [s for s in result.trace if s.kind == "tool" and s.error]
+
+
+# ------------------------------------------------- notes cut off at the ceiling
+
+
+def _truncated(text: str) -> LLMResponse:
+    """A reply the provider stopped at the token ceiling, mid-JSON."""
+    return LLMResponse(content=text, finish_reason="length")
+
+
+def test_a_note_cut_off_at_the_ceiling_is_asked_for_shorter_not_just_fixed(
+    con: duckdb.DuckDBPyConnection, case: Case
+) -> None:
+    """The symptom is misleading: a half-written note parses as every field missing.
+
+    Telling the model to "fix the note" then asks for the same too-long note
+    again. Measured: real notes reached 1,026 completion tokens, so a 900-token
+    ceiling truncated them and three retries all failed the same way.
+    """
+    model = ScriptedModel([_truncated('{"verdict": "likely_true_p'), note([1])])
+    result = investigator(con, model).investigate(case)
+
+    assert result.note is not None, "it recovers once told what actually went wrong"
+    sent = model.requests[-1]["messages"][-1]["content"]
+    assert "cut off at the length limit" in sent
+    assert "shorter note" in sent
+    assert "keep every claim" in sent  # and not by dropping evidence
+
+
+def test_an_ordinary_malformed_note_is_still_just_asked_to_be_fixed(
+    con: duckdb.DuckDBPyConnection, case: Case
+) -> None:
+    """A model that ignored the schema needs the schema error, not length advice."""
+    model = ScriptedModel([reply("I think these look duplicated."), note([1])])
+    result = investigator(con, model).investigate(case)
+
+    assert result.note is not None
+    sent = model.requests[-1]["messages"][-1]["content"]
+    assert "Fix it and reply again" in sent
+    assert "cut off" not in sent
+
+
+def test_the_reason_a_reply_stopped_is_recorded_on_the_parse_error(
+    con: duckdb.DuckDBPyConnection, case: Case
+) -> None:
+    """Without it, two days of failures look like a model that cannot follow a schema."""
+    model = ScriptedModel([_truncated('{"verdict": "likely'), note([1])])
+    result = investigator(con, model).investigate(case)
+
+    (failure,) = [s for s in result.trace if s.kind == "parse_error"]
+    assert failure.note == "length"
