@@ -422,3 +422,36 @@ def test_an_evaluation_counts_only_notes_by_its_own_model(
     )
     assert len(second.results) == first.sampled  # none of the scripted model's notes count
     assert {r.model for r in second.results} == {"gemini-2.5-flash"}
+
+
+def test_a_case_that_keeps_failing_stops_going_first_every_day(
+    tmp_path: Path, injected: InjectionResult
+) -> None:
+    """The sample is worked through over days against a daily quota (D-30).
+
+    A failing case keeps its severity rank, so it was retried first every single
+    day - spending the quota and starving everything behind it. Measured: one case
+    was attempted on four consecutive days, took 214,892 tokens, and no other case
+    in the sample was ever reached.
+    """
+    # quota=0 fails the first case outright: it stores a trace and no note, so it
+    # stays in the sample - which is exactly the case that used to be retried first
+    # for ever.
+    first = evaluate_investigation(
+        11, per_type=1, db_path=injected.out_db, report_dir=tmp_path, llm=CitesFirstRow(quota=0)
+    )
+    assert first.quota_stopped
+    starved = first.results[0].case_id
+    assert not latest_note(engine_for(tmp_path), starved), "it failed without writing a note"
+
+    seen: list[str] = []
+    evaluate_investigation(
+        11, per_type=1, db_path=injected.out_db, report_dir=tmp_path,
+        llm=CitesFirstRow(quota=0), on_result=lambda i, n, c, r: seen.append(c.case_id),
+    )  # fmt: skip
+    assert seen, "the next run attempts something"
+    assert seen[0] != starved, "and it is not the case that already failed"
+
+
+def engine_for(report_dir: Path) -> Any:
+    return get_engine(f"sqlite:///{(report_dir / 'investigation_seed11.sqlite').as_posix()}")

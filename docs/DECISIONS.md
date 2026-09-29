@@ -620,6 +620,30 @@ on - "your reply was cut off; keep every claim and its facts, shorten the prose"
 lesson is about diagnosis rather than limits: **the symptom pointed at the wrong cause**, and
 two days of failures looked like a model that could not follow a schema.
 
+**One case was starving the whole evaluation, and the earlier fixes did not stop it.**
+Four days of runs produced three notes. Counting tokens per case rather than per run showed
+why: a single inflation case had taken **214,892 tokens across 132 tool calls and 44 model
+turns** - more than an entire day's quota (D-30) - and never written a note. A successful
+note costs 2,000-23,000.
+
+Three defects, none of which the tool-call budget addressed:
+
+1. **No ceiling on a whole case.** There was a per-*request* context budget but nothing
+   bounding an investigation. `AGENT_MAX_CASE_TOKENS` (30,000) now stops one, recording why,
+   and gives the model a final turn to write the note from what it has.
+2. **The tool budget was handed back on every revision.** The counter lived inside
+   `_gather`, and `revise()` starts another one - so a case that had already made 24 calls
+   could make 24 more, twice over. It now lives on the result, which spans revisions.
+3. **A failing case kept its place at the front of the queue.** The sample is severity-ordered
+   and worked through over days, so the worst case was retried *first every single day*,
+   spent the quota, and starved everything behind it. Pending cases are now ordered by
+   attempts first: nothing that has already failed runs ahead of something untried.
+
+The third is the one that cost the four days, and it is the one nobody was looking for -
+the calculator loop and the truncation bug were both real, both fixed, and both irrelevant
+while a single case owned the queue. **The lesson is about measurement, not limits:** the
+per-case token table took one query and would have pointed at this on day one.
+
 **A runaway agent is a quota problem, not just a quality one.** The first case of the
 first Groq matrix run called `calculator` **58 times** across 19 turns, produced no note,
 and died on the context budget having spent two minutes and a slice of the day's tokens.

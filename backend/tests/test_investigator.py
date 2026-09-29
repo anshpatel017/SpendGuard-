@@ -499,3 +499,47 @@ def test_the_reason_a_reply_stopped_is_recorded_on_the_parse_error(
 
     (failure,) = [s for s in result.trace if s.kind == "parse_error"]
     assert failure.note == "length"
+
+
+# ------------------------------------------- one case must not spend the day
+
+
+def test_a_case_stops_at_its_token_ceiling_instead_of_spending_the_day(
+    con: duckdb.DuckDBPyConnection, case: Case, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Measured: one inflation case reached 214,892 tokens across four days and
+    never wrote a note, while sitting first in the sample and starving every case
+    behind it. A successful note costs 2,000-23,000."""
+    monkeypatch.setattr(settings, "agent_max_case_tokens", 4_000)
+    # Each scripted turn reports prompt tokens at a third of the request size, so
+    # a handful of tool round-trips crosses the ceiling.
+    model = ScriptedModel([tools(("vendor_profile", {"vendor_key": "sharma"}))] * 12 + [note([1])])
+    result = investigator(con, model).investigate(case)
+
+    assert result.tokens_spent >= settings.agent_max_case_tokens
+    stopped = [s for s in result.trace if s.kind == "context_trim" and "case budget" in (s.note or "")]  # fmt: skip
+    assert stopped, "it stops on the case budget rather than running to the step limit"
+    assert result.tokens_spent < 214_892  # the number this exists to prevent
+
+
+def test_the_tool_budget_is_not_handed_back_on_every_revision(
+    con: duckdb.DuckDBPyConnection, case: Case
+) -> None:
+    """It lived inside `_gather` first, so a revision restarted it: a case that had
+    already made 24 calls could make 24 more, twice over."""
+    limit = settings.agent_max_calls_per_tool
+    spam = [tools(*[("calculator", {"expression": "1+1"})] * 3)] * 4
+    model = ScriptedModel([*spam, note([1])])
+    investigator_ = investigator(con, model)
+    result = investigator_.investigate(case)
+
+    before = result.tools_used["calculator"]
+    assert before >= limit
+
+    # A revision continues the same investigation, so it inherits the spend.
+    model.turns = [tools(("calculator", {"expression": "2+2"})), note([1])]
+    investigator_.revise(case, result, "check the arithmetic again")
+
+    refused = [s for s in result.trace if s.tool_name == "calculator" and s.error]
+    assert refused, "calls past the limit are refused across the revision too"
+    assert result.tools_used["calculator"] >= before, "the counter carried over"

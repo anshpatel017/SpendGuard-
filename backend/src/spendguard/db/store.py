@@ -519,6 +519,25 @@ def save_investigation(
     return note_id
 
 
+def attempts_by_case(engine: Engine, case_ids: Sequence[str]) -> dict[str, int]:
+    """How many runs have already tried each case, whether or not they produced a note.
+
+    An evaluation sample is worked through over days against a daily quota (D-30),
+    and a case that keeps failing keeps its place at the front of the queue - so it
+    is attempted first every day, spends the quota, and starves everything behind
+    it. Counting attempts lets the caller put the repeat offenders last.
+    """
+    if not case_ids:
+        return {}
+    with Session(engine) as session:
+        rows = session.execute(
+            select(TraceRecord.case_id, func.count(func.distinct(TraceRecord.run_id)))
+            .where(TraceRecord.case_id.in_(list(case_ids)))
+            .group_by(TraceRecord.case_id)
+        ).all()
+    return {str(case_id): int(count) for case_id, count in rows}
+
+
 def latest_note(
     engine: Engine,
     case_id: str,
