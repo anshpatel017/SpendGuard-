@@ -193,6 +193,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[int]** The template-notes ablation runs and produces a comparison table. [FR-7.9] *(`--ablation template`; needs no model to write the note, and its citations still pass the deterministic check - the arm's point is the triage column, not the citation column)*
 - [ ] **[int]** Every run is logged to the experiment tracker with its parameters, seeds and results. [FR-7.10] *(logged to DuckDB `eval_results` + JSON/Markdown reports now; MLflow wiring in Phase 10)*
 - [ ] **[int]** Re-running an evaluation with the same seed reproduces the same numbers. [NFR-4]
+- [x] **[unit]** Every sourced figure in EVALUATION.md matches the file that generated it. [Phase 9 exit] *(`spendguard check-evaluation`; catches a one-figure drift, ignores rounding in the last place, and fails loudly if it finds no sourced table at all)*
 - [ ] **[man]** Results are reported across multiple seeds with variation stated. [FR-7.11]
 - [x] **[int]** Top-k unlabeled flags can be reviewed so precision is reported raw and adjusted. [FR-7.12] *(`spendguard review export/import/report`; the sample is seeded and recorded before any verdict, unclear verdicts stay out of the ratio, and every ratio carries a Wilson interval pinned in tests)*
 - [ ] **[man]** A real review batch is filled by three reviewers and reported. [FR-7.12]

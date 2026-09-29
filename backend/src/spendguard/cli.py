@@ -1088,6 +1088,30 @@ def check_llm() -> None:
     )
 
 
+@app.command("check-evaluation")
+def check_evaluation() -> None:
+    """Verify every sourced figure in docs/EVALUATION.md matches the file that generated it."""
+    from spendguard.eval.evaluation_check import EvaluationParseError, find_disagreements
+
+    try:
+        problems = find_disagreements()
+    except EvaluationParseError as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+
+    if problems:
+        console.print(f"[red]{len(problems)} figure(s) disagree with their source:[/red]")
+        for problem in problems:
+            console.print(f"  {problem}")
+        console.print()
+        console.print(
+            "Re-run the command that generates the results, then copy the table across - "
+            "or fix the prose. Do not adjust the generated file to match."
+        )
+        raise typer.Exit(code=1)
+    console.print("[green]Every sourced figure in EVALUATION.md matches its results file.[/green]")
+
+
 @app.command("check-policy")
 def check_policy() -> None:
     """Verify policy/policy.md and config.py state the same thresholds."""
