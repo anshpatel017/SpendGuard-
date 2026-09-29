@@ -606,6 +606,17 @@ message says the request is too large raises at once with the setting to change,
 retrying. This is the output-side twin of the 413 input limit in D-30; the shape of the
 lesson is the same, which is why both are recorded.
 
+**A runaway agent is a quota problem, not just a quality one.** The first case of the
+first Groq matrix run called `calculator` **58 times** across 19 turns, produced no note,
+and died on the context budget having spent two minutes and a slice of the day's tokens.
+`AGENT_MAX_STEPS` did not catch it: a step is one model *turn*, and one turn can request
+several tools at once, so nothing bounded tool use at all. `AGENT_MAX_TOOL_CALLS` (24) and
+`AGENT_MAX_CALLS_PER_TOOL` (8) now do. Exceeding either is answered with an ordinary tool
+error naming the count - "you have called calculator 8 times ... write the note from the
+evidence you already have" - not an exception (convention 7), so the agent can still finish
+from what it has rather than losing the case entirely. At roughly ten investigations a day
+one runaway case is expensive, which is what makes this a limit rather than a warning.
+
 **Also from this run:** a 503 "this model is currently experiencing high demand" used to
 back off 1s then 2s and give up, losing a case that would have succeeded a minute later.
 An overloaded provider now gets its own schedule (5s, 15s, 45s, 60s). A provider that is

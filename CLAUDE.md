@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, step 6 running) · 772 backend + 29 frontend tests passing.
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, step 6 running) · 776 backend + 29 frontend tests passing.
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -65,7 +65,7 @@ SpendGuard/
 │   │   │                    template (the no-agent ablation arm)
 │   │   └── api/                app (factory, errors, serves the build) · schemas · deps
 │   │                        cases (queue, detail, review) · overview (metrics, eval…)
-│   └── tests/                  mirrors src; 772 tests (+7 live, opt-in)
+│   └── tests/                  mirrors src; 776 tests (+7 live, opt-in)
 ├── frontend/                   React dashboard · openapi.json (committed contract)
 │   └── src/                    api (generated schema.d.ts, validate, client, hooks) · pages
 │                               components · lib (format, verification)
@@ -165,7 +165,7 @@ Copy `.env.example` to `.env` (gitignored). Names only, no secrets in the repo:
 - **Reproducibility:** `RANDOM_SEED`
 - **Currency:** `CURRENCY` (INR)
 - **Policy thresholds:** `APPROVAL_THRESHOLD`, `DIRECT_PURCHASE_CEILING`, `LIMITED_TENDER_CEILING`, `DUPLICATE_AMOUNT_TOLERANCE`, `DUPLICATE_DATE_WINDOW_DAYS`, `SPLIT_WINDOW_DAYS`, `PREPAYMENT_LOOKBACK_DAYS`, `NEW_VENDOR_DAYS`, `PRICE_HISTORY_MONTHS`
-- **LLM (Phase 5+):** `LLM_PROVIDER`; `GROQ_API_KEY`/`GROQ_MODEL`, `GEMINI_API_KEY`/`GEMINI_MODEL`, `OLLAMA_MODEL`; optional `LLM_MODEL`/`LLM_BASE_URL`/`LLM_API_KEY` overrides; `LLM_TEMPERATURE`, `AGENT_MAX_STEPS`, `AGENT_CONTEXT_TOKENS`, `VERIFIER_ENABLED`, `VERIFIER_SEMANTIC_CHECK`, `VERIFIER_MAX_RETRIES`, `INVESTIGATE_TOP_N`
+- **LLM (Phase 5+):** `LLM_PROVIDER`; `GROQ_API_KEY`/`GROQ_MODEL`, `GEMINI_API_KEY`/`GEMINI_MODEL`, `OLLAMA_MODEL`; optional `LLM_MODEL`/`LLM_BASE_URL`/`LLM_API_KEY` overrides; `LLM_TEMPERATURE`, `AGENT_MAX_STEPS`, `AGENT_MAX_TOOL_CALLS`, `AGENT_MAX_CALLS_PER_TOOL`, `AGENT_CONTEXT_TOKENS`, `VERIFIER_ENABLED`, `VERIFIER_SEMANTIC_CHECK`, `VERIFIER_MAX_RETRIES`, `INVESTIGATE_TOP_N`
 - **Stores:** `DATABASE_URL` (defaults to SQLite under `data/processed/`)
 - **API:** `API_HOST`, `API_PORT`
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import json
+from collections import Counter
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ from spendguard.agent.investigator import (
     InvestigationResult,
     Investigator,
     final_severity,
+    over_budget,
 )
 from spendguard.agent.llm import LLMCallError, LLMRequestTooLargeError, LLMResponse, ToolCall
 from spendguard.agent.note import Verdict
@@ -388,3 +390,60 @@ def test_final_severity_moves_the_number_with_the_band(
 def test_final_severity_never_raises_a_case() -> None:
     for verdict in Verdict:
         assert final_severity(20.0, verdict)[0] <= 20.0
+
+
+# ------------------------------------------------------- the tool-call budget
+
+
+def test_a_tool_leant_on_too_hard_is_refused_rather_than_run_again(
+    con: duckdb.DuckDBPyConnection, case: Case
+) -> None:
+    """A real inflation case called calculator 58 times, wrote no note, and died on
+    the context budget. `agent_max_steps` never caught it: it bounds model turns,
+    and one turn can ask for many tools at once."""
+    limit = settings.agent_max_calls_per_tool
+    turns = [tools(*[("calculator", {"expression": f"{i}+1"})] * 3) for i in range(6)]
+    model = ScriptedModel([*turns, note([1])])
+    result = investigator(con, model).investigate(case)
+
+    calls = [s for s in result.trace if s.kind == "tool" and s.tool_name == "calculator"]
+    ran = [s for s in calls if not s.error]
+    refused = [s for s in calls if s.error and "limit for one tool" in s.error]
+    assert len(ran) == limit, "the tool runs up to its limit and not once more"
+    assert refused, "and every call past it is refused"
+    assert result.note is not None, "the agent can still write its note from what it has"
+
+
+def test_the_refusal_names_the_count_so_the_model_knows_to_stop(
+    con: duckdb.DuckDBPyConnection, case: Case
+) -> None:
+    used: Counter[str] = Counter({"calculator": settings.agent_max_calls_per_tool})
+    refusal = over_budget("calculator", used)
+    assert refusal is not None
+    assert str(settings.agent_max_calls_per_tool) in refusal["error"]
+    assert "write the note" in refusal["error"].lower()
+    assert over_budget("vendor_profile", used) is None  # a different tool is untouched
+
+
+def test_the_total_budget_stops_an_agent_that_spreads_its_looping_around() -> None:
+    """Per-tool alone is not enough: six tools at seven calls each is still 42 calls."""
+    spread = Counter({f"tool_{i}": settings.agent_max_calls_per_tool - 1 for i in range(6)})
+    assert sum(spread.values()) >= settings.agent_max_tool_calls
+    refusal = over_budget("tool_7", spread)
+    assert refusal is not None and "tool calls in this investigation" in refusal["error"]
+
+
+def test_an_ordinary_investigation_never_meets_the_budget(
+    con: duckdb.DuckDBPyConnection, case: Case
+) -> None:
+    """The limits must not bite on normal behaviour, or they change what is measured."""
+    model = ScriptedModel(
+        [
+            tools(("vendor_profile", {"vendor_key": "sharma"})),
+            tools(("find_similar_invoices", {"row_id": 1})),
+            note([1]),
+        ]
+    )
+    result = investigator(con, model).investigate(case)
+    assert result.note is not None
+    assert not [s for s in result.trace if s.kind == "tool" and s.error]
