@@ -21,7 +21,11 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: python -m pip install -e "./backend[dev,detect,api]"
+        # `llm` is included: it is a few megabytes and it is what makes the
+        # rate-limit, quota and retry tests runnable. The heavy `agent` extra
+        # (PyTorch, via sentence-transformers) stays out, and the handful of
+        # tests needing it skip themselves.
+        run: python -m pip install -e "./backend[dev,detect,api,llm]"
 
       - name: Lint
         run: python -m ruff check backend/src backend/tests

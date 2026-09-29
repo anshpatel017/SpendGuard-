@@ -151,10 +151,10 @@ The venv is at `.venv`; with it active the bare `spendguard` command works, othe
 ./.venv/Scripts/python.exe -m ruff check backend/src backend/tests    # lint
 ./.venv/Scripts/python.exe -m ruff format backend/src backend/tests   # format
 ./.venv/Scripts/python.exe -m mypy --config-file backend/pyproject.toml backend/src
-./.venv/Scripts/python.exe -m pip install -e "./backend[dev,detect,agent,api]"  # install
+./.venv/Scripts/python.exe -m pip install -e "./backend[dev,detect,agent,api]"  # install (CI: no agent)
 ```
 
-CI, every push: backend (lint, format, mypy, pytest) and frontend (types current, tsc, Vitest, build).
+CI, every push: backend (lint, format, mypy, pytest) and frontend (types current, tsc, Vitest, build). It installs `dev,detect,api,llm` — **not** the heavy `agent` extra, so the few tests needing PyTorch skip. Check it is green (badge in README); it was red from Phase 5 to Phase 9 because the LLM tests could not import `openai`, and nobody looked.
 
 ---
 
@@ -169,7 +169,7 @@ Copy `.env.example` to `.env` (gitignored). Names only, no secrets in the repo:
 - **Stores:** `DATABASE_URL` (defaults to SQLite under `data/processed/`)
 - **API:** `API_HOST`, `API_PORT`
 
-Groq is the working provider (`spendguard check-llm`); the **Kaggle California PO dataset** is in `data/raw/`. One manual step left: **Ollama + Qwen2.5-3B** for the local-runtime proof. The `agent` extra pulls PyTorch and is a large download; CI installs only `dev,detect,api`, so tests needing the embedding model or a key skip rather than fail.
+Groq is the working provider (`spendguard check-llm`); the **Kaggle California PO dataset** is in `data/raw/`. One manual step left: **Ollama + Qwen2.5-3B** for the local-runtime proof. The `agent` extra pulls PyTorch and is a large download, so it is split: `llm` (openai, tiktoken — light, installed in CI) and `agent` (adds sentence-transformers, faiss). Tests needing the embedding model or a key skip rather than fail.
 
 ---
 

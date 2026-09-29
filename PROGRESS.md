@@ -319,6 +319,15 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
      - A `dashboard-frozen` launch config now sits beside `dashboard-eval-42`, on port 8001, so the frozen state can be rehearsed without disturbing the live one.
    - ✅ **The demo walkthrough** ([docs/DEMO.md](docs/DEMO.md)). What to run, in what order, what to say, and what to do when something fails in front of people. Three things it insists on, because each is a place a demo goes wrong: serve the **frozen** state rather than a live store (notes come from a model and a rerun does not reproduce them word for word); **show a dismissal**, because a case the agent called a false positive is the strongest single artefact the project has; and **let the live injection miss**, saying "that is the detector's measured recall" rather than re-rolling for a better seed. It ends with the questions a panel will ask and an honest answer to each, including "your D3 is worse than the baseline" — which it is, on F1, and the report says so.
 
+### Between steps — CI had been red since Phase 5 (`1603324`)
+
+Found by checking after a push rather than assuming. **Ten consecutive runs failed**, from the Phase 5 commit that introduced the `agent` extra right through to Phase 9, while CLAUDE.md said "CI, every push" as though it were green. The frontend job passed throughout; the backend job failed at *Tests*.
+
+- **Cause:** CI installs `dev,detect,api` and the `agent` extra pulls PyTorch, so it was excluded — but `openai` lives in that same extra. 24 of `test_llm.py`'s tests construct an `LLMClient` and so could not run at all. Two more failed for related reasons: `test_api.py`'s health test monkeypatches `openai.OpenAI`, and one policy-RAG test built a real index without the `importorskip` guard its neighbours have. **26 failures.**
+- **Fix:** the extra is split. `llm` (openai, tiktoken) is a few megabytes and CI now installs it, so the rate-limit, quota and retry logic — including everything changed this week — is actually exercised there. `agent` keeps the heavy retrieval half and the handful of tests needing it skip. The missed guard was added.
+- **Verified** by simulating CI's environment locally (blocking the heavy packages at import): **791 passed, 14 skipped, 0 failed**, against 26 failures before.
+- **So it cannot rot silently again:** a CI badge now sits at the top of the README, and CLAUDE.md states what CI installs and says plainly that it was red for four phases because nobody looked.
+
 ## Next Steps
 
 **Nothing is blocking.** `LLM_PROVIDER=groq` is set and passes `spendguard check-llm`, including the new second-turn check. Steps 1-5 are complete; step 6 needs only calendar time.
