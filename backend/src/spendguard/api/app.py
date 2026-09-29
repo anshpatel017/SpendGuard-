@@ -16,7 +16,9 @@ serves the frontend instead and proxies ``/api`` here.
 from __future__ import annotations
 
 import logging
+from copy import deepcopy
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
@@ -36,6 +38,30 @@ log = logging.getLogger(__name__)
 
 def _error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content={"detail": {"code": code, "message": message}})
+
+
+# FastAPI copies ``http.HTTPStatus(422).phrase`` into every endpoint's validation
+# response, and CPython 3.13 renamed it from "Unprocessable Entity" to
+# "Unprocessable Content". The committed contract would then depend on which
+# Python generated it - the dev machine runs 3.13, CI runs 3.12 - so the drift
+# test compared two schemas differing only in stdlib wording. That phrase is
+# CPython's, not SpendGuard's, so the artefact records a fixed one instead.
+VALIDATION_ERROR_DESCRIPTION = "Validation Error"
+
+
+def canonical_openapi(app: FastAPI) -> dict[str, Any]:
+    """The schema as the committed contract records it: Python-version independent.
+
+    Used by both ``spendguard openapi`` and the test that guards against drift, so
+    the two can never disagree about what "the schema" means.
+    """
+    schema = deepcopy(app.openapi())
+    for operations in schema.get("paths", {}).values():
+        for operation in operations.values():
+            response = (operation.get("responses") or {}).get("422")
+            if isinstance(response, dict) and "description" in response:
+                response["description"] = VALIDATION_ERROR_DESCRIPTION
+    return schema
 
 
 def create_app(
