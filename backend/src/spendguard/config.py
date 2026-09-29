@@ -173,6 +173,14 @@ class Settings(BaseSettings):
     llm_timeout_seconds: int = 120
 
     agent_max_steps: int = 12
+    # A step is one model *turn*, and one turn can ask for many tools at once, so
+    # the step limit does not bound tool use. Measured on a real inflation case:
+    # 58 calculator calls across 19 turns, no note, two minutes and a slice of the
+    # day's quota gone. These bound it. Exceeding one is answered with an ordinary
+    # tool error the model can read (convention 7), not an exception, so it can
+    # still write its note from what it already gathered.
+    agent_max_tool_calls: int = 24
+    agent_max_calls_per_tool: int = 8
     # Tool results are truncated before going back to the model. Every turn resends
     # the whole conversation, so an oversized result is paid for on every step.
     agent_tool_result_chars: int = 2_500
