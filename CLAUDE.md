@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 784 backend + 29 frontend tests passing.
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 787 backend + 29 frontend tests passing.
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -66,12 +66,13 @@ SpendGuard/
 │   │   │                    template (the no-agent ablation arm)
 │   │   └── api/                app (factory, errors, serves the build) · schemas · deps
 │   │                        cases (queue, detail, review) · overview (metrics, eval…)
-│   └── tests/                  mirrors src; 784 tests (+7 live, opt-in)
+│   └── tests/                  mirrors src; 787 tests (+7 live, opt-in)
 ├── frontend/                   React dashboard · openapi.json (committed contract)
 │   └── src/                    api (generated schema.d.ts, validate, client, hooks) · pages
 │                               components · lib (format, verification)
 ├── docs/                       DESIGN · REQUIREMENTS · ARCHITECTURE · DATA-SCHEMA · results/
-│                               API-CONTRACT · EVALUATION · TEST-CHECKLIST · DECISIONS · PHASE-PLAN
+│                               API-CONTRACT · EVALUATION · TEST-CHECKLIST · DECISIONS
+│                               PHASE-PLAN · DEMO (the walkthrough)
 ├── policy/policy.md            authored procurement policy; the RAG corpus
 └── data/                       raw · processed · frozen (all gitignored)
 ```
@@ -126,8 +127,7 @@ spendguard detect [--db X --store Y] # D1-D4 over 100% of rows -> case store
 spendguard inject --seed 42          # plant known anomalies in a copy -> ground truth
 spendguard evaluate --seed 42 --detector baseline --detector d1 --detector d2 --detector d3 --detector d4
 spendguard investigate --top 10      # investigate + verify the 10 highest-severity open cases
-spendguard investigate --eval-seed 42 --per-type 3   # triage + citation validity on planted anomalies
-spendguard investigate --matrix      # walk AGENT_EVAL_PLAN, stop on quota, resume tomorrow
+spendguard investigate --matrix      # walk AGENT_EVAL_PLAN (seeds x arms), stop on quota, resume
 spendguard investigate --eval-seed 42 --ablation template|--no-verify  # the ablation arms
 spendguard report detection|agent    # result tables with provenance -> docs/results/
 spendguard grade export|import|report --seed 42   # blinded rubric grading -> docs/results/
@@ -183,7 +183,7 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-37
 - **D-09** DuckDB (analytical) + SQLite/Postgres (transactional). No Node backend, no Django: DuckDB is embedded and Django's ORM cannot address it.
 - **D-12** `vendor_key` is for **blocking**, never identity. Measured: 0 suppliers split, 10 of 382 keys over-merged.
 - **D-15/16** Currency INR; principal control threshold **₹2,50,000** (GFR 2017 ladder, policy SG-PP-2.2).
-- **D-19/20/21** D1 blocks on **amount + date** (a name typo must not hide a duplicate) and scores pairs with **Fellegi–Sunter by MAP-EM**; D2 takes minimal runs, four policy indicators.
+- **D-19/20/21** D1 blocks on **amount + date** (a typo must not hide a duplicate), scores pairs with **Fellegi–Sunter by MAP-EM**; D2 takes minimal runs.
 - **D-23** D3 ties the baseline on F1, wins on ranking: honest premium purchases share the injected price band, which is why investigation exists. It never reads the description (a fraudster writes it).
 - **D-24** D4 tests each supplier against its *peers*, not against Benford (which accused 61 of 210 real suppliers), combines tests with Fisher, and controls FDR across suppliers.
 - **D-27/28** Policy retrieval is dense (BM25 and hybrid lost). Tools: read-only connection, answer-key-free view, validated single SELECT.
@@ -192,7 +192,7 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-37
 - **D-31** Verifier: deterministic checks (row exists, values match, clause exists, no "duplicate payment"), then a fresh-context LLM judge; failures revised, best draft released.
 - **D-32** API/dashboard: store paths fixed per app (`--eval-seed`); evidence via the audit view, a field list and a closed schema; contract checked at compile time and runtime; health never probes the LLM.
 - **D-33/37** Numbers are per model and a per-day quota ends a run for resumption. Gemini was chosen for evaluation, then dropped: every model it serves rejects a replayed tool call (no `thought_signature`), so the run is on Groq. `check-llm` now tests a second turn.
-- **D-34** The demo is two things: a live injection into a bounded copy (never the served data), and a hashed frozen state served from a fresh copy, so a reviewer's clicks never persist.
+- **D-34** The demo is a live injection into a bounded copy plus a hashed frozen state served from a fresh copy. Walkthrough: [docs/DEMO.md](docs/DEMO.md).
 - **D-35** Ablation arms (`template`, `no-verifier`) are stored, scored and reported *beside* the main run: their notes never stand as a case's note and never enter the agent's numbers.
 - **D-36** Grading rubric: five dimensions scored **0-1-2**; agreement is **ordinal Krippendorff's alpha**, pinned to published values; blinding is enforced by a test.
 - **Real data (EVALUATION 4.0c):** on California POs D3's taxonomy gives no price norm (5.63× spread vs 1.11× synthetic) and 48.7% of D1's flags pair two lines of one order. Evidence for **O-05**/**O-07**.
