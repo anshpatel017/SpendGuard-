@@ -24,6 +24,8 @@ spendguard freeze --seed 42             # hash and snapshot the state you will s
 spendguard serve --frozen               # serve it, from a fresh working copy
 ```
 
+> **Verified end to end on 2026-09-29**, not just unit-tested: snapshot taken, dashboard served from a fresh copy, a case confirmed through the API, server relaunched — the case came back `new` and all four file hashes still matched. Rehearse it anyway; the point of a walkthrough is that nothing is being tried for the first time in the room.
+
 - **Serve `--frozen`, not a live store.** Audit notes come from a language model
   and are not reproduced word for word by a rerun. The frozen state is the notes
   that were actually checked, with a SHA-256 manifest. It is also re-copied on
