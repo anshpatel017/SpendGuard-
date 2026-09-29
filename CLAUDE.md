@@ -188,10 +188,10 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-37
 - **D-24** D4 tests each supplier against its *peers*, not against Benford (which accused 61 of 210 real suppliers), combines tests with Fisher, and controls FDR across suppliers.
 - **D-27/28** Policy retrieval is dense (BM25 and hybrid lost). Tools: read-only connection, answer-key-free view, validated single SELECT.
 - **D-29** Notes are structured claims (`row_ids` + checkable `facts`), so the Verifier checks data, not prose. The prompt shows one case-type example and asks for the innocent explanation first.
-- **D-30** Groq free tier: **200k tokens/day (~10 investigations)**. The client honours 429 waits and trims the bulkiest old tool results to fit the budget; a spent quota stops the run, next resumes.
+- **D-30** Groq free tier ~10 investigations/day. The client honours 429 waits and trims the bulkiest old tool results; a spent quota stops the run, the next resumes.
 - **D-31** Verifier: deterministic checks (row exists, values match, clause exists, no "duplicate payment"), then a fresh-context LLM judge; failures revised, best draft released.
 - **D-32** API/dashboard: store paths fixed per app (`--eval-seed`); evidence via the audit view, a field list and a closed schema; contract checked at compile time and runtime; health never probes the LLM.
-- **D-33/37** Numbers are per model and a per-day quota ends a run for resumption. Gemini was chosen for evaluation, then dropped: every model it serves rejects a replayed tool call (no `thought_signature`), so the run is on Groq. `check-llm` now tests a second turn.
+- **D-33/37** Numbers are per model; a per-day quota ends a run for resumption. Gemini was dropped (it rejects replayed tool calls), so the run is on Groq; `check-llm` tests a second turn. Free-tier ceilings are plural: input 413, output 1,000/min, 200k/day.
 - **D-34** The demo is a live injection into a bounded copy plus a hashed frozen state served from a fresh copy. Walkthrough: [docs/DEMO.md](docs/DEMO.md).
 - **D-35** Ablation arms (`template`, `no-verifier`) are stored, scored and reported *beside* the main run: their notes never stand as a case's note and never enter the agent's numbers.
 - **D-36** Grading rubric: five dimensions scored **0-1-2**; agreement is **ordinal Krippendorff's alpha**, pinned to published values; blinding is enforced by a test.
