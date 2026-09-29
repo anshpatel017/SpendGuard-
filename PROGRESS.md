@@ -303,7 +303,12 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
    - **Also:** a 503 "high demand" used to back off 1s then 2s and give up, losing a case that would have succeeded a minute later; an overloaded provider now gets its own schedule (5s, 15s, 45s, 60s).
    - **Where the numbers stand** (`docs/results/agent.md`, regenerate with `spendguard report agent`): seed 42 has **3 agent notes** against a sample of 15, plus 15 template-arm notes from an earlier, narrower draw. Far too few to read as rates, which the report says on its face — **nothing here is a reported result yet.** The held-out seeds have no store at all. The remaining runs are calendar time rather than work: `spendguard investigate --matrix`, once a day, until the plan is complete. A run is in progress as of 2026-09-29.
    - **Third time now:** D-26 lost a retired Llama model, D-33 chose Gemini, D-37 lost Gemini to an API change. Free-tier model availability is not a stable foundation — an argument *for* the Ollama local-runtime proof, not for postponing it.
-7. ⏳ **EVALUATION.md:** every number traced to a command, the headline sentence, the final freeze, the demo walkthrough.
+7. 🚧 **EVALUATION.md, the freeze and the walkthrough — started.**
+   - ✅ **Every number traced to a command, and checked rather than promised.** Section 4.0b already carried a "Source:" line and "do not edit these figures by hand" — but that was an honour system: the numbers live in the prose *and* in `detection.json`, and two copies of a number drift. `spendguard check-evaluation` parses the figures back out of the document and fails on any that disagrees with the generated file beyond rounding. Same move as the policy/config agreement check, for the same reason. Proved non-vacuous: a one-figure edit (D1's F1 0.949 → 0.984) is caught and named. It also fails loudly when it finds *no* sourced table at all, because a check that silently passes having checked nothing is worse than none.
+   - **Deliberately not checked:** section 4.0a, the Phase 3 snapshot. It carries no "Source:" marker, and a historical record should not be rewritten every time a detector changes. It is now labelled as superseded.
+   - ⏳ **The headline sentence** — waits on step 6's figures; it should be generated from the results files rather than typed, so it cannot drift either.
+   - ⏳ **The final freeze** — waits on verified notes existing to freeze.
+   - ⏳ **The demo walkthrough.**
 
 ## Next Steps
 

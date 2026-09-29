@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, step 6 running) · 776 backend + 29 frontend tests passing.
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 784 backend + 29 frontend tests passing.
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -59,13 +59,14 @@ SpendGuard/
 │   │   ├── eval/               injection · matching · metrics · runner · triage · report
 │   │   │                    grading (blinded rubric) · grading_report · agreement (alpha)
 │   │   │                    review (real-data flags, Wilson interval)
+│   │   │                    agent_report · evaluation_check (figures vs results)
 │   │   ├── agent/              llm (provider switch) · tools (the six) · policy (RAG)
 │   │   │                    note (schema) · prompts · investigator (the loop)
 │   │   │                    checks (deterministic) · verifier (judge + revise loop)
 │   │   │                    template (the no-agent ablation arm)
 │   │   └── api/                app (factory, errors, serves the build) · schemas · deps
 │   │                        cases (queue, detail, review) · overview (metrics, eval…)
-│   └── tests/                  mirrors src; 776 tests (+7 live, opt-in)
+│   └── tests/                  mirrors src; 784 tests (+7 live, opt-in)
 ├── frontend/                   React dashboard · openapi.json (committed contract)
 │   └── src/                    api (generated schema.d.ts, validate, client, hooks) · pages
 │                               components · lib (format, verification)
@@ -127,8 +128,7 @@ spendguard evaluate --seed 42 --detector baseline --detector d1 --detector d2 --
 spendguard investigate --top 10      # investigate + verify the 10 highest-severity open cases
 spendguard investigate --eval-seed 42 --per-type 3   # triage + citation validity on planted anomalies
 spendguard investigate --matrix      # walk AGENT_EVAL_PLAN, stop on quota, resume tomorrow
-spendguard investigate --eval-seed 42 --ablation template   # the no-agent ablation arm
-spendguard investigate --eval-seed 42 --no-verify           # the Verifier-off arm (FR-7.8)
+spendguard investigate --eval-seed 42 --ablation template|--no-verify  # the ablation arms
 spendguard report detection|agent    # result tables with provenance -> docs/results/
 spendguard grade export|import|report --seed 42   # blinded rubric grading -> docs/results/
 spendguard review export|import|report            # real-data flags, adjusted precision
@@ -138,7 +138,7 @@ spendguard serve                     # API + built dashboard at http://127.0.0.1
 spendguard serve --eval-seed 42      # the same, over an evaluation run (planted anomalies)
 spendguard openapi                   # export the API schema -> frontend/openapi.json
 spendguard check-llm                 # endpoint answers, and tool calling works
-spendguard check-policy              # policy.md and config.py agree?
+spendguard check-policy|check-evaluation  # config vs policy.md; figures vs docs/results/
 ```
 
 Frontend (`frontend/`): `npm install` · `npm run dev` (Vite :5173, proxies `/api`) · `npm test` · `npm run typecheck` · `npm run build` (served by `spendguard serve`) · `npm run gen:api`.
@@ -169,7 +169,7 @@ Copy `.env.example` to `.env` (gitignored). Names only, no secrets in the repo:
 - **Stores:** `DATABASE_URL` (defaults to SQLite under `data/processed/`)
 - **API:** `API_HOST`, `API_PORT`
 
-Groq and Gemini keys are both set (`spendguard check-llm`), and the **Kaggle California PO dataset** is in `data/raw/`. One manual step is left: **Ollama + Qwen2.5-3B**, before the local-runtime proof. The `agent` extra pulls PyTorch (via sentence-transformers) and is a large download. CI installs only `dev,detect,api`, so tests needing the embedding model or a key skip there rather than fail.
+Groq is the working provider (`spendguard check-llm`); the **Kaggle California PO dataset** is in `data/raw/`. One manual step left: **Ollama + Qwen2.5-3B** for the local-runtime proof. The `agent` extra pulls PyTorch and is a large download; CI installs only `dev,detect,api`, so tests needing the embedding model or a key skip rather than fail.
 
 ---
 
@@ -179,21 +179,21 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-37
 
 - **D-02** A *case* is one anomaly group, not a row. Metrics are per case, with per-row secondary.
 - **D-04** The agent may overrule a detector (`likely_true_positive` / `likely_false_positive` / `inconclusive`) but never closes anything. Humans decide.
-- **D-05** Detection covers 100% of rows; **investigation is top-N by severity** (LLM-bound: 1–3 min per case on the Groq free tier, measured in Phase 6).
+- **D-05** Detection covers 100% of rows; **investigation is top-N by severity** (LLM-bound: 1–3 min a case on the free tier).
 - **D-09** DuckDB (analytical) + SQLite/Postgres (transactional). No Node backend, no Django: DuckDB is embedded and Django's ORM cannot address it.
 - **D-12** `vendor_key` is for **blocking**, never identity. Measured: 0 suppliers split, 10 of 382 keys over-merged.
 - **D-15/16** Currency INR; principal control threshold **₹2,50,000** (GFR 2017 ladder, policy SG-PP-2.2).
 - **D-19/20/21** D1 blocks on **amount + date** (a name typo must not hide a duplicate) and scores pairs with **Fellegi–Sunter by MAP-EM**; D2 takes minimal runs, four policy indicators.
 - **D-23** D3 ties the baseline on F1, wins on ranking: honest premium purchases share the injected price band, which is why investigation exists. It never reads the description (a fraudster writes it).
 - **D-24** D4 tests each supplier against its *peers*, not against Benford (which accused 61 of 210 real suppliers), combines tests with Fisher, and controls FDR across suppliers.
-- **D-27/28** Policy retrieval is dense (BM25 and hybrid measured and lost). Tools: read-only connection, answer-key-free view, validated single SELECT.
+- **D-27/28** Policy retrieval is dense (BM25 and hybrid lost). Tools: read-only connection, answer-key-free view, validated single SELECT.
 - **D-29** Notes are structured claims (`row_ids` + checkable `facts`), so the Verifier checks data, not prose. The prompt shows one case-type example and asks for the innocent explanation first.
 - **D-30** Groq free tier: **200k tokens/day (~10 investigations)**. The client honours 429 waits and trims the bulkiest old tool results to fit the budget; a spent quota stops the run, next resumes.
-- **D-31** Verifier: deterministic checks (row exists, values match at stated precision, clause exists, no "duplicate payment"), then a fresh-context LLM judge; failures revised, best draft released.
+- **D-31** Verifier: deterministic checks (row exists, values match, clause exists, no "duplicate payment"), then a fresh-context LLM judge; failures revised, best draft released.
 - **D-32** API/dashboard: store paths fixed per app (`--eval-seed`); evidence via the audit view, a field list and a closed schema; contract checked at compile time and runtime; health never probes the LLM.
 - **D-33/37** Numbers are per model and a per-day quota ends a run for resumption. Gemini was chosen for evaluation, then dropped: every model it serves rejects a replayed tool call (no `thought_signature`), so the run is on Groq. `check-llm` now tests a second turn.
 - **D-34** The demo is two things: a live injection into a bounded copy (never the served data), and a hashed frozen state served from a fresh copy, so a reviewer's clicks never persist.
 - **D-35** Ablation arms (`template`, `no-verifier`) are stored, scored and reported *beside* the main run: their notes never stand as a case's note and never enter the agent's numbers.
-- **D-36** Grading rubric: five dimensions scored **0-1-2**; agreement is **ordinal Krippendorff's alpha**, pinned to published values; blinding is enforced by a test, and the template arm's unavoidable tell is printed in the report.
-- **Real data (EVALUATION 4.0c):** on California PO line items D3's taxonomy gives no price norm (a typical item sits 5.63× from its category median, vs 1.11× synthetic) and 48.7% of D1's flags pair two lines of one order. Evidence for **O-05** and **O-07**; nothing was re-tuned.
+- **D-36** Grading rubric: five dimensions scored **0-1-2**; agreement is **ordinal Krippendorff's alpha**, pinned to published values; blinding is enforced by a test.
+- **Real data (EVALUATION 4.0c):** on California POs D3's taxonomy gives no price norm (5.63× spread vs 1.11× synthetic) and 48.7% of D1's flags pair two lines of one order. Evidence for **O-05**/**O-07**.
 - **O-04** implemented as recommended (the number moves with the band), awaiting confirmation. **O-05** open.
