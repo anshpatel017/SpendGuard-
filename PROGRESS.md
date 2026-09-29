@@ -310,7 +310,7 @@ Exit criterion: every number in `docs/EVALUATION.md` comes from a reproducible c
    - **Deliberately not checked:** section 4.0a, the Phase 3 snapshot. It carries no "Source:" marker, and a historical record should not be rewritten every time a detector changes. It is now labelled as superseded.
    - ⏳ **The headline sentence** — waits on step 6's figures; it should be generated from the results files rather than typed, so it cannot drift either.
    - ⏳ **The final freeze** — waits on verified notes existing to freeze.
-   - ⏳ **The demo walkthrough.**
+   - ✅ **The demo walkthrough** ([docs/DEMO.md](docs/DEMO.md)). What to run, in what order, what to say, and what to do when something fails in front of people. Three things it insists on, because each is a place a demo goes wrong: serve the **frozen** state rather than a live store (notes come from a model and a rerun does not reproduce them word for word); **show a dismissal**, because a case the agent called a false positive is the strongest single artefact the project has; and **let the live injection miss**, saying "that is the detector's measured recall" rather than re-rolling for a better seed. It ends with the questions a panel will ask and an honest answer to each, including "your D3 is worse than the baseline" — which it is, on F1, and the report says so.
 
 ## Next Steps
 
