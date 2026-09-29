@@ -1,6 +1,6 @@
 # Agent results - investigation and verification
 
-Generated 2026-09-28 18:18 UTC from commit `435558d`. Regenerate with `spendguard report agent`.
+Generated 2026-09-29 09:55 UTC from commit `087b998` **(uncommitted changes)**. Regenerate with `spendguard report agent`.
 
 Read from the evaluation stores, not from any single run: notes accumulate a few a day against a free-tier daily quota (D-30), and the newest note per (case, model, arm) is the one that stands. **Numbers are per model** - two models are never merged into one row (D-33) - and ablation arms sit beside the main run, never inside it (D-35).
 
@@ -10,7 +10,7 @@ Read from the evaluation stores, not from any single run: notes accumulate a few
 
 | Seed | Model | Arm | Notes | Citations | First draft | Released (deterministic) | Supported (model-judged) | Regenerated |
 |---:|---|---|---:|---:|---:|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 3 | 27 | 100.0% | **100.0%** | 83.3% | 2 |
+| 42 | qwen/qwen3.8-27b | agent | 3 | 27 | - | **100.0%** | 83.3% | 2 |
 | 42 | template | template | 5 | 35 | 100.0% | **100.0%** | - | 0 |
 
 ## Triage - what the agent filters
@@ -19,7 +19,7 @@ Over the seeded sample of real and spurious cases for each seed. *Real kept* is 
 
 | Seed | Model | Arm | Sample | Investigated | Real kept | Spurious filtered | Decisive accuracy |
 |---:|---|---|---:|---:|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 6 | 2 | 100% | 0% | **50%** |
+| 42 | qwen/qwen3.8-27b | agent | 15 | 3 | 33% | - | **100%** |
 | 42 | template | template | 5 | 5 | 100% | 0% | **80%** |
 
 ## Cost per investigation
