@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 798 backend + 29 frontend tests passing.
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 806 backend + 29 frontend tests passing · CI green.
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -66,7 +66,7 @@ SpendGuard/
 │   │   │                    template (the no-agent ablation arm)
 │   │   └── api/                app (factory, errors, serves the build) · schemas · deps
 │   │                        cases (queue, detail, review) · overview (metrics, eval…)
-│   └── tests/                  mirrors src; 798 tests (+7 live, opt-in)
+│   └── tests/                  mirrors src; 806 tests (+7 live, opt-in)
 ├── frontend/                   React dashboard · openapi.json (committed contract)
 │   └── src/                    api (generated schema.d.ts, validate, client, hooks) · pages
 │                               components · lib (format, verification)
