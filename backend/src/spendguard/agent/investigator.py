@@ -585,7 +585,15 @@ class Investigator:
     def _forced_final(
         self, messages: list[dict[str, Any]], tools: list[dict[str, Any]], record: Any
     ) -> InvestigatorNote | None:
-        """Out of steps or out of room: tools off, one last chance to write the note."""
+        """Out of steps or out of room: tools off, last chances to write the note.
+
+        Retried like any malformed note, and for a sharper reason than politeness.
+        By the time this runs the case has already spent its whole budget, so
+        losing it to one unparseable reply throws away everything that was paid
+        for. Measured in a single run: four of six cases died here, each after
+        roughly 32,000 tokens of real work, on about a hundred tokens of prose
+        where the JSON note should have been.
+        """
         messages.append(
             {
                 "role": "user",
@@ -595,17 +603,34 @@ class Investigator:
                 ),
             }
         )
-        reply = self._turn(messages, tools, record, tool_choice="none", final=True)
-        usage = {
-            "latency_ms": int(reply.latency_seconds * 1000),
-            "prompt_tokens": reply.prompt_tokens,
-            "completion_tokens": reply.completion_tokens,
-        }
-        messages.append({"role": "assistant", "content": reply.content})
-        try:
-            note = parse_note(reply.content)
-        except NoteParseError as exc:
-            record(kind="forced_final", error=str(exc), **usage)
-            return None
-        record(kind="forced_final", note="note written with tools switched off", **usage)
-        return note
+        for attempt in range(MAX_PARSE_RETRIES + 1):
+            try:
+                reply = self._turn(messages, tools, record, tool_choice="none", final=True)
+            except ContextFullError:
+                if attempt == 0:
+                    # The note never fitted at all. That is a better diagnosis
+                    # than "no valid note", so let the caller report it verbatim.
+                    raise
+                # A retry adds messages, so the room can run out on this path
+                # instead. Nothing left to try.
+                record(kind="forced_final", error="no room left for another attempt")
+                return None
+            usage = {
+                "latency_ms": int(reply.latency_seconds * 1000),
+                "prompt_tokens": reply.prompt_tokens,
+                "completion_tokens": reply.completion_tokens,
+            }
+            messages.append({"role": "assistant", "content": reply.content})
+            try:
+                note = parse_note(reply.content)
+            except NoteParseError as exc:
+                record(kind="forced_final", error=str(exc), **usage)
+                if attempt == MAX_PARSE_RETRIES:
+                    return None
+                messages.append(
+                    {"role": "user", "content": _retry_instruction(exc, reply.truncated)}
+                )
+                continue
+            record(kind="forced_final", note="note written with tools switched off", **usage)
+            return note
+        return None
