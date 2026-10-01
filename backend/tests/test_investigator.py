@@ -543,3 +543,63 @@ def test_the_tool_budget_is_not_handed_back_on_every_revision(
     refused = [s for s in result.trace if s.tool_name == "calculator" and s.error]
     assert refused, "calls past the limit are refused across the revision too"
     assert result.tools_used["calculator"] >= before, "the counter carried over"
+
+
+def test_the_last_chance_turn_is_retried_rather_than_thrown_away(
+    con: duckdb.DuckDBPyConnection, case: Case
+) -> None:
+    """Four of six cases in one real run died here, each after ~32,000 tokens of
+    work, on about a hundred tokens of prose where the JSON note should have been.
+
+    By the time this turn runs the case has spent its whole budget, so losing it
+    to one unparseable reply throws away everything already paid for.
+    """
+    model = ScriptedModel(
+        [tools(("vendor_profile", {"vendor_key": "sharma"})), reply("These look duplicated."),
+         note([1])]
+    )  # fmt: skip
+    inv = investigator(con, model)
+    inv.max_steps = 1  # straight to the final turn, whatever the context does
+    result = inv.investigate(case)
+
+    assert result.note is not None, "the second attempt at the final turn succeeds"
+    finals = [s for s in result.trace if s.kind == "forced_final"]
+    assert len(finals) == 2, "one rejected reply, then the note"
+    assert finals[0].error and "No JSON object" in finals[0].error
+
+
+def test_the_last_chance_turn_still_gives_up_eventually(
+    con: duckdb.DuckDBPyConnection, case: Case
+) -> None:
+    """A model that will not emit JSON must not be asked for ever: each attempt
+    costs tokens from a quota the case has already exhausted."""
+    model = ScriptedModel(
+        [tools(("vendor_profile", {"vendor_key": "sharma"})), *[reply("Still prose.")] * 6]
+    )
+    inv = investigator(con, model)
+    inv.max_steps = 1
+    result = inv.investigate(case)
+
+    assert result.note is None
+    assert result.error and "No valid note" in result.error
+    finals = [s for s in result.trace if s.kind == "forced_final"]
+    assert len(finals) == MAX_PARSE_RETRIES + 1, "bounded, not unbounded"
+
+
+def test_a_truncated_last_chance_reply_is_told_it_was_cut_off(
+    con: duckdb.DuckDBPyConnection, case: Case
+) -> None:
+    """Same misleading symptom as in the main loop: a note cut off at the token
+    ceiling parses as every field missing, and "fix the note" would ask for the
+    same too-long note again."""
+    model = ScriptedModel(
+        [tools(("vendor_profile", {"vendor_key": "sharma"})),
+         _truncated('{"verdict": "likely_true_p'), note([1])]
+    )  # fmt: skip
+    inv = investigator(con, model)
+    inv.max_steps = 1
+    result = inv.investigate(case)
+
+    assert result.note is not None
+    sent = model.requests[-1]["messages"][-1]["content"]
+    assert "cut off at the length limit" in sent
