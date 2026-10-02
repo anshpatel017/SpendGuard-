@@ -1,7 +1,7 @@
 {
   "manifest": {
-    "generated_at": "2026-10-01 16:57 UTC",
-    "commit": "94e0870",
+    "generated_at": "2026-10-02 17:13 UTC",
+    "commit": "74e4aac",
     "dirty": true,
     "python": "3.13.5",
     "packages": {
@@ -14,7 +14,7 @@
     },
     "settings": {}
   },
-  "sentence": "On 50,963 seeded synthetic transactions carrying 508 planted anomalies, across 3 seeds, SpendGuard's four detectors reach a pooled per-case **F1 of 0.689 \u00b1 0.006** against a rule-based baseline at **0.205 \u00b1 0.007**. Citation validity is **provisional**: 100.0% over only 5 note(s), below the 20 this project will quote a rate from. The sample fills at roughly ten investigations a day. Value implicated in real spend: not yet measured - run `spendguard review report`.",
+  "sentence": "On 50,963 seeded synthetic transactions carrying 508 planted anomalies, across 3 seeds, SpendGuard's four detectors reach a pooled per-case **F1 of 0.689 \u00b1 0.006** against a rule-based baseline at **0.205 \u00b1 0.007**. Citation validity is **provisional**: 100.0% over only 8 note(s), below the 20 this project will quote a rate from. The sample fills at roughly ten investigations a day. Value implicated in real spend: not yet measured - run `spendguard review report`.",
   "complete": false,
   "figures": [
     {
@@ -39,7 +39,7 @@
     },
     {
       "name": "citation validity (rule-checked)",
-      "value": "100.0% over 5 note(s)",
+      "value": "100.0% over 8 note(s)",
       "source": "agent.json - provisional, sample still filling"
     },
     {
