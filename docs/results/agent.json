@@ -1,8 +1,8 @@
 {
   "manifest": {
-    "generated_at": "2026-10-01 16:57 UTC",
-    "commit": "94e0870",
-    "dirty": true,
+    "generated_at": "2026-10-02 17:13 UTC",
+    "commit": "74e4aac",
+    "dirty": false,
     "python": "3.13.5",
     "packages": {
       "duckdb": "1.5.5",
@@ -24,28 +24,28 @@
       "seed": 42,
       "model": "qwen/qwen3.8-27b",
       "arm": "agent",
-      "notes": 5,
+      "notes": 8,
       "sampled": 15,
-      "citations_checked": 46,
+      "citations_checked": 73,
       "deterministic_valid": 1.0,
-      "semantic_valid": 0.8065,
+      "semantic_valid": 0.8966,
       "first_draft_valid": 1.0,
-      "regenerated": 4,
+      "regenerated": 6,
       "released": {
         "failed_after_retries": 2,
         "unverified": 2,
-        "verified": 1
+        "verified": 4
       },
       "triage": {
-        "cases": 6,
-        "real": 4,
+        "cases": 7,
+        "real": 5,
         "spurious": 2,
         "confusion": {
           "real": {
-            "likely_true_positive": 2,
+            "likely_true_positive": 5,
             "likely_false_positive": 0,
             "inconclusive": 0,
-            "failed": 2
+            "failed": 0
           },
           "spurious": {
             "likely_true_positive": 0,
@@ -54,19 +54,19 @@
             "failed": 1
           }
         },
-        "real_kept": 0.5,
+        "real_kept": 1.0,
         "real_wrongly_dismissed": 0.0,
         "spurious_filtered": 0.5,
         "inconclusive": 0.0,
-        "failed": 0.5,
+        "failed": 0.143,
         "decisive_accuracy": 1.0
       },
-      "avg_tool_calls": 6.6,
-      "avg_tokens": 25536.4,
-      "avg_seconds": 36.5526,
+      "avg_tool_calls": 7.875,
+      "avg_tokens": 32885.5,
+      "avg_seconds": 33.9984,
       "quota_stopped": true,
       "triage_accuracy": 1.0,
-      "real_kept": 0.5,
+      "real_kept": 1.0,
       "spurious_filtered": 0.5
     },
     {
