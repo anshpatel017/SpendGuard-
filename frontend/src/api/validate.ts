@@ -12,12 +12,15 @@ import type {
   Case,
   CaseDetailResponse,
   CaseListResponse,
+  CaseReviewItem,
   CaseSummary,
   Citation,
   DemoInjectResponse,
   DetectorMetrics,
   EvaluationResponse,
   HealthResponse,
+  InvestigationJobResponse,
+  InvestigationStatus,
   MetricsResponse,
   TraceStep,
   TransactionRow,
@@ -133,6 +136,44 @@ export const transactionSchema = z.object({
   cited: z.boolean(),
 }) satisfies z.ZodType<TransactionRow>;
 
+export const caseReviewItemSchema = z.object({
+  id: z.string(),
+  case_id: z.string(),
+  previous_status: z.string(),
+  new_status: z.string(),
+  note: z.string().nullable(),
+  reviewer: z.string(),
+  created_at: z.string(),
+}) satisfies z.ZodType<CaseReviewItem>;
+
+export const investigationStatusSchema = z.object({
+  state: z.enum([
+    "not_investigated",
+    "queued",
+    "investigating",
+    "verifying",
+    "completed",
+    "failed",
+  ]),
+  stage: z.string().nullable().optional(),
+  started_at: z.string().nullable().optional(),
+  finished_at: z.string().nullable().optional(),
+  error: z.string().nullable().optional(),
+}) satisfies z.ZodType<InvestigationStatus>;
+
+export const investigationJobResponseSchema = z.object({
+  case_id: z.string(),
+  state: z.enum([
+    "not_investigated",
+    "queued",
+    "investigating",
+    "verifying",
+    "completed",
+    "failed",
+  ]),
+  message: z.string(),
+}) satisfies z.ZodType<InvestigationJobResponse>;
+
 export const caseDetailSchema = z.object({
   case: caseSchema,
   audit_note: noteSchema.nullable(),
@@ -141,6 +182,8 @@ export const caseDetailSchema = z.object({
   context_rows: z.array(transactionSchema),
   trace: z.array(traceSchema),
   currency: z.string(),
+  investigation_status: investigationStatusSchema.nullable().optional(),
+  reviews: z.array(caseReviewItemSchema),
 }) satisfies z.ZodType<CaseDetailResponse>;
 
 const count = z.record(z.string(), z.number());

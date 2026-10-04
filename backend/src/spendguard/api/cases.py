@@ -6,12 +6,17 @@ it is a person's: nothing in the agent layer calls it (D-04, D-07).
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
+import threading
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
 import duckdb
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
+from fastapi.responses import HTMLResponse, PlainTextResponse
 from sqlalchemy import ColumnElement, Select, and_, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
@@ -23,9 +28,12 @@ from spendguard.api.schemas import (
     Case,
     CaseDetailResponse,
     CaseListResponse,
+    CaseReviewItem,
     CaseSummary,
     Citation,
     EvidenceResponse,
+    InvestigationJobResponse,
+    InvestigationStatus,
     StatusName,
     StatusUpdateRequest,
     TraceStep,
@@ -38,12 +46,16 @@ from spendguard.db.duck import AUDIT_FIELDS, AUDIT_VIEW
 from spendguard.db.store import (
     AuditNoteRecord,
     CaseRecord,
+    CaseReviewRecord,
     CaseStatus,
     CitationRecord,
+    InvalidTransitionError,
     TraceRecord,
+    get_case_reviews,
     latest_note,
     set_status,
 )
+from spendguard.investigation import investigate_case_by_id
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -77,6 +89,94 @@ DETECTOR_MAP = {
     "d4_vendor": "vendor_flag",
     "d4_vendor_risk": "vendor_flag",
 }
+
+
+@dataclass
+class _JobRecord:
+    state: str  # "queued", "investigating", "verifying", "completed", "failed"
+    stage: str
+    started_at: datetime
+    finished_at: datetime | None = None
+    error: str | None = None
+
+
+_JOB_LOCK = threading.Lock()
+_JOBS: dict[str, _JobRecord] = {}
+
+
+def _get_job(case_id: str) -> _JobRecord | None:
+    with _JOB_LOCK:
+        return _JOBS.get(case_id)
+
+
+def _set_job(
+    case_id: str,
+    state: str,
+    stage: str,
+    error: str | None = None,
+    finished: bool = False,
+) -> None:
+    with _JOB_LOCK:
+        existing = _JOBS.get(case_id)
+        now = datetime.now(UTC).replace(tzinfo=None)
+        if existing is None:
+            _JOBS[case_id] = _JobRecord(
+                state=state,
+                stage=stage,
+                started_at=now,
+                finished_at=now if finished else None,
+                error=error,
+            )
+        else:
+            existing.state = state
+            existing.stage = stage
+            if finished:
+                existing.finished_at = now
+            if error is not None:
+                existing.error = error
+
+
+def _get_case_investigation_status(cid: str, record: CaseRecord) -> InvestigationStatus:
+    job = _get_job(cid)
+    if job:
+        return InvestigationStatus(
+            state=job.state,  # type: ignore[arg-type]
+            stage=job.stage,
+            started_at=job.started_at,
+            finished_at=job.finished_at,
+            error=job.error,
+        )
+    if record.investigated:
+        return InvestigationStatus(
+            state="completed",
+            stage="Completed",
+            started_at=record.updated_at,
+            finished_at=record.updated_at,
+        )
+    return InvestigationStatus(
+        state="not_investigated",
+        stage="Not investigated",
+    )
+
+
+def _run_investigation_worker(case_id: str, engine: Any, duckdb_path: Path) -> None:
+    _set_job(case_id, "investigating", "Investigating transactions and policy")
+    try:
+        def on_stage(stage: str) -> None:
+            if stage == "verifying":
+                _set_job(case_id, "verifying", "Verifying citations and evidence claims")
+            elif stage == "investigating":
+                _set_job(case_id, "investigating", "Investigating transactions and policy")
+
+        investigate_case_by_id(
+            case_id,
+            engine=engine,
+            db_path=duckdb_path,
+            on_stage=on_stage,
+        )
+        _set_job(case_id, "completed", "Investigation completed", finished=True)
+    except Exception as exc:
+        _set_job(case_id, "failed", "Investigation failed", error=str(exc), finished=True)
 
 
 def money(value: float | None) -> Decimal | None:
@@ -342,6 +442,20 @@ def case_detail(case_id: UUID, store: Stores, con: Duck) -> CaseDetailResponse:
         note = _note(session, note_record) if note_record else None
         trace = _trace(session, note_record.note_id) if note_record else []
         case = to_case(record)
+        review_records = get_case_reviews(store.engine, record.case_id)
+        reviews = [
+            CaseReviewItem(
+                id=r.id,
+                case_id=r.case_id,
+                previous_status=r.previous_status,
+                new_status=r.new_status,
+                note=r.note,
+                reviewer=r.reviewer,
+                created_at=r.created_at,
+            )
+            for r in review_records
+        ]
+        inv_status = _get_case_investigation_status(record.case_id, record)
 
     case_rows = list(record.row_ids)
     cited = {c.row_id for c in note.citations} if note else set()
@@ -358,6 +472,8 @@ def case_detail(case_id: UUID, store: Stores, con: Duck) -> CaseDetailResponse:
         context_rows=[to_row(r, False, cited) for r in context],
         trace=trace,
         currency=settings.currency,
+        investigation_status=inv_status,
+        reviews=reviews,
     )
 
 
@@ -389,15 +505,321 @@ def case_evidence(
 @router.patch(
     "/{case_id}/status",
     response_model=Case,
-    responses={404: {"description": "Unknown case"}},
+    responses={
+        404: {"description": "Unknown case"},
+        400: {"description": "Invalid status transition"},
+    },
 )
 def update_status(case_id: UUID, body: StatusUpdateRequest, store: Stores) -> Case:
     """The human decision (FR-5.2). The agent never calls this."""
     try:
-        set_status(store.engine, str(case_id), CaseStatus(body.status), body.reviewer_note)
+        set_status(
+            store.engine,
+            str(case_id),
+            CaseStatus(body.status),
+            body.reviewer_note,
+            reviewer=body.reviewer,
+        )
     except KeyError:
         raise not_found("case", case_id) from None
+    except InvalidTransitionError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": "invalid_transition", "message": str(exc)},
+        ) from None
+
     with Session(store.engine) as session:
         record = session.get(CaseRecord, str(case_id))
         assert record is not None
         return to_case(record)
+
+
+@router.post(
+    "/{case_id}/investigate",
+    response_model=InvestigationJobResponse,
+    responses={404: {"description": "Unknown case"}},
+)
+def trigger_investigation(
+    case_id: UUID,
+    store: Stores,
+    background_tasks: BackgroundTasks,
+) -> InvestigationJobResponse:
+    """Trigger an AI investigation for a case in the background."""
+    with Session(store.engine) as session:
+        record = session.get(CaseRecord, str(case_id))
+        if record is None:
+            raise not_found("case", case_id)
+
+    cid = str(case_id)
+    current_job = _get_job(cid)
+    if current_job and current_job.state in ("queued", "investigating", "verifying"):
+        return InvestigationJobResponse(
+            case_id=case_id,
+            state=current_job.state,
+            message=f"Investigation already {current_job.state}",
+        )
+
+    _set_job(cid, "queued", "Queued for investigation")
+    background_tasks.add_task(_run_investigation_worker, cid, store.engine, settings.duckdb_path)
+    return InvestigationJobResponse(
+        case_id=case_id,
+        state="queued",
+        message="Investigation queued successfully",
+    )
+
+
+@router.get(
+    "/{case_id}/investigate",
+    response_model=InvestigationStatus,
+    responses={404: {"description": "Unknown case"}},
+)
+def get_investigation_status(case_id: UUID, store: Stores) -> InvestigationStatus:
+    """Check the real-time or historical investigation status of a case."""
+    with Session(store.engine) as session:
+        record = session.get(CaseRecord, str(case_id))
+        if record is None:
+            raise not_found("case", case_id)
+        return _get_case_investigation_status(str(case_id), record)
+
+
+@router.get(
+    "/{case_id}/reviews",
+    response_model=list[CaseReviewItem],
+    responses={404: {"description": "Unknown case"}},
+)
+def list_case_reviews(case_id: UUID, store: Stores) -> list[CaseReviewItem]:
+    """Retrieve full audit history of human reviews and status changes for this case."""
+    with Session(store.engine) as session:
+        record = session.get(CaseRecord, str(case_id))
+        if record is None:
+            raise not_found("case", case_id)
+        history = get_case_reviews(store.engine, str(case_id))
+        return [
+            CaseReviewItem(
+                id=r.id,
+                case_id=r.case_id,
+                previous_status=r.previous_status,
+                new_status=r.new_status,
+                note=r.note,
+                reviewer=r.reviewer,
+                created_at=r.created_at,
+            )
+            for r in history
+        ]
+
+
+def _format_case_report_markdown(
+    case: Case,
+    note: AuditNote | None,
+    evidence_rows: list[TransactionRow],
+    reviews: list[CaseReviewItem],
+    trace: list[TraceStep],
+) -> str:
+    lines: list[str] = [
+        f"# SpendGuard Case Report: {case.case_id}",
+        "",
+        "## Summary",
+        f"- **Case ID:** `{case.case_id}`",
+        f"- **Detector:** {case.detector} ({case.anomaly_type})",
+        f"- **Severity:** {case.severity_band.upper()} (Preliminary: {case.severity_prelim:.2f}, Final: {case.severity_final or case.severity_prelim:.2f})",
+        f"- **Status:** {case.status.replace('_', ' ').title()}",
+        f"- **Vendor Key:** {case.vendor_key or 'N/A'}",
+        f"- **Amount at Risk:** {settings.currency} {case.amount_at_risk:,.2f}",
+        f"- **Created At:** {case.created_at.isoformat() if case.created_at else 'N/A'}",
+        "",
+        "## Detector Facts",
+        f"- **Anomaly Type:** {case.anomaly_type}",
+        f"- **Detector Score:** {case.detector_score:.3f}",
+        f"- **Involved Row IDs:** {', '.join(str(r) for r in case.row_ids)}",
+    ]
+
+    if case.metadata:
+        lines.append("- **Detector Details:**")
+        for k, v in case.metadata.items():
+            lines.append(f"  - `{k}`: {v}")
+
+    lines.extend([
+        "",
+        "## AI Investigation",
+    ])
+    if note is None:
+        lines.append("*This case has not been investigated by the AI agent yet.*")
+    else:
+        lines.extend([
+            f"- **Verdict:** **{note.verdict.upper()}**",
+            f"- **Recommended Action:** {note.recommended_action or 'None'}",
+            f"- **Model Used:** `{note.model_name or 'Default'}`",
+            f"- **Policy Clauses Cited:** {', '.join(note.policy_clauses) if note.policy_clauses else 'None'}",
+            "",
+            "### AI Finding",
+            note.finding,
+        ])
+
+    lines.extend([
+        "",
+        "## Verification",
+    ])
+    if note is None:
+        lines.append("*No verification performed.*")
+    else:
+        lines.extend([
+            f"- **Overall Status:** {note.verification_status.upper() if note.verification_status else 'UNKNOWN'}",
+            f"- **Deterministic Rule Check:** {'PASSED' if note.deterministic_passed else 'FAILED' if note.deterministic_passed is False else 'SKIPPED'}",
+            f"- **Semantic Check:** {'PASSED' if note.semantic_passed else 'FAILED' if note.semantic_passed is False else 'SKIPPED'}",
+            f"- **Citations Checked:** {note.citations_checked}",
+            f"- **Citations Passed:** {note.citations_passed}",
+            f"- **Retry Count:** {note.retry_count}",
+        ])
+        if note.citations:
+            lines.extend([
+                "",
+                "### Evidence Citations",
+                "| Claim # | Claim Text | Row ID | Row Exists | Values Match | Supports Claim | Failure Reason |",
+                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+            ])
+            for c in note.citations:
+                c_text = c.claim_text.replace("\n", " ").replace("|", "\\|")
+                lines.append(
+                    f"| {c.claim_index} | {c_text} | {c.row_id} | "
+                    f"{'✓' if c.row_exists else '✗'} | "
+                    f"{'✓' if c.values_match else '✗'} | "
+                    f"{'✓' if c.supports_claim else '✗'} | "
+                    f"{c.failure_reason or '-'} |"
+                )
+
+    lines.extend([
+        "",
+        "## Evidence Transactions",
+        f"Showing {len(evidence_rows)} evidence row(s):",
+        "",
+        "| Row ID | Date | Vendor | Amount | Officer | Category | Description |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+    ])
+    for r in evidence_rows:
+        lines.append(
+            f"| {r.row_id} | {r.txn_date} | {r.vendor_name or r.vendor_key or '-'} | "
+            f"{settings.currency} {r.amount:,.2f} | {r.officer_id or '-'} | "
+            f"{r.item_category or '-'} | {r.item_desc or '-'} |"
+        )
+
+    lines.extend([
+        "",
+        "## Human Review History",
+        f"- **Current Reviewer Note:** {case.reviewer_note or 'None'}",
+        "",
+    ])
+    if not reviews:
+        lines.append("*No review actions recorded yet.*")
+    else:
+        lines.extend([
+            "| Date | Reviewer | Previous Status | New Status | Note |",
+            "| :--- | :--- | :--- | :--- | :--- |",
+        ])
+        for rev in reviews:
+            rev_note = (rev.note or "").replace("\n", " ").replace("|", "\\|")
+            lines.append(
+                f"| {rev.created_at.strftime('%Y-%m-%d %H:%M:%S')} | {rev.reviewer} | "
+                f"{rev.previous_status} | {rev.new_status} | {rev_note} |"
+            )
+
+    if trace:
+        lines.extend([
+            "",
+            "## Investigation Trace Summary",
+            "*Internal investigation steps (prompts and chain-of-thought omitted for audit privacy).*",
+            "",
+            "| Step | Role | Tool | Latency (ms) | Tokens (Prompt/Comp) | Error |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- |",
+        ])
+        for s in trace:
+            tokens = f"{s.prompt_tokens or 0}/{s.completion_tokens or 0}"
+            lines.append(
+                f"| {s.step_index} | {s.role} | {s.tool_name or '-'} | "
+                f"{s.latency_ms or 0}ms | {tokens} | {s.error or '-'} |"
+            )
+
+    return "\n".join(lines)
+
+
+@router.get(
+    "/{case_id}/export",
+    responses={
+        200: {
+            "content": {"text/markdown": {}, "text/html": {}},
+            "description": "Formatted case report",
+        },
+        404: {"description": "Unknown case"},
+    },
+)
+def export_case_report(
+    case_id: UUID,
+    store: Stores,
+    con: Duck,
+    format: Literal["markdown", "html"] = "markdown",
+) -> Response:
+    """Export an evidence-backed audit report for a case in Markdown or HTML (P1)."""
+    with Session(store.engine) as session:
+        record = session.get(CaseRecord, str(case_id))
+        if record is None:
+            raise not_found("case", case_id)
+        note_record = latest_note(store.engine, record.case_id)
+        note = _note(session, note_record) if note_record else None
+        trace = _trace(session, note_record.note_id) if note_record else []
+        case = to_case(record)
+        review_records = get_case_reviews(store.engine, record.case_id)
+        reviews = [
+            CaseReviewItem(
+                id=r.id,
+                case_id=r.case_id,
+                previous_status=r.previous_status,
+                new_status=r.new_status,
+                note=r.note,
+                reviewer=r.reviewer,
+                created_at=r.created_at,
+            )
+            for r in review_records
+        ]
+
+    case_rows = list(record.row_ids)
+    cited = {c.row_id for c in note.citations} if note else set()
+    evidence_dicts = fetch_rows(con, case_rows, limit=settings.api_evidence_rows)
+    evidence_rows = [to_row(r, True, cited) for r in evidence_dicts]
+
+    md_content = _format_case_report_markdown(case, note, evidence_rows, reviews, trace)
+
+    if format == "html":
+        # Convert to a clean standalone HTML document with styling
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SpendGuard Case Report - {case.case_id}</title>
+<style>
+  body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; }}
+  h1, h2, h3 {{ color: #0f172a; margin-top: 1.5rem; }}
+  h1 {{ border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }}
+  h2 {{ border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3rem; margin-top: 2rem; }}
+  table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.9rem; }}
+  th, td {{ border: 1px solid #cbd5e1; padding: 0.5rem 0.75rem; text-align: left; }}
+  th {{ background-color: #f1f5f9; font-weight: 600; }}
+  code {{ background-color: #f1f5f9; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.85em; }}
+  .badge {{ display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.85rem; }}
+  ul {{ padding-left: 1.5rem; }}
+</style>
+</head>
+<body>
+<pre style="white-space: pre-wrap; font-family: inherit;">{md_content}</pre>
+</body>
+</html>"""
+        return HTMLResponse(
+            content=html_content,
+            headers={"Content-Disposition": f'inline; filename="spendguard-case-{case_id}.html"'},
+        )
+
+    return PlainTextResponse(
+        content=md_content,
+        media_type="text/markdown",
+        headers={"Content-Disposition": f'attachment; filename="spendguard-case-{case_id}.md"'},
+    )
+

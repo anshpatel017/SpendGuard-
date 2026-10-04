@@ -332,6 +332,95 @@ def test_the_review_action_refuses_bad_input(client: TestClient) -> None:
     assert missing.status_code == 404
 
 
+def test_the_review_action_refuses_invalid_status_transition(client: TestClient) -> None:
+    # DUPLICATE starts as 'new'
+    # new -> confirmed is valid
+    res1 = client.patch(
+        f"{API}/cases/{DUPLICATE.case_id}/status",
+        json={"status": "confirmed", "reviewer_note": "Confirmed duplicate.", "reviewer": "Auditor 1"},
+    )
+    assert res1.status_code == 200
+
+    # confirmed -> dismissed directly is invalid: must return 400
+    res2 = client.patch(
+        f"{API}/cases/{DUPLICATE.case_id}/status",
+        json={"status": "dismissed", "reviewer": "Auditor 1"},
+    )
+    assert res2.status_code == 400
+    assert res2.json()["detail"]["code"] == "invalid_transition"
+
+    # confirmed -> under_review is valid
+    res3 = client.patch(
+        f"{API}/cases/{DUPLICATE.case_id}/status",
+        json={"status": "under_review", "reviewer_note": "Re-opening for inspection."},
+    )
+    assert res3.status_code == 200
+
+    # under_review -> dismissed is valid
+    res4 = client.patch(
+        f"{API}/cases/{DUPLICATE.case_id}/status",
+        json={"status": "dismissed", "reviewer_note": "Dismissed as false alarm."},
+    )
+    assert res4.status_code == 200
+
+    # check review history endpoint
+    reviews_res = client.get(f"{API}/cases/{DUPLICATE.case_id}/reviews")
+    assert reviews_res.status_code == 200
+    history = reviews_res.json()
+    assert len(history) == 3
+    assert history[0]["previous_status"] == "new"
+    assert history[0]["new_status"] == "confirmed"
+    assert history[1]["previous_status"] == "confirmed"
+    assert history[1]["new_status"] == "under_review"
+    assert history[2]["previous_status"] == "under_review"
+    assert history[2]["new_status"] == "dismissed"
+
+
+def test_trigger_investigation_and_status_polling(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from spendguard.api import cases as cases_module
+
+    monkeypatch.setattr(
+        cases_module,
+        "_run_investigation_worker",
+        lambda case_id, engine, duckdb_path: cases_module._set_job(
+            case_id, "completed", "Test investigation completed", finished=True
+        ),
+    )
+
+    # Trigger background investigation
+    res = client.post(f"{API}/cases/{SPLIT.case_id}/investigate")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["case_id"] == SPLIT.case_id
+    assert data["state"] in ("queued", "completed")
+
+    # Poll investigation status
+    poll = client.get(f"{API}/cases/{SPLIT.case_id}/investigate")
+    assert poll.status_code == 200
+    assert poll.json()["state"] == "completed"
+
+
+def test_case_report_export_markdown_and_html(client: TestClient) -> None:
+    # Markdown export
+    md_res = client.get(f"{API}/cases/{DUPLICATE.case_id}/export")
+    assert md_res.status_code == 200
+    assert "SpendGuard Case Report" in md_res.text
+    assert "Detector Facts" in md_res.text
+    assert "AI Investigation" in md_res.text
+    assert "Verification" in md_res.text
+    assert "Evidence Transactions" in md_res.text
+    assert "Human Review History" in md_res.text
+
+    # HTML export
+    html_res = client.get(f"{API}/cases/{DUPLICATE.case_id}/export?format=html")
+    assert html_res.status_code == 200
+    assert "<!DOCTYPE html>" in html_res.text
+    assert "SpendGuard Case Report" in html_res.text
+
+
+
 # ------------------------------------------------------------------ metrics, runs, health
 
 
