@@ -12,7 +12,7 @@ from uuid import UUID
 
 import duckdb
 from fastapi import APIRouter, Query
-from sqlalchemy import ColumnElement, Select, and_, func, select
+from sqlalchemy import ColumnElement, Select, and_, func, or_, select
 from sqlalchemy.orm import Session, aliased
 
 from spendguard.api.deps import Duck, Stores, not_found
@@ -53,6 +53,29 @@ SORTS = {
     "severity_final": CaseRecord.severity_final,
     "amount_at_risk": CaseRecord.amount_at_risk,
     "created_at": CaseRecord.created_at,
+}
+
+
+DETECTOR_MAP = {
+    "duplicate": "duplicate",
+    "duplicates": "duplicate",
+    "d1": "duplicate",
+    "d1_duplicate": "duplicate",
+    "d1_duplicates": "duplicate",
+    "split": "split",
+    "splits": "split",
+    "d2": "split",
+    "d2_split": "split",
+    "d2_splits": "split",
+    "inflation": "inflation",
+    "d3": "inflation",
+    "d3_inflation": "inflation",
+    "vendor": "vendor_flag",
+    "vendor_flag": "vendor_flag",
+    "vendor_risk": "vendor_flag",
+    "d4": "vendor_flag",
+    "d4_vendor": "vendor_flag",
+    "d4_vendor_risk": "vendor_flag",
 }
 
 
@@ -114,11 +137,14 @@ def list_cases(
     store: Stores,
     status: Annotated[list[StatusName] | None, Query()] = None,
     anomaly_type: Annotated[list[AnomalyTypeName] | None, Query()] = None,
+    detector: Annotated[list[str] | None, Query()] = None,
     severity_band: Annotated[list[BandName] | None, Query()] = None,
+    severity: Annotated[list[BandName] | None, Query()] = None,
     verdict: Annotated[list[VerdictName] | None, Query()] = None,
     verification_status: Annotated[list[VerificationName] | None, Query()] = None,
     investigated: bool | None = None,
     dismissed_by_agent: bool | None = None,
+    search: Annotated[str | None, Query()] = None,
     min_amount: Annotated[Decimal | None, Query(ge=0)] = None,
     sort: Literal["severity_prelim", "severity_final", "amount_at_risk", "created_at"] = (
         "severity_prelim"
@@ -135,10 +161,19 @@ def list_cases(
     filters: list[ColumnElement[bool]] = []
     if status:
         filters.append(CaseRecord.status.in_(status))
+
+    target_types: set[str] = set()
     if anomaly_type:
-        filters.append(CaseRecord.anomaly_type.in_(anomaly_type))
-    if severity_band:
-        filters.append(CaseRecord.severity_band.in_(severity_band))
+        target_types.update(DETECTOR_MAP.get(t.lower(), t) for t in anomaly_type)
+    if detector:
+        target_types.update(DETECTOR_MAP.get(d.lower(), d) for d in detector)
+    if target_types:
+        filters.append(CaseRecord.anomaly_type.in_(list(target_types)))
+
+    target_severities = severity_band or severity
+    if target_severities:
+        filters.append(CaseRecord.severity_band.in_(target_severities))
+
     if verdict:
         filters.append(note.verdict.in_(verdict))
     if verification_status:
@@ -147,6 +182,15 @@ def list_cases(
         filters.append(CaseRecord.investigated.is_(investigated))
     if dismissed_by_agent is not None:
         filters.append(CaseRecord.dismissed_by_agent.is_(dismissed_by_agent))
+    if search and search.strip():
+        s = search.strip()
+        filters.append(
+            or_(
+                CaseRecord.vendor_key.ilike(f"%{s}%"),
+                CaseRecord.case_id.ilike(f"%{s}%"),
+                CaseRecord.detector.ilike(f"%{s}%"),
+            )
+        )
     if min_amount is not None:
         filters.append(CaseRecord.amount_at_risk >= float(min_amount))
     if filters:

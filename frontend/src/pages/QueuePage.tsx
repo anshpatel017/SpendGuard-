@@ -19,12 +19,15 @@ import {
 const PAGE_SIZE = 50;
 const FILTER_KEYS = [
   "anomaly_type",
+  "detector",
   "severity_band",
+  "severity",
   "status",
   "verdict",
   "verification_status",
   "investigated",
   "dismissed_by_agent",
+  "search",
   "sort",
   "order",
 ] as const;
@@ -128,10 +131,18 @@ export function QueuePage() {
   const navigate = useNavigate();
   const metrics = useMetrics();
 
+  const detectorVal = params.get("detector") || params.get("anomaly_type") || "";
+  const severityVal = params.get("severity") || params.get("severity_band") || "";
+  const searchVal = params.get("search") || "";
+
   const filters: CaseFilters = { page: Number(params.get("page") ?? 1), page_size: PAGE_SIZE };
+  if (detectorVal) filters.detector = detectorVal;
+  if (severityVal) filters.severity_band = severityVal;
+  if (searchVal) filters.search = searchVal;
+
   for (const key of FILTER_KEYS) {
     const value = params.get(key);
-    if (value) filters[key] = value;
+    if (value && !(key in filters)) (filters as Record<string, any>)[key] = value;
   }
   const cases = useCases(filters);
 
@@ -142,6 +153,31 @@ export function QueuePage() {
     if (key !== "page") next.delete("page");
     setParams(next);
   };
+  const setDetector = (val: string) => {
+    const next = new URLSearchParams(params);
+    if (val) {
+      next.set("detector", val);
+      next.delete("anomaly_type");
+    } else {
+      next.delete("detector");
+      next.delete("anomaly_type");
+    }
+    next.delete("page");
+    setParams(next);
+  };
+  const setSeverity = (val: string) => {
+    const next = new URLSearchParams(params);
+    if (val) {
+      next.set("severity", val);
+      next.delete("severity_band");
+    } else {
+      next.delete("severity");
+      next.delete("severity_band");
+    }
+    next.delete("page");
+    setParams(next);
+  };
+
   const sortBy = (key: string) => {
     const same = (params.get("sort") ?? "severity_prelim") === key;
     const next = new URLSearchParams(params);
@@ -156,6 +192,8 @@ export function QueuePage() {
   const page = filters.page ?? 1;
   const pages = cases.data ? Math.max(1, Math.ceil(cases.data.total / PAGE_SIZE)) : 1;
 
+  const currentSearch = params.toString() ? `?${params.toString()}` : "";
+
   return (
     <div className="stack">
       {metrics.error ? <ErrorBanner error={metrics.error} /> : metrics.data ? <Kpis m={metrics.data} /> : <Loading what="metrics" />}
@@ -164,10 +202,25 @@ export function QueuePage() {
         title={`Case queue${cases.data ? ` · ${formatCount(cases.data.total)}` : ""}`}
         actions={
           <div className="filters">
-            <Select label="Type" value={params.get("anomaly_type") ?? ""} onChange={(v) => set("anomaly_type", v)}
-              options={Object.entries(ANOMALY_LABEL)} />
-            <Select label="Severity" value={params.get("severity_band") ?? ""} onChange={(v) => set("severity_band", v)}
-              options={[["high", "High"], ["medium", "Medium"], ["low", "Low"]]} />
+            <input
+              type="text"
+              aria-label="Search"
+              placeholder="Search supplier or ID…"
+              value={searchVal}
+              onChange={(e) => set("search", e.target.value)}
+            />
+            <Select
+              label="Detector"
+              value={detectorVal}
+              onChange={setDetector}
+              options={Object.entries(ANOMALY_LABEL)}
+            />
+            <Select
+              label="Severity"
+              value={severityVal}
+              onChange={setSeverity}
+              options={[["high", "High"], ["medium", "Medium"], ["low", "Low"]]}
+            />
             <Select label="Status" value={params.get("status") ?? ""} onChange={(v) => set("status", v)}
               options={Object.entries(STATUS_LABEL)} />
             <Select label="Investigation" value={params.get("investigated") ?? ""} onChange={(v) => set("investigated", v)}
@@ -207,7 +260,16 @@ export function QueuePage() {
                 </thead>
                 <tbody>
                   {cases.data.items.map((c) => (
-                    <CaseRow key={c.case_id} c={c} onOpen={() => navigate(`/cases/${c.case_id}`)} />
+                    <CaseRow
+                      key={c.case_id}
+                      c={c}
+                      onOpen={() =>
+                        navigate(
+                          { pathname: `/cases/${c.case_id}`, search: currentSearch },
+                          { state: { returnSearch: currentSearch } },
+                        )
+                      }
+                    />
                   ))}
                 </tbody>
               </table>

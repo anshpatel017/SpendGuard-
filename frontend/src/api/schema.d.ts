@@ -790,11 +790,14 @@ export interface operations {
             query?: {
                 status?: ("new" | "under_review" | "confirmed" | "dismissed")[] | null;
                 anomaly_type?: ("duplicate" | "split" | "inflation" | "vendor_flag")[] | null;
+                detector?: string[] | null;
                 severity_band?: ("high" | "medium" | "low")[] | null;
+                severity?: ("high" | "medium" | "low")[] | null;
                 verdict?: ("likely_true_positive" | "likely_false_positive" | "inconclusive")[] | null;
                 verification_status?: ("verified" | "unverified" | "failed_after_retries")[] | null;
                 investigated?: boolean | null;
                 dismissed_by_agent?: boolean | null;
+                search?: string | null;
                 min_amount?: number | string | null;
                 sort?: "severity_prelim" | "severity_final" | "amount_at_risk" | "created_at";
                 order?: "asc" | "desc";

@@ -53,12 +53,15 @@ async function request<T>(path: string, schema: z.ZodType<T>, init?: RequestInit
 
 export interface CaseFilters {
   anomaly_type?: string;
+  detector?: string;
   severity_band?: string;
+  severity?: string;
   status?: string;
   verdict?: string;
   verification_status?: string;
   investigated?: string;
   dismissed_by_agent?: string;
+  search?: string;
   sort?: string;
   order?: string;
   page?: number;
