@@ -10,8 +10,7 @@ That single decision is what keeps the serving layer thin: nothing slow ever hap
 +---------------------------------------------------------------+
 |  FRONTEND                                                     |
 |  React 18 + TypeScript (Vite)                                 |
-|  TanStack Query - TanStack Table - Tailwind + shadcn/ui       |
-|  Recharts - React Router - Zod                                |
+|  TanStack Query - React Router - Zod - Custom CSS             |
 +------------------------------+--------------------------------+
                                |  HTTP / JSON
                                v
@@ -19,7 +18,7 @@ That single decision is what keeps the serving layer thin: nothing slow ever hap
 |  API                                                          |
 |  FastAPI + Pydantic v2 (OpenAPI published)                    |
 |                                                               |
-|   +-- SQLAlchemy 2.0 --------> PostgreSQL                     |
+|   +-- SQLAlchemy 2.0 --------> SQLite / PostgreSQL           |
 |   |                            cases, status, notes, traces   |
 |   |                                                           |
 |   +-- duckdb (read_only) ----> DuckDB                         |
@@ -33,8 +32,8 @@ That single decision is what keeps the serving layer thin: nothing slow ever hap
 |                                                               |
 |  ingest  ->  detect  ->  investigate  ->  verify  ->  evaluate|
 |                                                               |
-|  pandas / Polars - scikit-learn - PyOD - rapidfuzz - Splink   |
-|  scipy - sentence-transformers + FAISS - MLflow               |
+|  pandas / Polars - scikit-learn - rapidfuzz - scipy           |
+|  sentence-transformers + FAISS                                |
 |  Ollama serving Qwen2.5-7B-Instruct (Q4_K_M)                  |
 +---------------------------------------------------------------+
 ```
@@ -76,7 +75,7 @@ Every detector implements the same interface and returns the same Case shape. Th
 
 A **rule-based baseline** implements the same interface, deliberately naive, so that every claim of improvement has something concrete to be measured against.
 
-**Technology:** scikit-learn, PyOD, rapidfuzz, Splink, scipy.stats, DuckDB SQL.
+**Technology:** scikit-learn, rapidfuzz, scipy.stats, DuckDB SQL.
 
 ### 2.3 Agentic layer
 
@@ -181,7 +180,7 @@ React with TypeScript. TanStack Query owns all server state — caching, refetch
        -> per-case and per-row precision / recall / F1 / PR-AUC
        -> citation validity, triage accuracy, efficiency
        -> ablation runs
-       -> MLflow + DuckDB.eval_results
+       -> DuckDB.eval_results + JSON/Markdown reports
 
 5. API + React
      read cases, notes, evidence rows, traces, metrics
@@ -262,7 +261,7 @@ Ollama runs on the host rather than in Compose, because it needs direct GPU acce
 | Alternative | Why not |
 |---|---|
 | Node/Express for CRUD alongside Python for ML | Two runtimes and two dependency systems. DuckDB is embedded, so the Node process could not share a connection and every query would become an extra HTTP hop into Python. No benefit. |
-| Django alongside FastAPI | Two Python web frameworks doing one job. The Django ORM cannot address DuckDB, so it would force a second relational store and split the data across engines. Its main value — admin, auth, migrations — is either out of scope or already covered by Alembic. |
+| Django alongside FastAPI | Two Python web frameworks doing one job. The Django ORM cannot address DuckDB, so it would force a second relational store and split the data across engines. Its main value — admin, auth, migrations — is either out of scope or covered by SQLAlchemy directly. |
 | Single DuckDB for everything | DuckDB is single-writer. Case-status writes from the API would contend with batch runs for the file lock. |
 | An agent framework | Hundreds of lines of abstraction between the team and the agent's behaviour, in a system where every step must be explainable and debuggable. |
 | PostgreSQL for the analytical store too | Row-oriented, and needs tuning to approach DuckDB on the aggregate scans the detectors run. |
