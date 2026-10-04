@@ -1,6 +1,6 @@
 # Agent results - investigation and verification
 
-Generated 2026-10-02 17:13 UTC from commit `74e4aac`. Regenerate with `spendguard report agent`.
+Generated 2026-10-04 13:44 UTC from commit `f556e06`. Regenerate with `spendguard report agent`.
 
 Read from the evaluation stores, not from any single run: notes accumulate a few a day against a free-tier daily quota (D-30), and the newest note per (case, model, arm) is the one that stands. **Numbers are per model** - two models are never merged into one row (D-33) - and ablation arms sit beside the main run, never inside it (D-35).
 
@@ -10,7 +10,7 @@ Read from the evaluation stores, not from any single run: notes accumulate a few
 
 | Seed | Model | Arm | Notes | Citations | First draft | Released (deterministic) | Supported (model-judged) | Regenerated |
 |---:|---|---|---:|---:|---:|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 8 | 73 | 100.0% | **100.0%** | 89.7% | 6 |
+| 42 | qwen/qwen3.8-27b | agent | 12 | 102 | 86.5% | **100.0%** | 82.8% | 8 |
 | 42 | template | template | 5 | 35 | 100.0% | **100.0%** | - | 0 |
 
 ## Triage - what the agent filters
@@ -19,14 +19,14 @@ Over the seeded sample of real and spurious cases for each seed. *Real kept* is 
 
 | Seed | Model | Arm | Sample | Investigated | Real kept | Spurious filtered | Decisive accuracy |
 |---:|---|---|---:|---:|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 15 | 7 | 100% | 50% | **100%** |
+| 42 | qwen/qwen3.8-27b | agent | 15 | 11 | 88% | 100% | **100%** |
 | 42 | template | template | 5 | 5 | 100% | 0% | **80%** |
 
 ## Cost per investigation
 
 | Seed | Model | Arm | Tool calls | Tokens | Seconds of model time |
 |---:|---|---|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 7.9 | 32,886 | 34.0 |
+| 42 | qwen/qwen3.8-27b | agent | 9.6 | 33,986 | 30.6 |
 | 42 | template | template | 0.0 | 0 | 0.0 |
 
 **Some runs stopped on the provider's daily quota** and have fewer notes than their sample: seed 42 / qwen/qwen3.8-27b / agent. Running the same command later continues where it stopped (D-30).

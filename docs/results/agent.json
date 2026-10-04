@@ -1,7 +1,7 @@
 {
   "manifest": {
-    "generated_at": "2026-10-02 17:13 UTC",
-    "commit": "74e4aac",
+    "generated_at": "2026-10-04 13:44 UTC",
+    "commit": "f556e06",
     "dirty": false,
     "python": "3.13.5",
     "packages": {
@@ -24,50 +24,50 @@
       "seed": 42,
       "model": "qwen/qwen3.8-27b",
       "arm": "agent",
-      "notes": 8,
+      "notes": 12,
       "sampled": 15,
-      "citations_checked": 73,
+      "citations_checked": 102,
       "deterministic_valid": 1.0,
-      "semantic_valid": 0.8966,
-      "first_draft_valid": 1.0,
-      "regenerated": 6,
+      "semantic_valid": 0.8276,
+      "first_draft_valid": 0.865,
+      "regenerated": 8,
       "released": {
-        "failed_after_retries": 2,
+        "failed_after_retries": 4,
         "unverified": 2,
-        "verified": 4
+        "verified": 6
       },
       "triage": {
-        "cases": 7,
-        "real": 5,
-        "spurious": 2,
+        "cases": 11,
+        "real": 8,
+        "spurious": 3,
         "confusion": {
           "real": {
-            "likely_true_positive": 5,
+            "likely_true_positive": 7,
             "likely_false_positive": 0,
             "inconclusive": 0,
-            "failed": 0
+            "failed": 1
           },
           "spurious": {
             "likely_true_positive": 0,
-            "likely_false_positive": 1,
+            "likely_false_positive": 3,
             "inconclusive": 0,
-            "failed": 1
+            "failed": 0
           }
         },
-        "real_kept": 1.0,
+        "real_kept": 0.875,
         "real_wrongly_dismissed": 0.0,
-        "spurious_filtered": 0.5,
+        "spurious_filtered": 1.0,
         "inconclusive": 0.0,
-        "failed": 0.143,
+        "failed": 0.091,
         "decisive_accuracy": 1.0
       },
-      "avg_tool_calls": 7.875,
-      "avg_tokens": 32885.5,
-      "avg_seconds": 33.9984,
+      "avg_tool_calls": 9.5833,
+      "avg_tokens": 33985.5833,
+      "avg_seconds": 30.5732,
       "quota_stopped": true,
       "triage_accuracy": 1.0,
-      "real_kept": 1.0,
-      "spurious_filtered": 0.5
+      "real_kept": 0.875,
+      "spurious_filtered": 1.0
     },
     {
       "seed": 42,
