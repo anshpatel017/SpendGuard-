@@ -10,6 +10,7 @@ export const keys = {
   metrics: ["metrics"] as const,
   cases: (filters: CaseFilters) => ["cases", filters] as const,
   caseDetail: (caseId: string) => ["case", caseId] as const,
+  investigationStatus: (caseId: string) => ["investigation-status", caseId] as const,
   evaluation: (seed: number) => ["evaluation", seed] as const,
 };
 
@@ -29,6 +30,38 @@ export function useCaseDetail(caseId: string) {
   return useQuery({ queryKey: keys.caseDetail(caseId), queryFn: () => api.caseDetail(caseId) });
 }
 
+export function useInvestigationStatus(caseId: string, enabled: boolean) {
+  const client = useQueryClient();
+  return useQuery({
+    queryKey: keys.investigationStatus(caseId),
+    queryFn: async () => {
+      const res = await api.investigationStatus(caseId);
+      if (res.state === "completed" || res.state === "failed") {
+        client.invalidateQueries({ queryKey: keys.caseDetail(caseId) });
+      }
+      return res;
+    },
+    enabled: Boolean(caseId) && enabled,
+    refetchInterval: (query) => {
+      const state = query.state.data?.state;
+      return state === "queued" || state === "investigating" || state === "verifying" ? 1500 : false;
+    },
+  });
+}
+
+export function useTriggerInvestigation(caseId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.triggerInvestigation(caseId),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: keys.caseDetail(caseId) }),
+        client.invalidateQueries({ queryKey: keys.investigationStatus(caseId) }),
+      ]);
+    },
+  });
+}
+
 export function useEvaluation(seed: number) {
   return useQuery({ queryKey: keys.evaluation(seed), queryFn: () => api.evaluation(seed) });
 }
@@ -43,8 +76,15 @@ export function useDemoInject() {
 export function useUpdateStatus(caseId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: ({ status, note }: { status: CaseStatus; note: string }) =>
-      api.updateStatus(caseId, status, note),
+    mutationFn: ({
+      status,
+      note,
+      reviewer,
+    }: {
+      status: CaseStatus;
+      note: string;
+      reviewer?: string;
+    }) => api.updateStatus(caseId, status, note, reviewer),
     onSuccess: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: keys.caseDetail(caseId) }),

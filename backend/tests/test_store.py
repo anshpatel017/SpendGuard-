@@ -134,3 +134,56 @@ def test_an_in_memory_store_needs_no_directory() -> None:
     engine = get_engine("sqlite:///:memory:")
     save_cases(engine, "run-1", "dataset", [_case([1, 2])])
     assert cases_to_investigate(engine)
+
+
+def test_status_transition_validation_and_review_history() -> None:
+    from spendguard.db.store import (
+        CaseStatus,
+        InvalidTransitionError,
+        get_case_reviews,
+        set_status,
+    )
+
+    engine = get_engine("sqlite:///:memory:")
+    case = _case([1, 2])
+    save_cases(engine, "run-1", "dataset", [case])
+
+    # Valid: new -> under_review
+    set_status(
+        engine,
+        case.case_id,
+        CaseStatus.UNDER_REVIEW,
+        note="Reviewing vendor docs",
+        reviewer="Auditor Alice",
+    )
+    reviews = get_case_reviews(engine, case.case_id)
+    assert len(reviews) == 1
+    assert reviews[0].previous_status == "new"
+    assert reviews[0].new_status == "under_review"
+    assert reviews[0].note == "Reviewing vendor docs"
+    assert reviews[0].reviewer == "Auditor Alice"
+
+    # Valid: under_review -> confirmed
+    set_status(
+        engine,
+        case.case_id,
+        CaseStatus.CONFIRMED,
+        note="Confirmed duplicate payment",
+        reviewer="Auditor Bob",
+    )
+    reviews = get_case_reviews(engine, case.case_id)
+    assert len(reviews) == 2
+    assert reviews[1].previous_status == "under_review"
+    assert reviews[1].new_status == "confirmed"
+
+    # Invalid: confirmed -> dismissed directly (must go via under_review)
+    with pytest.raises(InvalidTransitionError, match="Cannot move case from confirmed to dismissed"):
+        set_status(engine, case.case_id, CaseStatus.DISMISSED)
+
+    # Valid: confirmed -> under_review -> dismissed
+    set_status(engine, case.case_id, CaseStatus.UNDER_REVIEW, note="Re-evaluating")
+    set_status(engine, case.case_id, CaseStatus.DISMISSED, note="Dismissed after check")
+    reviews = get_case_reviews(engine, case.case_id)
+    assert len(reviews) == 4
+    assert reviews[-1].new_status == "dismissed"
+

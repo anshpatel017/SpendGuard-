@@ -19,9 +19,13 @@ export type HealthResponse = Schemas["HealthResponse"];
 export type StatusUpdateRequest = Schemas["StatusUpdateRequest"];
 export type DemoInjectRequest = Schemas["DemoInjectRequest"];
 export type DemoInjectResponse = Schemas["DemoInjectResponse"];
+export type CaseReviewItem = Schemas["CaseReviewItem"];
+export type InvestigationStatus = Schemas["InvestigationStatus"];
+export type InvestigationJobResponse = Schemas["InvestigationJobResponse"];
 
 export type AnomalyType = Case["anomaly_type"];
 export type CaseStatus = Case["status"];
 export type SeverityBand = Case["severity_band"];
 export type Verdict = AuditNote["verdict"];
 export type VerificationStatus = AuditNote["verification_status"];
+

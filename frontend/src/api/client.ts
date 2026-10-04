@@ -1,15 +1,18 @@
 // The one place the frontend talks to the backend. Every response is validated;
 // every error arrives as an ApiError carrying the API's own code and message.
-import type { z } from "zod";
+import { z } from "zod";
 
 import type { CaseStatus, DemoInjectRequest, StatusUpdateRequest } from "./types";
 import {
   caseDetailSchema,
   caseListSchema,
+  caseReviewItemSchema,
   caseSchema,
   demoSchema,
   evaluationSchema,
   healthSchema,
+  investigationJobResponseSchema,
+  investigationStatusSchema,
   metricsSchema,
   transactionSchema,
 } from "./validate";
@@ -81,11 +84,30 @@ export const api = {
   metrics: () => request("/metrics", metricsSchema),
   cases: (filters: CaseFilters) => request(`/cases${query(filters)}`, caseListSchema),
   caseDetail: (caseId: string) => request(`/cases/${encodeURIComponent(caseId)}`, caseDetailSchema),
-  updateStatus: (caseId: string, status: CaseStatus, reviewerNote: string | null) =>
+  updateStatus: (
+    caseId: string,
+    status: CaseStatus,
+    reviewerNote: string | null,
+    reviewer: string = "Demo Reviewer",
+  ) =>
     request(`/cases/${encodeURIComponent(caseId)}/status`, caseSchema, {
       method: "PATCH",
-      body: JSON.stringify({ status, reviewer_note: reviewerNote } satisfies StatusUpdateRequest),
+      body: JSON.stringify({
+        status,
+        reviewer_note: reviewerNote,
+        reviewer,
+      } satisfies StatusUpdateRequest),
     }),
+  triggerInvestigation: (caseId: string) =>
+    request(`/cases/${encodeURIComponent(caseId)}/investigate`, investigationJobResponseSchema, {
+      method: "POST",
+    }),
+  investigationStatus: (caseId: string) =>
+    request(`/cases/${encodeURIComponent(caseId)}/investigate`, investigationStatusSchema),
+  caseReviews: (caseId: string) =>
+    request(`/cases/${encodeURIComponent(caseId)}/reviews`, z.array(caseReviewItemSchema)),
+  exportReportUrl: (caseId: string, format: "markdown" | "html" = "markdown") =>
+    `${BASE}/cases/${encodeURIComponent(caseId)}/export?format=${format}`,
   transaction: (rowId: number) => request(`/transactions/${rowId}`, transactionSchema),
   evaluation: (seed: number) => request(`/evaluation?seed=${seed}`, evaluationSchema),
   health: () => request("/health", healthSchema),
