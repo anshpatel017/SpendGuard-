@@ -235,9 +235,14 @@ def render_cases(
                 f"| {_cell(row.get('unit_price'))} |"
             )
         if len(case.row_ids) > settings.review_max_rows:
+            # One empty cell per remaining column. This line was written before the
+            # `document` column existed and was never widened, so it rendered as a
+            # broken row - on a D4 case, the row saying "763 more rows".
+            hidden = len(case.row_ids) - settings.review_max_rows
             lines.append(
-                f"| … | _{len(case.row_ids) - settings.review_max_rows} more rows in this case_ "
-                "| | | | | | |"
+                f"| … | _{hidden} more row{'' if hidden == 1 else 's'} in this case_"
+                + " |" * 7
+                + " |"
             )
         lines.append("")
     return "\n".join(lines) + "\n"
