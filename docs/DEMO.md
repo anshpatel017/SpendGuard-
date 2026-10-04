@@ -111,12 +111,15 @@ Open the **Live demo** page and inject 3 anomalies.
   is never touched, and a test hashes it before and after.
 - Takes 3–8 seconds.
 
-**Misses are shown as misses.** On rehearsal seeds it catches 2 of 3, and the
-misses are small price markups — exactly what D3's measured recall (~0.48)
-predicts. **Do not apologise for this, and do not re-roll for a better seed.**
-Say: "that is the detector's measured recall, and it is why the investigation
-layer exists." A demo rigged to always succeed would contradict the evaluation
-it is meant to illustrate.
+**Misses are shown as misses.** On rehearsal seeds it catches 2 of 3. The page
+names whatever was actually missed on the run in front of you and points at the
+measured recall on the Evaluation page, rather than guessing a cause; on a run
+that misses nothing it says so without promising a clean sweep next time.
+**Do not apologise for this, and do not re-roll for a better seed.** Say: "that
+is the detector's measured recall, and it is why the investigation layer
+exists" — D3's is about 0.48, the one most likely to be on screen. A demo
+rigged to always succeed would contradict the evaluation it is meant to
+illustrate.
 
 ---
 

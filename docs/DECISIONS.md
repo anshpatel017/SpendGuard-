@@ -474,7 +474,7 @@ On any failure the objections go back to the Investigator, which revises, up to 
 - **What gets planted:** duplicates, splits and price inflation. Vendor flags are excluded, because they need months of a supplier's history.
 - **What counts as caught:** only a case of the same type, under the evaluation's matching rule (D-03).
 - **Time:** 3–8 s, because a full scan takes about 25 s and an audience will not wait that long.
-- **Misses are shown as misses.** On three rehearsal seeds the demo caught 2 of 3 each time; the misses were small price markups, exactly what D3's measured recall (about 0.48) predicts. Rigging it to always succeed would contradict the evaluation it is meant to illustrate.
+- **Misses are shown as misses.** On three rehearsal seeds the demo caught 2 of 3 each time, and on those seeds the misses happened to be small price markups - about what D3's measured recall (0.48) predicts. The page does not generalise from that: it names whatever was actually missed on the run in front of you, because a fixed explanation contradicted the table printed directly above it the first time a duplicate got away (Phase 9, `missExplanation` in `frontend/src/lib/demo.ts`). Rigging it to always succeed would contradict the evaluation it is meant to illustrate.
 - **Determinism:** the anomaly mix is drawn with `random.Random(seed)`. The first draft used `hash()`, which is randomized per process, so one seed would have planted different anomalies on different runs.
 
 **Frozen demo state (`spendguard freeze`, `spendguard serve --frozen`).**
