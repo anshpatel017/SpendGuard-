@@ -5,12 +5,17 @@ import { useState } from "react";
 
 import { useDemoInject } from "../api/hooks";
 import { Card, ErrorBanner } from "../components/common";
+import { missExplanation } from "../lib/demo";
 import { ANOMALY_LABEL, formatCount, formatDate, formatMoney } from "../lib/format";
 
 export function DemoPage() {
   const [count, setCount] = useState(3);
   const demo = useDemoInject();
   const run = demo.data;
+  // Named rather than assumed: the explanation used to say "small price markups"
+  // whatever was actually missed, which contradicted the table above it whenever a
+  // duplicate or a split was the one that got away.
+  const missed = (run?.results ?? []).filter((r) => !r.detected).map((r) => r.anomaly_type);
 
   return (
     <div className="stack">
@@ -73,9 +78,8 @@ export function DemoPage() {
                 </tbody>
               </table>
             </div>
-            <p className="muted small">
-              A miss is shown as a miss. It is what the measured recall predicts: small price markups are the
-              hardest to separate from honest premium purchases. The detectors also raised {run.other_cases} case
+            <p className="muted small" data-testid="demo-explanation">
+              {missExplanation(missed)} The detectors also raised {run.other_cases} case
               {run.other_cases === 1 ? "" : "s"} on the copy's real rows, flags the demo does not count either way.
             </p>
           </div>
