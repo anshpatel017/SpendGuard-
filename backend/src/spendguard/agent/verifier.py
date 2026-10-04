@@ -26,6 +26,7 @@ a revision that made things worse should not replace one that was better.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import json
 import time
 from typing import Any
@@ -268,6 +269,7 @@ def investigate_and_verify(
     *,
     max_retries: int | None = None,
     enabled: bool | None = None,
+    on_stage: Callable[[str], None] | None = None,
 ) -> InvestigationResult:
     """Investigate one case, then verify and regenerate until it passes or retries run out.
 
@@ -275,6 +277,8 @@ def investigate_and_verify(
     ``unverified`` and never regenerated - but the deterministic check still
     runs, so the ablation's citation validity is measured the same way.
     """
+    if on_stage:
+        on_stage("investigating")
     enabled = settings.verifier_enabled if enabled is None else enabled
     max_retries = settings.verifier_max_retries if max_retries is None else max_retries
 
@@ -282,6 +286,8 @@ def investigate_and_verify(
     if result.note is None or verifier is None:
         return result
 
+    if on_stage:
+        on_stage("verifying")
     report = verifier.check(result, semantic=None if enabled else False)
     result.first_check = report
     drafts: list[tuple[InvestigatorNote, VerificationReport]] = [(result.note, report)]

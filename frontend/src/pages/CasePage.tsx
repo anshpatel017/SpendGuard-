@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
-import { ApiError } from "../api/client";
-import { useCaseDetail } from "../api/hooks";
+import { ApiError, api } from "../api/client";
+import { useCaseDetail, useInvestigationStatus, useTriggerInvestigation } from "../api/hooks";
 import type { Case } from "../api/types";
 import { Card, ErrorBanner, Loading, SeverityChip } from "../components/common";
 import { EvidenceTable } from "../components/EvidenceTable";
@@ -43,6 +43,15 @@ export function CasePage() {
 
   const detail = useCaseDetail(caseId);
   const [highlight, setHighlight] = useState<number | null>(null);
+  const trigger = useTriggerInvestigation(caseId);
+
+  const initialStatus = detail.data?.investigation_status;
+  const isJobActive =
+    initialStatus?.state === "queued" ||
+    initialStatus?.state === "investigating" ||
+    initialStatus?.state === "verifying";
+  const statusQuery = useInvestigationStatus(caseId, isJobActive || trigger.isSuccess);
+  const activeStatus = statusQuery.data ?? initialStatus;
 
   if (detail.isPending) return <Loading what="case" />;
   if (detail.error) {
@@ -61,9 +70,15 @@ export function CasePage() {
     requestAnimationFrame(() => setHighlight(rowId)); // re-trigger the highlight on a repeat click
   };
 
+  const isInvestigating =
+    trigger.isPending ||
+    activeStatus?.state === "queued" ||
+    activeStatus?.state === "investigating" ||
+    activeStatus?.state === "verifying";
+
   return (
     <div className="stack">
-      <div className="row" style={{ justifyContent: "space-between" }}>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start" }}>
         <div className="stack" style={{ gap: 6 }}>
           <Link to={backUrl} className="small">← Case queue</Link>
           <h1>
@@ -77,25 +92,108 @@ export function CasePage() {
             <span className="muted small mono">{c.case_id}</span>
           </div>
         </div>
+
+        <div className="row" style={{ gap: 8, alignItems: "center" }}>
+          <a
+            href={api.exportReportUrl(c.case_id, "markdown")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn small"
+            title="Download full audit report in Markdown format"
+          >
+            Export (MD)
+          </a>
+          <a
+            href={api.exportReportUrl(c.case_id, "html")}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn small"
+            title="Open formatted case report in HTML"
+          >
+            Export (HTML)
+          </a>
+          <button
+            type="button"
+            className="btn primary small"
+            disabled={isInvestigating}
+            onClick={() => trigger.mutate()}
+            title="Trigger autonomous ReAct investigation on this case"
+          >
+            {trigger.isPending
+              ? "Queuing…"
+              : activeStatus?.state === "investigating"
+              ? "Investigating…"
+              : activeStatus?.state === "verifying"
+              ? "Verifying…"
+              : activeStatus?.state === "queued"
+              ? "Queued…"
+              : activeStatus?.state === "failed"
+              ? "Retry AI Investigation"
+              : note
+              ? "Re-investigate with AI"
+              : "Investigate with AI"}
+          </button>
+        </div>
       </div>
+
+      {activeStatus && activeStatus.state !== "not_investigated" && activeStatus.state !== "completed" && (
+        <Card title="Autonomous AI Investigation">
+          <div className="stack" style={{ gap: 8 }}>
+            <div className="row" style={{ alignItems: "center", gap: 8 }}>
+              <span className={`chip ${activeStatus.state === "failed" ? "bad" : "warn"}`}>
+                {activeStatus.state === "queued" && "Queued"}
+                {activeStatus.state === "investigating" && "Investigating"}
+                {activeStatus.state === "verifying" && "Verifying Claims"}
+                {activeStatus.state === "failed" && "Failed"}
+              </span>
+              <span className="small">{activeStatus.stage ?? "Processing..."}</span>
+            </div>
+            {activeStatus.error && (
+              <div
+                className="failure small"
+                style={{
+                  color: "#991b1b",
+                  backgroundColor: "rgba(239, 68, 68, 0.08)",
+                  padding: "8px 12px",
+                  borderRadius: 4,
+                  border: "1px solid rgba(239, 68, 68, 0.2)",
+                }}
+              >
+                <strong>AI Provider Error:</strong> {activeStatus.error}
+                <div className="muted" style={{ marginTop: 4 }}>
+                  Detector findings, transaction rows, and human review decisions are intact. You can retry investigation anytime.
+                </div>
+              </div>
+            )}
+            {isInvestigating && (
+              <div className="small muted">
+                The ReAct investigator is running tool queries against DuckDB and verifying claims. Results will automatically appear below when ready.
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       <div className="grid-2">
         <div className="stack">
           {note ? (
             <NotePanel note={note} onInspect={inspect} />
           ) : (
-            <Card title="Audit note">
+            <Card title="AI Investigation">
               <div className="empty">
-                Not yet investigated. Detection flagged this case; investigation runs on the highest-severity cases
-                first, and this one is still queued.
+                Not yet investigated by AI. Detection flagged this case based on deterministic rules. Click "Investigate with AI" above to run the autonomous investigator and verifier.
               </div>
             </Card>
           )}
-          <EvidenceTable evidence={detail.data.evidence_rows} total={detail.data.evidence_total}
-            context={detail.data.context_rows} highlight={highlight} />
+          <EvidenceTable
+            evidence={detail.data.evidence_rows}
+            total={detail.data.evidence_total}
+            context={detail.data.context_rows}
+            highlight={highlight}
+          />
         </div>
         <div className="stack">
-          <ReviewPanel c={c} />
+          <ReviewPanel c={c} reviews={detail.data.reviews} />
           <Facts c={c} />
         </div>
       </div>

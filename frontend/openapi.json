@@ -493,6 +493,24 @@
             "title": "Evidence Total",
             "type": "integer"
           },
+          "investigation_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InvestigationStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reviews": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CaseReviewItem"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
           "trace": {
             "items": {
               "$ref": "#/components/schemas/TraceStep"
@@ -547,6 +565,58 @@
           "currency"
         ],
         "title": "CaseListResponse",
+        "type": "object"
+      },
+      "CaseReviewItem": {
+        "properties": {
+          "case_id": {
+            "format": "uuid",
+            "title": "Case Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "new_status": {
+            "title": "New Status",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "previous_status": {
+            "title": "Previous Status",
+            "type": "string"
+          },
+          "reviewer": {
+            "title": "Reviewer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "case_id",
+          "previous_status",
+          "new_status",
+          "note",
+          "reviewer",
+          "created_at"
+        ],
+        "title": "CaseReviewItem",
         "type": "object"
       },
       "CaseSummary": {
@@ -1262,6 +1332,105 @@
         "title": "HealthResponse",
         "type": "object"
       },
+      "InvestigationJobResponse": {
+        "properties": {
+          "case_id": {
+            "format": "uuid",
+            "title": "Case Id",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "state": {
+            "enum": [
+              "not_investigated",
+              "queued",
+              "investigating",
+              "verifying",
+              "completed",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_id",
+          "state",
+          "message"
+        ],
+        "title": "InvestigationJobResponse",
+        "type": "object"
+      },
+      "InvestigationStatus": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "state": {
+            "enum": [
+              "not_investigated",
+              "queued",
+              "investigating",
+              "verifying",
+              "completed",
+              "failed"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "InvestigationStatus",
+        "type": "object"
+      },
       "MetricsResponse": {
         "properties": {
           "by_anomaly_type": {
@@ -1487,6 +1656,19 @@
       },
       "StatusUpdateRequest": {
         "properties": {
+          "reviewer": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "Demo Reviewer",
+            "title": "Reviewer"
+          },
           "reviewer_note": {
             "anyOf": [
               {
@@ -2198,6 +2380,210 @@
         ]
       }
     },
+    "/api/v1/cases/{case_id}/export": {
+      "get": {
+        "description": "Export an evidence-backed audit report for a case in Markdown or HTML (P1).",
+        "operationId": "export_case_report_api_v1_cases__case_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "markdown",
+              "enum": [
+                "markdown",
+                "html"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              },
+              "text/html": {},
+              "text/markdown": {}
+            },
+            "description": "Formatted case report"
+          },
+          "404": {
+            "description": "Unknown case"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Case Report",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{case_id}/investigate": {
+      "get": {
+        "description": "Check the real-time or historical investigation status of a case.",
+        "operationId": "get_investigation_status_api_v1_cases__case_id__investigate_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestigationStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Unknown case"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Investigation Status",
+        "tags": [
+          "cases"
+        ]
+      },
+      "post": {
+        "description": "Trigger an AI investigation for a case in the background.",
+        "operationId": "trigger_investigation_api_v1_cases__case_id__investigate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvestigationJobResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Unknown case"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Trigger Investigation",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
+    "/api/v1/cases/{case_id}/reviews": {
+      "get": {
+        "description": "Retrieve full audit history of human reviews and status changes for this case.",
+        "operationId": "list_case_reviews_api_v1_cases__case_id__reviews_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CaseReviewItem"
+                  },
+                  "title": "Response List Case Reviews Api V1 Cases  Case Id  Reviews Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Unknown case"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Case Reviews",
+        "tags": [
+          "cases"
+        ]
+      }
+    },
     "/api/v1/cases/{case_id}/status": {
       "patch": {
         "description": "The human decision (FR-5.2). The agent never calls this.",
@@ -2234,6 +2620,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "description": "Invalid status transition"
           },
           "404": {
             "description": "Unknown case"
