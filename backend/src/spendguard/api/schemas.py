@@ -140,6 +140,19 @@ class TransactionRow(BaseModel):
     cited: bool  # additive: the audit note cites this row
 
 
+class TransactionListResponse(BaseModel):
+    items: list[TransactionRow]
+    total: int
+    page: int
+    page_size: int
+    dataset: str | None = None
+    date_min: date | None = None
+    date_max: date | None = None
+    vendor_count: int = 0
+    total_amount: Decimal = Decimal("0.00")
+    currency: str = "INR"
+
+
 class CaseReviewItem(BaseModel):
     id: str
     case_id: UUID

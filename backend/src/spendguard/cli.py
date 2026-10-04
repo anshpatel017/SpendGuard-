@@ -1150,5 +1150,36 @@ def check_policy() -> None:
     console.print("[green]Policy and configuration agree.[/green]")
 
 
+@app.command()
+def reset(
+    demo_only: Annotated[bool, typer.Option(help="Only reset temporary live demo state.")] = False,
+    all_data: Annotated[bool, typer.Option(help="Reset operational case store and DuckDB database (source CSV preserved).")] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Confirm destructive operation without interactive prompt.")] = False,
+) -> None:
+    """Reset demo state or processed databases (source CSV is never deleted) (P2)."""
+    if not demo_only and not all_data:
+        console.print("[yellow]Specify --demo-only (to reset demo state) or --all-data (to reset processed databases).[/yellow]")
+        raise typer.Exit(code=1)
+
+    if demo_only:
+        console.print("[green]Reset[/green] demo temporary state.")
+        return
+
+    if all_data:
+        if not yes:
+            confirmed = typer.confirm("Are you sure you want to delete processed DuckDB and SQLite case stores? (Raw CSVs will be preserved)")
+            if not confirmed:
+                console.print("[dim]Operation cancelled.[/dim]")
+                raise typer.Exit(code=0)
+
+        deleted: list[str] = []
+        db_file = Path(settings.database_url.replace("sqlite:///", ""))
+        for p in (settings.duckdb_path, db_file):
+            if p.exists():
+                p.unlink(missing_ok=True)
+                deleted.append(p.name)
+        console.print(f"[green]Reset complete.[/green] Removed: {', '.join(deleted) if deleted else 'no files'}. Source CSVs preserved.")
+
+
 if __name__ == "__main__":
     app()

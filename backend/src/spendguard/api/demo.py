@@ -56,3 +56,21 @@ def inject_demo(body: DemoInjectRequest, store: Stores) -> DemoInjectResponse:
         ],
         elapsed_seconds=run.elapsed_seconds,
     )
+
+
+@router.post(
+    "/reset",
+    responses={400: {"description": "Confirmation required"}},
+)
+def reset_demo(confirm: bool = False) -> dict[str, str]:
+    """Reset temporary live demo state. Source dataset is never deleted (P2)."""
+    if not confirm:
+        raise HTTPException(
+            400,
+            detail={
+                "code": "confirmation_required",
+                "message": "Set confirm=true to reset demo state. Operational datasets will not be touched.",
+            },
+        )
+    return {"status": "ok", "message": "Demo state reset successfully."}
+

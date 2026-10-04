@@ -3,7 +3,7 @@
 // so nothing on screen contradicts what was just saved.
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { api, type CaseFilters } from "./client";
+import { api, type CaseFilters, type TransactionFilters } from "./client";
 import type { CaseStatus } from "./types";
 
 export const keys = {
@@ -11,6 +11,9 @@ export const keys = {
   cases: (filters: CaseFilters) => ["cases", filters] as const,
   caseDetail: (caseId: string) => ["case", caseId] as const,
   investigationStatus: (caseId: string) => ["investigation-status", caseId] as const,
+  transactions: (filters: TransactionFilters) => ["transactions", filters] as const,
+  runs: ["runs"] as const,
+  health: ["health"] as const,
   evaluation: (seed: number) => ["evaluation", seed] as const,
 };
 
@@ -90,6 +93,43 @@ export function useUpdateStatus(caseId: string) {
         client.invalidateQueries({ queryKey: keys.caseDetail(caseId) }),
         client.invalidateQueries({ queryKey: ["cases"] }),
         client.invalidateQueries({ queryKey: keys.metrics }),
+      ]);
+    },
+  });
+}
+
+export function useTransactions(filters: TransactionFilters = {}) {
+  return useQuery({
+    queryKey: keys.transactions(filters),
+    queryFn: () => api.transactions(filters),
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useRuns(limit: number = 50) {
+  return useQuery({
+    queryKey: keys.runs,
+    queryFn: () => api.runs(limit),
+  });
+}
+
+export function useHealth() {
+  return useQuery({
+    queryKey: keys.health,
+    queryFn: api.health,
+    refetchInterval: 30000,
+  });
+}
+
+export function useDemoReset() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.demoReset(),
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: ["cases"] }),
+        client.invalidateQueries({ queryKey: keys.metrics }),
+        client.invalidateQueries({ queryKey: keys.health }),
       ]);
     },
   });

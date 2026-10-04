@@ -22,7 +22,9 @@ import type {
   InvestigationJobResponse,
   InvestigationStatus,
   MetricsResponse,
+  RunSummary,
   TraceStep,
+  TransactionListResponse,
   TransactionRow,
 } from "./types";
 
@@ -135,6 +137,29 @@ export const transactionSchema = z.object({
   in_case: z.boolean(),
   cited: z.boolean(),
 }) satisfies z.ZodType<TransactionRow>;
+
+export const transactionListSchema = z.object({
+  items: z.array(transactionSchema),
+  total: z.number(),
+  page: z.number(),
+  page_size: z.number(),
+  dataset: z.string().nullable().optional(),
+  date_min: z.string().nullable().optional(),
+  date_max: z.string().nullable().optional(),
+  vendor_count: z.number(),
+  total_amount: money,
+  currency: z.string(),
+}) satisfies z.ZodType<TransactionListResponse>;
+
+export const runSummarySchema = z.object({
+  run_id: z.string(),
+  kind: z.enum(["ingest", "detect", "investigate", "evaluate"]),
+  status: z.enum(["running", "completed", "failed"]),
+  seed: z.number().nullable(),
+  started_at: z.string(),
+  finished_at: z.string().nullable(),
+  summary: z.record(z.string(), z.unknown()),
+}) satisfies z.ZodType<RunSummary>;
 
 export const caseReviewItemSchema = z.object({
   id: z.string(),

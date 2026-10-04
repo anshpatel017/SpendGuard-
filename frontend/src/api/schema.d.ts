@@ -168,6 +168,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/demo/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Demo
+         * @description Reset temporary live demo state. Source dataset is never deleted (P2).
+         */
+        post: operations["reset_demo_api_v1_demo_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/evaluation": {
         parameters: {
             query?: never;
@@ -240,6 +260,26 @@ export interface paths {
          * @description Run history, newest first, so the dashboard can say which run it shows.
          */
         get: operations["runs_api_v1_runs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Transactions
+         * @description Read-only transaction explorer for auditing procurement transactions (P2).
+         */
+        get: operations["list_transactions_api_v1_transactions_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -873,6 +913,38 @@ export interface components {
             /** Tool Result */
             tool_result: unknown;
         };
+        /** TransactionListResponse */
+        TransactionListResponse: {
+            /**
+             * Currency
+             * @default INR
+             */
+            currency: string;
+            /** Dataset */
+            dataset?: string | null;
+            /** Date Max */
+            date_max?: string | null;
+            /** Date Min */
+            date_min?: string | null;
+            /** Items */
+            items: components["schemas"]["TransactionRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /**
+             * Total Amount
+             * @default 0.00
+             */
+            total_amount: string;
+            /**
+             * Vendor Count
+             * @default 0
+             */
+            vendor_count: number;
+        };
         /** TransactionRow */
         TransactionRow: {
             /** Amount */
@@ -1301,6 +1373,55 @@ export interface operations {
             };
         };
     };
+    reset_demo_api_v1_demo_reset_post: {
+        parameters: {
+            query?: {
+                confirm?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Confirmation required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     evaluation_api_v1_evaluation_get: {
         parameters: {
             query?: {
@@ -1435,6 +1556,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunSummary"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_transactions_api_v1_transactions_get: {
+        parameters: {
+            query?: {
+                /** @description Search vendor, description, or invoice */
+                search?: string | null;
+                /** @description Filter by vendor key */
+                vendor?: string | null;
+                min_amount?: number | string | null;
+                max_amount?: number | string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionListResponse"];
                 };
             };
             /** @description Not Found */

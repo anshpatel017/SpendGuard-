@@ -14,6 +14,8 @@ import {
   investigationJobResponseSchema,
   investigationStatusSchema,
   metricsSchema,
+  runSummarySchema,
+  transactionListSchema,
   transactionSchema,
 } from "./validate";
 
@@ -80,6 +82,15 @@ function query(filters: CaseFilters): string {
   return text ? `?${text}` : "";
 }
 
+export interface TransactionFilters {
+  search?: string;
+  vendor?: string;
+  min_amount?: number;
+  max_amount?: number;
+  page?: number;
+  page_size?: number;
+}
+
 export const api = {
   metrics: () => request("/metrics", metricsSchema),
   cases: (filters: CaseFilters) => request(`/cases${query(filters)}`, caseListSchema),
@@ -108,12 +119,25 @@ export const api = {
     request(`/cases/${encodeURIComponent(caseId)}/reviews`, z.array(caseReviewItemSchema)),
   exportReportUrl: (caseId: string, format: "markdown" | "html" = "markdown") =>
     `${BASE}/cases/${encodeURIComponent(caseId)}/export?format=${format}`,
+  transactions: (filters: TransactionFilters = {}) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+    }
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request(`/transactions${q}`, transactionListSchema);
+  },
   transaction: (rowId: number) => request(`/transactions/${rowId}`, transactionSchema),
+  runs: (limit: number = 50) => request(`/runs?limit=${limit}`, z.array(runSummarySchema)),
   evaluation: (seed: number) => request(`/evaluation?seed=${seed}`, evaluationSchema),
   health: () => request("/health", healthSchema),
   demoInject: (anomalyCount: number, seed: number | null) =>
     request("/demo/inject", demoSchema, {
       method: "POST",
       body: JSON.stringify({ anomaly_count: anomalyCount, seed } satisfies DemoInjectRequest),
+    }),
+  demoReset: () =>
+    request<{ status: string; message: string }>("/demo/reset?confirm=true", z.object({ status: z.string(), message: z.string() }), {
+      method: "POST",
     }),
 };
