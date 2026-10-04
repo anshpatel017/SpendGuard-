@@ -27,10 +27,11 @@ from spendguard.api.schemas import (
     HealthResponse,
     MetricsResponse,
     RunSummary,
+    TransactionListResponse,
     TransactionRow,
 )
 from spendguard.config import settings
-from spendguard.db.duck import AUDIT_VIEW, table_exists
+from spendguard.db.duck import AUDIT_FIELDS, AUDIT_VIEW, table_exists
 from spendguard.db.store import (
     AuditNoteRecord,
     CaseRecord,
@@ -136,6 +137,70 @@ def runs(store: Stores, limit: Annotated[int, Query(ge=1, le=200)] = 20) -> list
             )
             for r in records
         ]
+
+
+@router.get("/transactions", response_model=TransactionListResponse)
+def list_transactions(
+    con: Duck,
+    search: Annotated[str | None, Query(description="Search vendor, description, or invoice")] = None,
+    vendor: Annotated[str | None, Query(description="Filter by vendor key")] = None,
+    min_amount: Annotated[Decimal | None, Query(ge=0)] = None,
+    max_amount: Annotated[Decimal | None, Query(ge=0)] = None,
+    page: Annotated[int, Query(ge=1)] = 1,
+    page_size: Annotated[int, Query(ge=1)] = 50,
+) -> TransactionListResponse:
+    """Read-only transaction explorer for auditing procurement transactions (P2)."""
+    dataset, _, _ = _dataset_facts(con)
+    page_size = min(page_size, settings.api_page_size_max)
+
+    agg_row = con.execute(
+        f"SELECT min(txn_date), max(txn_date), count(distinct vendor_key), count(*), coalesce(sum(amount), 0) FROM {AUDIT_VIEW}"
+    ).fetchone()
+    date_min = agg_row[0] if agg_row and agg_row[0] else None
+    date_max = agg_row[1] if agg_row and agg_row[1] else None
+    vendor_count = int(agg_row[2]) if agg_row else 0
+    total_amount = money(agg_row[4]) or Decimal("0.00") if agg_row else Decimal("0.00")
+
+    where_clauses: list[str] = []
+    params: list[Any] = []
+    if search and search.strip():
+        s = f"%{search.strip()}%"
+        where_clauses.append(
+            "(vendor_name ILIKE ? OR vendor_key ILIKE ? OR invoice_no ILIKE ? OR item_desc ILIKE ? OR officer_id ILIKE ?)"
+        )
+        params.extend([s, s, s, s, s])
+    if vendor and vendor.strip():
+        where_clauses.append("vendor_key = ?")
+        params.append(vendor.strip())
+    if min_amount is not None:
+        where_clauses.append("amount >= ?")
+        params.append(float(min_amount))
+    if max_amount is not None:
+        where_clauses.append("amount <= ?")
+        params.append(float(max_amount))
+
+    where_sql = f" WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    total = int(con.execute(f"SELECT count(*) FROM {AUDIT_VIEW}{where_sql}", params).fetchone()[0])
+
+    data_sql = (
+        f"SELECT {', '.join(AUDIT_FIELDS)} FROM {AUDIT_VIEW}{where_sql} "
+        f"ORDER BY txn_date DESC, row_id DESC LIMIT ? OFFSET ?"
+    )
+    data_params = params + [page_size, (page - 1) * page_size]
+    rows = con.execute(data_sql, data_params).pl().to_dicts()
+
+    return TransactionListResponse(
+        items=[to_row(r, False, set()) for r in rows],
+        total=total,
+        page=page,
+        page_size=page_size,
+        dataset=dataset,
+        date_min=date_min,
+        date_max=date_max,
+        vendor_count=vendor_count,
+        total_amount=total_amount,
+        currency=settings.currency,
+    )
 
 
 @router.get(
