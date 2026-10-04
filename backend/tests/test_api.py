@@ -176,6 +176,10 @@ def test_money_leaves_as_a_string(client: TestClient) -> None:
     [
         ({"anomaly_type": "split"}, {SPLIT.case_id}),
         ({"anomaly_type": ["split", "duplicate"]}, {SPLIT.case_id, DUPLICATE.case_id}),
+        ({"detector": "duplicate"}, {DUPLICATE.case_id}),
+        ({"detector": ["split", "duplicate"]}, {SPLIT.case_id, DUPLICATE.case_id}),
+        ({"search": "sharma"}, {DUPLICATE.case_id, SPLIT.case_id, INFLATION.case_id, *(c.case_id for c in QUEUED)}),
+        ({"search": "nonexistent"}, set()),
         ({"investigated": "true"}, {DUPLICATE.case_id, INFLATION.case_id}),
         ({"verdict": "likely_false_positive"}, {INFLATION.case_id}),
         ({"dismissed_by_agent": "true"}, {INFLATION.case_id}),

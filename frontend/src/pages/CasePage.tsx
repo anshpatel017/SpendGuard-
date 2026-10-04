@@ -1,7 +1,7 @@
 // One case, everything needed to decide it: the verified note and its citations,
 // the evidence rows, the agent's trace, and the review controls.
 import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 
 import { ApiError } from "../api/client";
 import { useCaseDetail } from "../api/hooks";
@@ -37,6 +37,10 @@ function Facts({ c }: { c: Case }) {
 
 export function CasePage() {
   const { caseId = "" } = useParams();
+  const location = useLocation();
+  const returnSearch = location.search || (location.state as { returnSearch?: string } | null)?.returnSearch || "";
+  const backUrl = returnSearch ? `/${returnSearch.startsWith("?") ? returnSearch : `?${returnSearch}`}` : "/";
+
   const detail = useCaseDetail(caseId);
   const [highlight, setHighlight] = useState<number | null>(null);
 
@@ -45,7 +49,7 @@ export function CasePage() {
     const missing = detail.error instanceof ApiError && detail.error.status === 404;
     return (
       <div className="stack">
-        <Link to="/">← Case queue</Link>
+        <Link to={backUrl}>← Case queue</Link>
         {missing ? <div className="empty">No case with id {caseId}.</div> : <ErrorBanner error={detail.error} />}
       </div>
     );
@@ -61,7 +65,7 @@ export function CasePage() {
     <div className="stack">
       <div className="row" style={{ justifyContent: "space-between" }}>
         <div className="stack" style={{ gap: 6 }}>
-          <Link to="/" className="small">← Case queue</Link>
+          <Link to={backUrl} className="small">← Case queue</Link>
           <h1>
             {ANOMALY_LABEL[c.anomaly_type]} · {c.vendor_key ?? "unknown supplier"}
           </h1>
