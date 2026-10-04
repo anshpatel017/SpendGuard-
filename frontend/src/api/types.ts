@@ -22,6 +22,8 @@ export type DemoInjectResponse = Schemas["DemoInjectResponse"];
 export type CaseReviewItem = Schemas["CaseReviewItem"];
 export type InvestigationStatus = Schemas["InvestigationStatus"];
 export type InvestigationJobResponse = Schemas["InvestigationJobResponse"];
+export type TransactionListResponse = Schemas["TransactionListResponse"];
+export type RunSummary = Schemas["RunSummary"];
 
 export type AnomalyType = Case["anomaly_type"];
 export type CaseStatus = Case["status"];

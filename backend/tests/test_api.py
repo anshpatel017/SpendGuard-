@@ -468,7 +468,39 @@ def test_a_missing_database_degrades_health_and_is_a_structured_503(paths: dict[
     client = TestClient(app)
     assert client.get(f"{API}/health").json()["status"] == "degraded"
     response = client.get(f"{API}/metrics")
-    assert response.status_code == 503 and response.json()["detail"]["code"] == "duckdb_unavailable"
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] in ("dataset_not_initialized", "duckdb_unavailable")
+
+
+def test_list_transactions_explorer(client: TestClient) -> None:
+    # All transactions
+    res = client.get(f"{API}/transactions")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 32
+    assert len(data["items"]) == 32
+    assert data["currency"] == "INR"
+    assert data["vendor_count"] >= 1
+
+    # Search filter
+    search_res = client.get(f"{API}/transactions", params={"search": "Sharma"})
+    assert search_res.status_code == 200
+    search_data = search_res.json()
+    assert search_data["total"] >= 1
+    for item in search_data["items"]:
+        assert "sharma" in (item["vendor_name"] + item["vendor_key"]).lower()
+
+
+def test_demo_reset_endpoint(client: TestClient) -> None:
+    # confirm=false is rejected with 400
+    res_bad = client.post(f"{API}/demo/reset")
+    assert res_bad.status_code == 400
+    assert res_bad.json()["detail"]["code"] == "confirmation_required"
+
+    # confirm=true succeeds
+    res_ok = client.post(f"{API}/demo/reset", params={"confirm": "true"})
+    assert res_ok.status_code == 200
+    assert res_ok.json()["status"] == "ok"
 
 
 # ------------------------------------------------------------------ evaluation

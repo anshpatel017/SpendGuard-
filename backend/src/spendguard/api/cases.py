@@ -160,6 +160,16 @@ def _get_case_investigation_status(cid: str, record: CaseRecord) -> Investigatio
 
 
 def _run_investigation_worker(case_id: str, engine: Any, duckdb_path: Path) -> None:
+    if settings.llm_api_key in ("", "not-set"):
+        _set_job(
+            case_id,
+            "failed",
+            "AI investigation is unavailable: no supported provider configured.",
+            error="AI investigation is unavailable because no supported provider is configured.",
+            finished=True,
+        )
+        return
+
     _set_job(case_id, "investigating", "Investigating transactions and policy")
     try:
         def on_stage(stage: str) -> None:
