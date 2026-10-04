@@ -15,6 +15,7 @@ from typing import Any
 import pytest
 
 from spendguard.cases import AnomalyType, Case
+from spendguard.config import settings
 from spendguard.db.store import FlagReviewRecord, get_engine, save_cases
 from spendguard.eval.review import (
     CASES_FILE,
@@ -294,3 +295,34 @@ def test_a_report_with_nothing_reviewed_says_so_rather_than_printing_zeros(tmp_p
     report = collect(engine)
     assert report.detectors == []
     assert "No flags reviewed yet" in render_markdown(report)
+
+
+def test_the_overflow_row_has_as_many_cells_as_the_header(store: Any, tmp_path: Path) -> None:
+    """A D4 case covers hundreds of rows, so most of them are summarised in one line.
+
+    That line was written before the `document` column existed and was never
+    widened, so it rendered as a broken row - and on a vendor case it is the line
+    saying "763 more rows", which is exactly the one a reviewer needs to read.
+    """
+    many = _case("d4", "vendor_flag", list(range(1, 40)), 5_000_000.0)
+    save_cases(store, "detect-wide", "california_po", [many])
+    batch = _export(store, tmp_path, per_detector=99)
+
+    rendered = (batch.out_dir / CASES_FILE).read_text(encoding="utf-8").splitlines()
+    body = [line for line in rendered if line.startswith("| ")]
+    assert body
+    assert {line.count("|") for line in body} == {10}, "every row matches the header"
+
+    overflow = [line for line in body if "more row" in line]
+    assert overflow, "the hidden rows are summarised"
+    assert "more rows in this case" in overflow[0]
+
+
+def test_one_hidden_row_is_not_described_as_rows(store: Any, tmp_path: Path) -> None:
+    rows = list(range(1, settings.review_max_rows + 2))  # exactly one over the limit
+    save_cases(store, "detect-one-over", "california_po", [_case("d4", "vendor_flag", rows, 1.0)])
+    batch = _export(store, tmp_path, per_detector=99)
+
+    text = (batch.out_dir / CASES_FILE).read_text(encoding="utf-8")
+    assert "1 more row in this case" in text
+    assert "1 more rows" not in text
