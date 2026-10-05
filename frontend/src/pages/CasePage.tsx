@@ -289,6 +289,19 @@ export function CasePage() {
         </div>
       </div>
 
+      {/* 2b. Audit Context Banner */}
+      <div className="p-4 rounded-xl border border-black bg-neutral-50 flex items-start gap-3 text-xs leading-relaxed shadow-2xs">
+        <ShieldAlert className="w-4 h-4 text-black shrink-0 mt-0.5" />
+        <div>
+          <strong className="font-semibold block text-black">
+            Forensic Evidence Grounding Protocol
+          </strong>
+          <span className="text-slate-600">
+            All AI findings, citations, and claim verifications are derived strictly from primary source DuckDB rows. Final compliance determinations remain under exclusive human authority.
+          </span>
+        </div>
+      </div>
+
       {/* 3. Investigation Live Status Banner (if active or failed) */}
       {activeStatus && activeStatus.state !== "not_investigated" && activeStatus.state !== "completed" && (
         <div

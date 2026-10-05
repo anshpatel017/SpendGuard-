@@ -62,43 +62,31 @@ export function HealthPage() {
 
       {/* 2. Global Readiness Banner */}
       <div
-        className={`p-4 rounded-xl border flex items-center justify-between text-xs ${
-          isDegraded
-            ? "border-amber-200 bg-amber-50/70"
-            : "border-emerald-200 bg-emerald-50/70"
-        }`}
+        className="p-4 rounded-xl border border-black bg-neutral-50 flex items-start sm:items-center justify-between gap-3 text-xs leading-relaxed shadow-2xs"
       >
         <div className="flex items-center gap-3">
           <div
             className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
               isDegraded
-                ? "bg-amber-100 text-amber-800"
-                : "bg-emerald-100 text-emerald-800"
+                ? "bg-amber-100 text-amber-900 border border-amber-300"
+                : "bg-black text-white"
             }`}
           >
-            {isDegraded ? <AlertCircle className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+            {isDegraded ? <AlertCircle className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5 text-emerald-400" />}
           </div>
           <div>
-            <h4
-              className={`text-sm font-bold ${
-                isDegraded ? "text-amber-950" : "text-emerald-950"
-              }`}
-            >
+            <h4 className="text-sm font-bold text-black">
               {isDegraded
                 ? "System Warning: Degraded Telemetry Detected"
                 : "All Systems Operational & Nominal"}
             </h4>
-            <p
-              className={`text-[11px] mt-0.5 ${
-                isDegraded ? "text-amber-800" : "text-emerald-800"
-              }`}
-            >
+            <p className="text-[11px] text-slate-600 mt-0.5">
               Read-only investigation tools verified isolated. No database write locks or connection saturation.
             </p>
           </div>
         </div>
 
-        <span className="hidden sm:inline-flex px-2.5 py-1 rounded bg-white border border-emerald-300 font-mono text-emerald-900 font-bold">
+        <span className="hidden sm:inline-flex px-2.5 py-1 rounded bg-white border border-black font-mono text-black font-bold shadow-2xs">
           {health?.status ? health.status.toUpperCase() : "CHECKING"}
         </span>
       </div>

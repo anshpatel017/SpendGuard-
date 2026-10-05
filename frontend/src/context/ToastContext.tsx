@@ -25,12 +25,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const showToast = useCallback((message: string, type: ToastType = "success") => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-    setToasts((prev) => [...prev, { id, message, type }]);
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    setToasts((prev) => {
+      // Deduplication: remove existing toasts with identical message
+      const withoutDup = prev.filter((t) => t.message !== message);
+      // Limit stacking to prevent screen clutter
+      const trimmed = withoutDup.slice(-2);
+      return [...trimmed, { id, message, type }];
+    });
 
+    // Auto-dismiss after 4000ms (4 seconds)
     setTimeout(() => {
       dismissToast(id);
-    }, 4500);
+    }, 4000);
   }, [dismissToast]);
 
   return (
@@ -44,7 +51,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 export function useToast() {
   const ctx = useContext(ToastContext);
   if (!ctx) {
-    // fallback if used outside provider
     return {
       toasts: [],
       showToast: (msg: string) => console.log(msg),
@@ -66,35 +72,31 @@ function ToastContainer({
   return (
     <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-md w-full pointer-events-none">
       {toasts.map((toast) => {
-        let borderClass = "border-slate-800 bg-white text-slate-900 shadow-lg";
-        let icon = <Info className="w-4 h-4 text-sky-600 shrink-0" />;
+        let icon = <Info className="w-4 h-4 text-black shrink-0" />;
 
         if (toast.type === "success") {
-          borderClass = "border-emerald-600 bg-white text-slate-900 shadow-lg";
-          icon = <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />;
+          icon = <CheckCircle2 className="w-4 h-4 text-black shrink-0" />;
         } else if (toast.type === "warning") {
-          borderClass = "border-amber-600 bg-white text-slate-900 shadow-lg";
-          icon = <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />;
+          icon = <AlertTriangle className="w-4 h-4 text-black shrink-0" />;
         } else if (toast.type === "danger" || toast.type === "error") {
-          borderClass = "border-red-600 bg-white text-slate-900 shadow-lg";
-          icon = <XCircle className="w-4 h-4 text-red-600 shrink-0" />;
+          icon = <XCircle className="w-4 h-4 text-black shrink-0" />;
         }
 
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto flex items-center justify-between p-3.5 rounded-xl border text-sm transition-all animate-in fade-in slide-in-from-bottom-2 ${borderClass}`}
+            className="pointer-events-auto flex items-center justify-between p-3.5 rounded-lg border border-black bg-white text-black shadow-md text-xs sm:text-sm font-semibold transition-all animate-in fade-in slide-in-from-bottom-2"
           >
             <div className="flex items-center gap-2.5">
               {icon}
-              <span className="font-semibold text-xs sm:text-sm text-slate-900">{toast.message}</span>
+              <span className="font-semibold text-xs sm:text-sm text-black">{toast.message}</span>
             </div>
             <button
               onClick={() => dismissToast(toast.id)}
-              className="p-1 text-slate-400 hover:text-slate-900 transition-colors ml-2"
+              className="p-1 text-slate-400 hover:text-black transition-colors ml-2 cursor-pointer"
               aria-label="Close notification"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-3.5 h-3.5 text-black" />
             </button>
           </div>
         );

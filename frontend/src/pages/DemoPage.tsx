@@ -153,11 +153,16 @@ export function DemoPage() {
       </div>
 
       {/* 2. Isolated Sandbox Protocol Notice Banner */}
-      <div className="p-3.5 rounded-xl border border-black bg-amber-50/80 text-amber-950 text-xs flex items-center gap-2.5">
-        <Info className="w-4 h-4 text-black shrink-0" />
-        <span>
-          <strong className="text-black">Sandbox Notice:</strong> This sandbox is completely isolated from the main investigation database. Runs here do not alter live cases or notify officers.
-        </span>
+      <div className="p-4 rounded-xl border border-black bg-neutral-50 flex items-start gap-3 text-xs leading-relaxed shadow-2xs">
+        <Info className="w-4 h-4 text-black shrink-0 mt-0.5" />
+        <div>
+          <strong className="font-semibold block text-black">
+            Isolated Sandbox Protocol
+          </strong>
+          <span className="text-slate-600">
+            This sandbox environment is strictly air-gapped from the primary enterprise ledger. Test injections and experimental detection parameters execute in isolated volatile memory without modifying live case records.
+          </span>
+        </div>
       </div>
 
       {/* 3. High-Tech Scanning Radar Visual Banner */}

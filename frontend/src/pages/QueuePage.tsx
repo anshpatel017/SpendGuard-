@@ -134,18 +134,21 @@ function KpiMetrics({ m }: { m: MetricsResponse }) {
 
       {/* Coverage Banner (Contract item preserved for tests) */}
       <div
-        className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-2xs text-xs text-slate-600 flex items-center justify-between"
+        className="p-4 rounded-xl border border-black bg-neutral-50 shadow-2xs text-xs text-slate-800 flex items-start gap-3 leading-relaxed"
         data-testid="coverage-line"
       >
-        <span>
-          Detection covered <strong>100%</strong> of transactions ({formatMoneyShort(m.total_amount)} scanned):{" "}
-          <strong>{formatCount(m.cases_flagged)}</strong> cases flagged ·{" "}
-          <strong>{formatCount(m.cases_investigated)}</strong> investigated ·{" "}
-          <strong>{formatCount(m.cases_queued)}</strong> queued for investigation, highest severity first.
-        </span>
-        <span className="hidden md:inline-flex text-[11px] font-mono text-slate-400">
-          Risk Pool: {formatMoney(m.money_at_risk)}
-        </span>
+        <ShieldAlert className="w-4 h-4 text-black shrink-0 mt-0.5" />
+        <div className="flex-1 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+          <span>
+            <strong className="font-bold text-black">100% Audit Coverage:</strong> Scanned {formatMoneyShort(m.total_amount)} across procurement transactions.{" "}
+            <strong>{formatCount(m.cases_flagged)}</strong> cases flagged ·{" "}
+            <strong>{formatCount(m.cases_investigated)}</strong> investigated ·{" "}
+            <strong>{formatCount(m.cases_queued)}</strong> queued for investigation, highest severity first.
+          </span>
+          <span className="text-[11px] font-mono text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-300 whitespace-nowrap self-start md:self-auto font-semibold shadow-2xs">
+            Risk Pool: {formatMoney(m.money_at_risk)}
+          </span>
+        </div>
       </div>
     </div>
   );
