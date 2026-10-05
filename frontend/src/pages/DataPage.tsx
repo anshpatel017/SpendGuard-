@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Database,
   Download,
+  Info,
   Search,
   X,
 } from "lucide-react";
@@ -168,6 +169,19 @@ export function DataPage() {
               <span>Mounted</span>
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* 2b. Audit Context Banner */}
+      <div className="p-4 rounded-xl border border-black bg-neutral-50 flex items-start gap-3 text-xs leading-relaxed shadow-2xs">
+        <Info className="w-4 h-4 text-black shrink-0 mt-0.5" />
+        <div>
+          <strong className="font-semibold block text-black">
+            Deterministic Columnar Ledger Isolation
+          </strong>
+          <span className="text-slate-600">
+            DuckDB executes analytical queries in read-only mode directly over normalized procurement parquet files. Zero write-mutation is permitted to guarantee tamper-proof auditability.
+          </span>
         </div>
       </div>
 

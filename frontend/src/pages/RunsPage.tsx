@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Clock,
   Database,
+  Info,
   RefreshCw,
   RotateCcw,
   Search,
@@ -200,6 +201,19 @@ export function RunsPage() {
             DuckDB OLAP
           </div>
           <span className="text-[11px] text-slate-400 mt-1 block">Sub-100ms vectorized execution</span>
+        </div>
+      </div>
+
+      {/* 2b. Pipeline Context Banner */}
+      <div className="p-4 rounded-xl border border-black bg-neutral-50 flex items-start gap-3 text-xs leading-relaxed shadow-2xs">
+        <Info className="w-4 h-4 text-black shrink-0 mt-0.5" />
+        <div>
+          <strong className="font-semibold block text-black">
+            Deterministic Pipeline Execution State
+          </strong>
+          <span className="text-slate-600">
+            Pipeline operations execute deterministically across dataset ingestion, anomaly detection, agent evidence retrieval, and claim verification with immutable audit logs.
+          </span>
         </div>
       </div>
 
