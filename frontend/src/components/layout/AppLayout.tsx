@@ -33,8 +33,8 @@ export function AppLayout({ children }: AppLayoutProps) {
     });
   };
 
-  // If on /landing, render marketing layout without sidebar
-  if (currentPath === "/landing") {
+  // If on / or /landing, render marketing layout without sidebar
+  if (currentPath === "/" || currentPath === "/landing") {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800">
         <main className="flex-1">{children}</main>

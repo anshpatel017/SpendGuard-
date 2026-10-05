@@ -37,7 +37,7 @@ export function Sidebar({
   const navItems = [
     {
       name: "Overview & Queue",
-      path: "/",
+      path: "/dashboard",
       icon: LayoutDashboard,
       badge: openCasesCount > 0 ? `${openCasesCount}` : undefined,
     },
@@ -104,7 +104,7 @@ export function Sidebar({
               </button>
             ) : (
               <>
-                <Link to="/" className="flex items-center gap-2.5 group overflow-hidden">
+                <Link to="/dashboard" className="flex items-center gap-2.5 group overflow-hidden">
                   <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center font-bold text-white shadow-xs group-hover:bg-neutral-800 transition-colors shrink-0">
                     <ShieldAlert className="w-4 h-4 text-white" />
                   </div>
@@ -143,8 +143,8 @@ export function Sidebar({
 
             {navItems.map((item) => {
               const isActive =
-                item.path === "/"
-                  ? currentPath === "/" || currentPath.startsWith("/cases")
+                item.path === "/dashboard"
+                  ? currentPath === "/dashboard" || currentPath === "/queue" || currentPath.startsWith("/cases")
                   : currentPath.startsWith(item.path);
 
               const Icon = item.icon;
@@ -204,7 +204,7 @@ export function Sidebar({
             )}
 
             <Link
-              to="/landing"
+              to="/"
               onClick={onCloseMobile}
               className={`group relative flex items-center ${
                 collapsed ? "justify-center p-2.5" : "justify-between px-3 py-2"
