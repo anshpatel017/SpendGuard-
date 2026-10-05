@@ -6,11 +6,11 @@ it is a person's: nothing in the agent layer calls it (D-04, D-07).
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-import threading
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
@@ -46,7 +46,6 @@ from spendguard.db.duck import AUDIT_FIELDS, AUDIT_VIEW
 from spendguard.db.store import (
     AuditNoteRecord,
     CaseRecord,
-    CaseReviewRecord,
     CaseStatus,
     CitationRecord,
     InvalidTransitionError,
@@ -91,9 +90,14 @@ DETECTOR_MAP = {
 }
 
 
+JobState = Literal[
+    "not_investigated", "queued", "investigating", "verifying", "completed", "failed"
+]
+
+
 @dataclass
 class _JobRecord:
-    state: str  # "queued", "investigating", "verifying", "completed", "failed"
+    state: JobState  # "queued", "investigating", "verifying", "completed", "failed"
     stage: str
     started_at: datetime
     finished_at: datetime | None = None
@@ -111,7 +115,7 @@ def _get_job(case_id: str) -> _JobRecord | None:
 
 def _set_job(
     case_id: str,
-    state: str,
+    state: JobState,
     stage: str,
     error: str | None = None,
     finished: bool = False,
@@ -140,7 +144,7 @@ def _get_case_investigation_status(cid: str, record: CaseRecord) -> Investigatio
     job = _get_job(cid)
     if job:
         return InvestigationStatus(
-            state=job.state,  # type: ignore[arg-type]
+            state=job.state,
             stage=job.stage,
             started_at=job.started_at,
             finished_at=job.finished_at,
@@ -172,6 +176,7 @@ def _run_investigation_worker(case_id: str, engine: Any, duckdb_path: Path) -> N
 
     _set_job(case_id, "investigating", "Investigating transactions and policy")
     try:
+
         def on_stage(stage: str) -> None:
             if stage == "verifying":
                 _set_job(case_id, "verifying", "Verifying citations and evidence claims")
@@ -456,7 +461,7 @@ def case_detail(case_id: UUID, store: Stores, con: Duck) -> CaseDetailResponse:
         reviews = [
             CaseReviewItem(
                 id=r.id,
-                case_id=r.case_id,
+                case_id=UUID(r.case_id),
                 previous_status=r.previous_status,
                 new_status=r.new_status,
                 note=r.note,
@@ -607,7 +612,7 @@ def list_case_reviews(case_id: UUID, store: Stores) -> list[CaseReviewItem]:
         return [
             CaseReviewItem(
                 id=r.id,
-                case_id=r.case_id,
+                case_id=UUID(r.case_id),
                 previous_status=r.previous_status,
                 new_status=r.new_status,
                 note=r.note,
@@ -648,45 +653,55 @@ def _format_case_report_markdown(
         for k, v in case.metadata.items():
             lines.append(f"  - `{k}`: {v}")
 
-    lines.extend([
-        "",
-        "## AI Investigation",
-    ])
+    lines.extend(
+        [
+            "",
+            "## AI Investigation",
+        ]
+    )
     if note is None:
         lines.append("*This case has not been investigated by the AI agent yet.*")
     else:
-        lines.extend([
-            f"- **Verdict:** **{note.verdict.upper()}**",
-            f"- **Recommended Action:** {note.recommended_action or 'None'}",
-            f"- **Model Used:** `{note.model_name or 'Default'}`",
-            f"- **Policy Clauses Cited:** {', '.join(note.policy_clauses) if note.policy_clauses else 'None'}",
-            "",
-            "### AI Finding",
-            note.finding,
-        ])
+        lines.extend(
+            [
+                f"- **Verdict:** **{note.verdict.upper()}**",
+                f"- **Recommended Action:** {note.recommended_action or 'None'}",
+                f"- **Model Used:** `{note.model_name or 'Default'}`",
+                f"- **Policy Clauses Cited:** {', '.join(note.policy_clauses) if note.policy_clauses else 'None'}",
+                "",
+                "### AI Finding",
+                note.finding,
+            ]
+        )
 
-    lines.extend([
-        "",
-        "## Verification",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Verification",
+        ]
+    )
     if note is None:
         lines.append("*No verification performed.*")
     else:
-        lines.extend([
-            f"- **Overall Status:** {note.verification_status.upper() if note.verification_status else 'UNKNOWN'}",
-            f"- **Deterministic Rule Check:** {'PASSED' if note.deterministic_passed else 'FAILED' if note.deterministic_passed is False else 'SKIPPED'}",
-            f"- **Semantic Check:** {'PASSED' if note.semantic_passed else 'FAILED' if note.semantic_passed is False else 'SKIPPED'}",
-            f"- **Citations Checked:** {note.citations_checked}",
-            f"- **Citations Passed:** {note.citations_passed}",
-            f"- **Retry Count:** {note.retry_count}",
-        ])
+        lines.extend(
+            [
+                f"- **Overall Status:** {note.verification_status.upper() if note.verification_status else 'UNKNOWN'}",
+                f"- **Deterministic Rule Check:** {'PASSED' if note.deterministic_passed else 'FAILED' if note.deterministic_passed is False else 'SKIPPED'}",
+                f"- **Semantic Check:** {'PASSED' if note.semantic_passed else 'FAILED' if note.semantic_passed is False else 'SKIPPED'}",
+                f"- **Citations Checked:** {note.citations_checked}",
+                f"- **Citations Passed:** {note.citations_passed}",
+                f"- **Retry Count:** {note.retry_count}",
+            ]
+        )
         if note.citations:
-            lines.extend([
-                "",
-                "### Evidence Citations",
-                "| Claim # | Claim Text | Row ID | Row Exists | Values Match | Supports Claim | Failure Reason |",
-                "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "### Evidence Citations",
+                    "| Claim # | Claim Text | Row ID | Row Exists | Values Match | Supports Claim | Failure Reason |",
+                    "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+                ]
+            )
             for c in note.citations:
                 c_text = c.claim_text.replace("\n", " ").replace("|", "\\|")
                 lines.append(
@@ -697,14 +712,16 @@ def _format_case_report_markdown(
                     f"{c.failure_reason or '-'} |"
                 )
 
-    lines.extend([
-        "",
-        "## Evidence Transactions",
-        f"Showing {len(evidence_rows)} evidence row(s):",
-        "",
-        "| Row ID | Date | Vendor | Amount | Officer | Category | Description |",
-        "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Evidence Transactions",
+            f"Showing {len(evidence_rows)} evidence row(s):",
+            "",
+            "| Row ID | Date | Vendor | Amount | Officer | Category | Description |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |",
+        ]
+    )
     for r in evidence_rows:
         lines.append(
             f"| {r.row_id} | {r.txn_date} | {r.vendor_name or r.vendor_key or '-'} | "
@@ -712,19 +729,23 @@ def _format_case_report_markdown(
             f"{r.item_category or '-'} | {r.item_desc or '-'} |"
         )
 
-    lines.extend([
-        "",
-        "## Human Review History",
-        f"- **Current Reviewer Note:** {case.reviewer_note or 'None'}",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Human Review History",
+            f"- **Current Reviewer Note:** {case.reviewer_note or 'None'}",
+            "",
+        ]
+    )
     if not reviews:
         lines.append("*No review actions recorded yet.*")
     else:
-        lines.extend([
-            "| Date | Reviewer | Previous Status | New Status | Note |",
-            "| :--- | :--- | :--- | :--- | :--- |",
-        ])
+        lines.extend(
+            [
+                "| Date | Reviewer | Previous Status | New Status | Note |",
+                "| :--- | :--- | :--- | :--- | :--- |",
+            ]
+        )
         for rev in reviews:
             rev_note = (rev.note or "").replace("\n", " ").replace("|", "\\|")
             lines.append(
@@ -733,14 +754,16 @@ def _format_case_report_markdown(
             )
 
     if trace:
-        lines.extend([
-            "",
-            "## Investigation Trace Summary",
-            "*Internal investigation steps (prompts and chain-of-thought omitted for audit privacy).*",
-            "",
-            "| Step | Role | Tool | Latency (ms) | Tokens (Prompt/Comp) | Error |",
-            "| :--- | :--- | :--- | :--- | :--- | :--- |",
-        ])
+        lines.extend(
+            [
+                "",
+                "## Investigation Trace Summary",
+                "*Internal investigation steps (prompts and chain-of-thought omitted for audit privacy).*",
+                "",
+                "| Step | Role | Tool | Latency (ms) | Tokens (Prompt/Comp) | Error |",
+                "| :--- | :--- | :--- | :--- | :--- | :--- |",
+            ]
+        )
         for s in trace:
             tokens = f"{s.prompt_tokens or 0}/{s.completion_tokens or 0}"
             lines.append(
@@ -780,7 +803,7 @@ def export_case_report(
         reviews = [
             CaseReviewItem(
                 id=r.id,
-                case_id=r.case_id,
+                case_id=UUID(r.case_id),
                 previous_status=r.previous_status,
                 new_status=r.new_status,
                 note=r.note,
@@ -832,4 +855,3 @@ def export_case_report(
         media_type="text/markdown",
         headers={"Content-Disposition": f'attachment; filename="spendguard-case-{case_id}.md"'},
     )
-

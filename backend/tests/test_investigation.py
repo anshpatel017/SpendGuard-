@@ -40,7 +40,12 @@ from spendguard.detection import EvaluationDatabaseError, run_detection
 from spendguard.eval.injection import InjectionResult
 from spendguard.eval.matching import TruthGroup
 from spendguard.eval.triage import TriageItem, triage_metrics
-from spendguard.investigation import evaluate_investigation, run_investigation, sample_for_triage
+from spendguard.investigation import (
+    evaluate_investigation,
+    investigate_case_by_id,
+    run_investigation,
+    sample_for_triage,
+)
 from spendguard.pipeline.ingest import IngestResult
 
 from .conftest import build_db
@@ -455,3 +460,41 @@ def test_a_case_that_keeps_failing_stops_going_first_every_day(
 
 def engine_for(report_dir: Path) -> Any:
     return get_engine(f"sqlite:///{(report_dir / 'investigation_seed11.sqlite').as_posix()}")
+
+
+def test_investigate_case_by_id_executes_and_saves(tmp_path: Path) -> None:
+    from datetime import date
+
+    con = build_db(tmp_path / "t.duckdb", [{"amount": 5000.0, "txn_date": date(2025, 4, 1)}])
+    con.close()
+    url = f"sqlite:///{(tmp_path / 'cases.sqlite').as_posix()}"
+    engine = get_engine(url)
+    case = _case([1])
+    save_cases(engine, "det-1", "test", [case])
+
+    stages: list[str] = []
+    model = ScriptedModel(
+        [
+            reply("{}"),
+            note([1]),
+            reply("{}"),
+        ]
+    )
+    result = investigate_case_by_id(
+        case.case_id,
+        db_path=tmp_path / "t.duckdb",
+        engine=engine,
+        llm=model,
+        verify=False,
+        on_stage=stages.append,
+    )
+    assert result.case_id == case.case_id
+    assert result.status == "completed"
+    assert "completed" in stages
+    stored_note = latest_note(engine, case.case_id)
+    assert stored_note is not None
+    assert stored_note.verdict == "likely_true_positive"
+
+    # Non-existent case raises KeyError
+    with pytest.raises(KeyError, match="No case with id"):
+        investigate_case_by_id("non-existent-id", db_path=tmp_path / "t.duckdb", engine=engine)

@@ -178,7 +178,10 @@ def test_money_leaves_as_a_string(client: TestClient) -> None:
         ({"anomaly_type": ["split", "duplicate"]}, {SPLIT.case_id, DUPLICATE.case_id}),
         ({"detector": "duplicate"}, {DUPLICATE.case_id}),
         ({"detector": ["split", "duplicate"]}, {SPLIT.case_id, DUPLICATE.case_id}),
-        ({"search": "sharma"}, {DUPLICATE.case_id, SPLIT.case_id, INFLATION.case_id, *(c.case_id for c in QUEUED)}),
+        (
+            {"search": "sharma"},
+            {DUPLICATE.case_id, SPLIT.case_id, INFLATION.case_id, *(c.case_id for c in QUEUED)},
+        ),
         ({"search": "nonexistent"}, set()),
         ({"investigated": "true"}, {DUPLICATE.case_id, INFLATION.case_id}),
         ({"verdict": "likely_false_positive"}, {INFLATION.case_id}),
@@ -337,7 +340,11 @@ def test_the_review_action_refuses_invalid_status_transition(client: TestClient)
     # new -> confirmed is valid
     res1 = client.patch(
         f"{API}/cases/{DUPLICATE.case_id}/status",
-        json={"status": "confirmed", "reviewer_note": "Confirmed duplicate.", "reviewer": "Auditor 1"},
+        json={
+            "status": "confirmed",
+            "reviewer_note": "Confirmed duplicate.",
+            "reviewer": "Auditor 1",
+        },
     )
     assert res1.status_code == 200
 
@@ -418,7 +425,6 @@ def test_case_report_export_markdown_and_html(client: TestClient) -> None:
     assert html_res.status_code == 200
     assert "<!DOCTYPE html>" in html_res.text
     assert "SpendGuard Case Report" in html_res.text
-
 
 
 # ------------------------------------------------------------------ metrics, runs, health

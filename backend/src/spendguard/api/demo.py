@@ -73,4 +73,3 @@ def reset_demo(confirm: bool = False) -> dict[str, str]:
             },
         )
     return {"status": "ok", "message": "Demo state reset successfully."}
-
