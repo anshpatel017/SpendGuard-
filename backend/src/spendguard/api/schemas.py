@@ -164,7 +164,9 @@ class CaseReviewItem(BaseModel):
 
 
 class InvestigationStatus(BaseModel):
-    state: Literal["not_investigated", "queued", "investigating", "verifying", "completed", "failed"]
+    state: Literal[
+        "not_investigated", "queued", "investigating", "verifying", "completed", "failed"
+    ]
     stage: str | None = None
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -173,7 +175,9 @@ class InvestigationStatus(BaseModel):
 
 class InvestigationJobResponse(BaseModel):
     case_id: UUID
-    state: Literal["not_investigated", "queued", "investigating", "verifying", "completed", "failed"]
+    state: Literal[
+        "not_investigated", "queued", "investigating", "verifying", "completed", "failed"
+    ]
     message: str
 
 
