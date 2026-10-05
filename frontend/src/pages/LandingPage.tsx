@@ -13,6 +13,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 
 import LineWaves from "../components/landing/LineWaves";
+import InvestigationArchitectureFlow from "../components/landing/InvestigationArchitectureFlow";
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -115,6 +116,11 @@ export function LandingPage() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* 2b. Hero Visual: End-to-End Investigation Architecture with Scroll-Follow Glow Black Lines */}
+      <section id="architecture" className="w-full bg-white border-y border-slate-200">
+        <InvestigationArchitectureFlow />
       </section>
 
       {/* 3. Operational Pillars Section (Image 2) */}
