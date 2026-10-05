@@ -142,7 +142,9 @@ def runs(store: Stores, limit: Annotated[int, Query(ge=1, le=200)] = 20) -> list
 @router.get("/transactions", response_model=TransactionListResponse)
 def list_transactions(
     con: Duck,
-    search: Annotated[str | None, Query(description="Search vendor, description, or invoice")] = None,
+    search: Annotated[
+        str | None, Query(description="Search vendor, description, or invoice")
+    ] = None,
     vendor: Annotated[str | None, Query(description="Filter by vendor key")] = None,
     min_amount: Annotated[Decimal | None, Query(ge=0)] = None,
     max_amount: Annotated[Decimal | None, Query(ge=0)] = None,
@@ -180,7 +182,8 @@ def list_transactions(
         params.append(float(max_amount))
 
     where_sql = f" WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
-    total = int(con.execute(f"SELECT count(*) FROM {AUDIT_VIEW}{where_sql}", params).fetchone()[0])
+    row = con.execute(f"SELECT count(*) FROM {AUDIT_VIEW}{where_sql}", params).fetchone()
+    total = int(row[0]) if row else 0
 
     data_sql = (
         f"SELECT {', '.join(AUDIT_FIELDS)} FROM {AUDIT_VIEW}{where_sql} "

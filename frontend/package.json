@@ -13,10 +13,14 @@
     "gen:api": "openapi-typescript openapi.json -o src/api/schema.d.ts"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.103.2",
+    "lucide-react": "^1.52.0",
+    "ogl": "^1.0.11",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.4",
+    "tailwindcss": "^4.3.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {

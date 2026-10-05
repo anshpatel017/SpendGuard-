@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 /* SpendGuard dashboard. One stylesheet, design tokens as CSS variables, light and dark. */
 
 :root {

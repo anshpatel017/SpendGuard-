@@ -34,6 +34,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from sqlalchemy.orm import Session
+
 from spendguard.ablations import ARMS as ABLATION_ARMS
 from spendguard.ablations import NO_VERIFIER as NO_VERIFIER_ARM
 from spendguard.ablations import TEMPLATE as TEMPLATE_ARM
@@ -46,6 +48,7 @@ from spendguard.db.duck import connect, table_exists
 from spendguard.db.store import (
     CaseRecord,
     attempts_by_case,
+    case_from_record,
     cases_to_investigate,
     get_engine,
     latest_note,
@@ -228,7 +231,6 @@ def run_investigation(
         include_investigated=include_investigated,
     )
     run_id = f"investigate-{started:%Y%m%dT%H%M%S}"
-    from sqlalchemy.orm import Session
 
     with Session(engine) as session:
         first = session.get(CaseRecord, cases[0].case_id) if cases else None
@@ -285,9 +287,6 @@ def investigate_case_by_id(
     3. Persists the note, citations, verification, and trace.
     4. Handles failures cleanly so previous notes are preserved and the case remains usable.
     """
-    from sqlalchemy.orm import Session
-    from spendguard.db.store import case_from_record
-
     verify = settings.verifier_enabled if verify is None else verify
     engine = engine or get_engine(store_url)
     db_path = db_path or settings.duckdb_path

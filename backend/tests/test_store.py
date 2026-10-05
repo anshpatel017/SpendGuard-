@@ -177,7 +177,9 @@ def test_status_transition_validation_and_review_history() -> None:
     assert reviews[1].new_status == "confirmed"
 
     # Invalid: confirmed -> dismissed directly (must go via under_review)
-    with pytest.raises(InvalidTransitionError, match="Cannot move case from confirmed to dismissed"):
+    with pytest.raises(
+        InvalidTransitionError, match="Cannot move case from confirmed to dismissed"
+    ):
         set_status(engine, case.case_id, CaseStatus.DISMISSED)
 
     # Valid: confirmed -> under_review -> dismissed
@@ -186,4 +188,3 @@ def test_status_transition_validation_and_review_history() -> None:
     reviews = get_case_reviews(engine, case.case_id)
     assert len(reviews) == 4
     assert reviews[-1].new_status == "dismissed"
-
