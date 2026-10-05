@@ -23,7 +23,7 @@ export function Header({
   let breadcrumb = "SpendGuard";
   let pageTitle = "Investigation Queue";
 
-  if (currentPath === "/") {
+  if (currentPath === "/dashboard" || currentPath === "/queue" || currentPath === "/") {
     breadcrumb = "Operations";
     pageTitle = "Investigation Queue";
   } else if (currentPath.startsWith("/cases")) {
@@ -80,7 +80,7 @@ export function Header({
 
         <div className="flex flex-col">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <Link to="/" className="hover:text-slate-900 transition-colors">
+            <Link to="/dashboard" className="hover:text-slate-900 transition-colors">
               {breadcrumb}
             </Link>
             <span className="text-slate-300">/</span>
