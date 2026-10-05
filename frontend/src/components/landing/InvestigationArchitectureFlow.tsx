@@ -100,6 +100,9 @@ export default function InvestigationArchitectureFlow() {
       let endY = 0;
 
       if (isAOnLeft) {
+        // From left card to right card:
+        // Leaves bottom of card A, goes down, turns 90° right, runs horizontally,
+        // turns 90° down, and points vertically down into top of card B
         startX = rectA.left + rectA.width * 0.65 - containerRect.left;
         startY = rectA.bottom - containerRect.top;
 
@@ -119,6 +122,9 @@ export default function InvestigationArchitectureFlow() {
         const length = (endY - startY) + Math.abs(endX - startX) + 10;
         newPaths.push({ d, length });
       } else {
+        // From right card to left card:
+        // Leaves bottom of card A, goes down, turns 90° left, runs horizontally,
+        // turns 90° down, and connects directly into top of card B
         startX = rectA.left + rectA.width * 0.35 - containerRect.left;
         startY = rectA.bottom - containerRect.top;
 
@@ -154,6 +160,8 @@ export default function InvestigationArchitectureFlow() {
       const rect = container.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
 
+      // Start progressing when section starts entering bottom of screen
+      // Complete when section is near top/middle
       const enterPoint = viewportHeight * 0.85;
       const exitPoint = viewportHeight * 0.15;
       const totalDistance = rect.height + (enterPoint - exitPoint);
@@ -166,6 +174,7 @@ export default function InvestigationArchitectureFlow() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
 
+    // Recheck after initial renders
     const timer = setTimeout(updatePaths, 300);
 
     return () => {
@@ -180,6 +189,7 @@ export default function InvestigationArchitectureFlow() {
       ref={containerRef}
       className="relative max-w-5xl mx-auto py-16 px-4 sm:px-8 text-slate-900 select-none"
     >
+      {/* Header */}
       <div className="text-center mb-16">
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-neutral-100 border border-neutral-300 text-black text-xs font-semibold uppercase tracking-wider mb-3 shadow-2xs">
           <Sparkles className="w-3.5 h-3.5 text-black" />
@@ -193,11 +203,13 @@ export default function InvestigationArchitectureFlow() {
         </p>
       </div>
 
+      {/* SVG Connecting Flow Lines with Scroll Follow */}
       <svg
         className="pointer-events-none absolute inset-0 w-full h-full z-0 overflow-visible"
         xmlns="http://www.w3.org/2000/svg"
       >
         {paths.map((p, idx) => {
+          // Each path corresponds to 1/4 of total scroll progress
           const segmentStart = idx * 0.22;
           const segmentEnd = segmentStart + 0.25;
           const segmentProgress = Math.max(
@@ -209,6 +221,7 @@ export default function InvestigationArchitectureFlow() {
 
           return (
             <g key={idx}>
+              {/* Dim underlying guide line */}
               <path
                 d={p.d}
                 fill="none"
@@ -218,6 +231,8 @@ export default function InvestigationArchitectureFlow() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
+
+              {/* Animated active scroll-follow line: Clean Normal Black */}
               <path
                 d={p.d}
                 fill="none"
@@ -234,10 +249,12 @@ export default function InvestigationArchitectureFlow() {
         })}
       </svg>
 
+      {/* Alternating Zigzag Cards Layout */}
       <div className="relative z-10 flex flex-col space-y-12 sm:space-y-16">
         {FLOW_STEPS.map((step, idx) => {
           const isLeft = idx % 2 === 0;
           const Icon = step.icon;
+          // Step is activated when scroll reaches its approximate position
           const stepThreshold = idx * 0.2;
           const isActivated = scrollProgress >= stepThreshold;
 
@@ -258,6 +275,7 @@ export default function InvestigationArchitectureFlow() {
                     : 'bg-white/95 border border-slate-200 hover:border-slate-300'
                 }`}
               >
+                {/* Header row */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <div
@@ -290,10 +308,12 @@ export default function InvestigationArchitectureFlow() {
                   </span>
                 </div>
 
+                {/* Description */}
                 <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
                   {step.description}
                 </p>
 
+                {/* Tag pill at bottom */}
                 <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-[11px] font-mono text-slate-500">
                     {step.tag}

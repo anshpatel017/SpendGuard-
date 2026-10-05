@@ -13,7 +13,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useDemoReset, useRuns } from "../api/hooks";
 import type { RunSummary } from "../api/types";
@@ -31,6 +31,48 @@ export function RunsPage() {
   const [typeFilter, setTypeFilter] = useState("All");
 
   const RUN_TYPES = ["All", "detect", "investigate", "ingest", "evaluate"];
+
+  const [indicatorStyle, setIndicatorStyle] = useState<{
+    left: number;
+    width: number;
+    height: number;
+    top: number;
+    ready: boolean;
+  }>({
+    left: 0,
+    width: 0,
+    height: 0,
+    top: 0,
+    ready: false,
+  });
+  const tabRefs = useRef<{ [key: string]: HTMLButtonElement | null }>({});
+  const tabsContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const updateIndicator = () => {
+      const activeTab = tabRefs.current[typeFilter];
+      const container = tabsContainerRef.current;
+      if (activeTab && container) {
+        const tabRect = activeTab.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        setIndicatorStyle({
+          left: tabRect.left - containerRect.left,
+          width: tabRect.width,
+          height: tabRect.height,
+          top: tabRect.top - containerRect.top,
+          ready: true,
+        });
+      }
+    };
+
+    updateIndicator();
+    const timer = setTimeout(updateIndicator, 50);
+    window.addEventListener("resize", updateIndicator);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateIndicator);
+    };
+  }, [typeFilter]);
 
   const runs = query.data ?? [];
 
@@ -161,19 +203,36 @@ export function RunsPage() {
         </div>
       </div>
 
-      {/* 3. Filter Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg w-fit text-xs font-medium">
+      {/* 3. Filter Tabs with Animated Sliding Pill */}
+      <div
+        ref={tabsContainerRef}
+        className="relative flex items-center p-1 bg-slate-200/70 rounded-lg w-fit text-xs font-medium select-none"
+      >
+        {indicatorStyle.ready && (
+          <div
+            className="absolute bg-white rounded-md shadow-2xs transition-all duration-300 ease-out pointer-events-none"
+            style={{
+              left: `${indicatorStyle.left}px`,
+              width: `${indicatorStyle.width}px`,
+              height: `${indicatorStyle.height}px`,
+              top: `${indicatorStyle.top}px`,
+            }}
+          />
+        )}
         {RUN_TYPES.map((t) => (
           <button
             key={t}
+            ref={(el) => {
+              tabRefs.current[t] = el;
+            }}
             onClick={() => setTypeFilter(t)}
-            className={`px-3 py-1.5 rounded-md capitalize transition-colors cursor-pointer ${
+            className={`relative z-10 px-3 py-1.5 rounded-md capitalize transition-colors duration-200 cursor-pointer ${
               typeFilter.toLowerCase() === t.toLowerCase()
-                ? "bg-white text-slate-900 font-semibold shadow-2xs"
+                ? "text-slate-900 font-semibold"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            {t}
+            {t === "detect" ? "Detection" : t === "investigate" ? "Investigation" : t === "ingest" ? "Ingestion" : t === "evaluate" ? "Evaluation" : t}
           </button>
         ))}
       </div>

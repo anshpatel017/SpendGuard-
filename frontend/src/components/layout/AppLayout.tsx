@@ -4,6 +4,8 @@ import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { useCases } from "../../api/hooks";
 
+import GlowCursor from "../common/GlowCursor";
+
 interface AppLayoutProps {
   children: ReactNode;
 }
@@ -36,14 +38,17 @@ export function AppLayout({ children }: AppLayoutProps) {
   // If on / or /landing, render marketing layout without sidebar
   if (currentPath === "/" || currentPath === "/landing") {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800">
-        <main className="flex-1">{children}</main>
-      </div>
+      <GlowCursor color="#0284C7" secondaryColor="#6366F1" opacity={0.45} followSpeed={0.16} trailLength={32} trailWidth={6}>
+        <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans text-slate-800">
+          <main className="flex-1">{children}</main>
+        </div>
+      </GlowCursor>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex font-sans text-slate-800 antialiased">
+    <GlowCursor color="#0284C7" secondaryColor="#6366F1" opacity={0.4} followSpeed={0.16} trailLength={30} trailWidth={6}>
+      <div className="min-h-screen bg-[#F8FAFC] flex font-sans text-slate-800 antialiased">
       {/* Sidebar */}
       <Sidebar
         mobileOpen={mobileSidebarOpen}
@@ -70,5 +75,6 @@ export function AppLayout({ children }: AppLayoutProps) {
         </main>
       </div>
     </div>
+  </GlowCursor>
   );
 }
