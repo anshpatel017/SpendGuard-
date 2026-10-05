@@ -34,9 +34,36 @@ export function LandingPage() {
 
         {/* Navigation links */}
         <nav className="hidden md:flex items-center gap-8 text-xs font-medium text-slate-600">
-          <a href="#workflow" className="hover:text-slate-900 transition-colors">Workflow</a>
-          <a href="#detectors" className="hover:text-slate-900 transition-colors">Detectors</a>
-          <a href="#architecture" className="hover:text-slate-900 transition-colors">Architecture</a>
+          <a
+            href="#workflow"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById("workflow")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="hover:text-slate-900 transition-colors cursor-pointer"
+          >
+            Workflow
+          </a>
+          <a
+            href="#architecture"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById("architecture")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="hover:text-slate-900 transition-colors cursor-pointer"
+          >
+            Architecture
+          </a>
+          <a
+            href="#detectors"
+            onClick={(e) => {
+              e.preventDefault();
+              document.getElementById("detectors")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="hover:text-slate-900 transition-colors cursor-pointer"
+          >
+            Detectors
+          </a>
           <Link to="/evaluation" className="hover:text-slate-900 transition-colors">Evaluation Benchmarks</Link>
           <Link to="/demo" className="hover:text-slate-900 transition-colors">Interactive Sandbox</Link>
         </nav>
