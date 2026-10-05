@@ -16,8 +16,10 @@ export function App() {
     <ToastProvider>
       <AppLayout>
         <Routes>
-          <Route path="/" element={<QueuePage />} />
+          <Route path="/" element={<LandingPage />} />
           <Route path="/landing" element={<LandingPage />} />
+          <Route path="/dashboard" element={<QueuePage />} />
+          <Route path="/queue" element={<QueuePage />} />
           <Route path="/cases/:caseId" element={<CasePage />} />
           <Route path="/data" element={<DataPage />} />
           <Route path="/runs" element={<RunsPage />} />
@@ -34,7 +36,7 @@ export function App() {
                 </p>
                 <div className="mt-4">
                   <NavLink
-                    to="/"
+                    to="/dashboard"
                     className="inline-flex px-3.5 py-1.5 text-xs font-semibold text-white bg-black hover:bg-neutral-800 rounded-md transition-colors"
                   >
                     Back to Queue

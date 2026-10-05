@@ -76,7 +76,7 @@ export function CasePage() {
   const { showToast } = useToast();
 
   const returnSearch = location.search || (location.state as { returnSearch?: string } | null)?.returnSearch || "";
-  const backUrl = returnSearch ? `/${returnSearch.startsWith("?") ? returnSearch : `?${returnSearch}`}` : "/";
+  const backUrl = returnSearch ? `/dashboard${returnSearch.startsWith("?") ? returnSearch : `?${returnSearch}`}` : "/dashboard";
 
   const detail = useCaseDetail(caseId);
   const [highlight, setHighlight] = useState<number | null>(null);
