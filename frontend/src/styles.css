@@ -1,7 +1,11 @@
+@import "tailwindcss";
+
 /* SpendGuard dashboard. One stylesheet, design tokens as CSS variables, light and dark. */
 
 :root {
   color-scheme: light dark;
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --bg: #f6f7f9;
   --surface: #ffffff;
   --surface-2: #f0f2f5;
@@ -23,8 +27,8 @@
   --highlight: #ffe8a3;
   --radius: 8px;
   --shadow: 0 1px 2px rgba(20, 30, 50, 0.06), 0 1px 1px rgba(20, 30, 50, 0.04);
-  --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
-  font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", sans-serif;
+  --mono: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.45;
 }
@@ -161,10 +165,25 @@ label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--
   color: var(--text); cursor: pointer;
 }
 .btn:hover:not(:disabled) { background: var(--surface-2); }
-.btn:disabled { opacity: 0.5; cursor: default; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
-.btn.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.btn.primary {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease-in-out;
+}
+.btn.primary:hover:not(:disabled) {
+  background: #262626;
+  border-color: #262626;
+  color: #ffffff;
+}
+.btn.selected {
+  border-color: #000000;
+  background: #000000;
+  color: #ffffff;
+  font-weight: 600;
+}
 .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 10px; }
 
 /* ------------------------------------------------------------ note */
@@ -175,7 +194,13 @@ label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--
 .claim.failed { border-color: var(--bad); background: var(--bad-soft); }
 .claim .cites { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
 .failure { color: var(--bad); font-size: 12.5px; margin-top: 4px; }
-.recommendation { margin-top: 14px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--accent-soft); }
+.recommendation {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #000000;
+  border-radius: 8px;
+  background: #f8fafc;
+}
 
 /* ------------------------------------------------------------ trace */
 
@@ -199,3 +224,26 @@ details > summary { cursor: pointer; color: var(--accent); font-size: 12.5px; }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}

@@ -176,6 +176,13 @@ def test_money_leaves_as_a_string(client: TestClient) -> None:
     [
         ({"anomaly_type": "split"}, {SPLIT.case_id}),
         ({"anomaly_type": ["split", "duplicate"]}, {SPLIT.case_id, DUPLICATE.case_id}),
+        ({"detector": "duplicate"}, {DUPLICATE.case_id}),
+        ({"detector": ["split", "duplicate"]}, {SPLIT.case_id, DUPLICATE.case_id}),
+        (
+            {"search": "sharma"},
+            {DUPLICATE.case_id, SPLIT.case_id, INFLATION.case_id, *(c.case_id for c in QUEUED)},
+        ),
+        ({"search": "nonexistent"}, set()),
         ({"investigated": "true"}, {DUPLICATE.case_id, INFLATION.case_id}),
         ({"verdict": "likely_false_positive"}, {INFLATION.case_id}),
         ({"dismissed_by_agent": "true"}, {INFLATION.case_id}),
@@ -328,6 +335,98 @@ def test_the_review_action_refuses_bad_input(client: TestClient) -> None:
     assert missing.status_code == 404
 
 
+def test_the_review_action_refuses_invalid_status_transition(client: TestClient) -> None:
+    # DUPLICATE starts as 'new'
+    # new -> confirmed is valid
+    res1 = client.patch(
+        f"{API}/cases/{DUPLICATE.case_id}/status",
+        json={
+            "status": "confirmed",
+            "reviewer_note": "Confirmed duplicate.",
+            "reviewer": "Auditor 1",
+        },
+    )
+    assert res1.status_code == 200
+
+    # confirmed -> dismissed directly is invalid: must return 400
+    res2 = client.patch(
+        f"{API}/cases/{DUPLICATE.case_id}/status",
+        json={"status": "dismissed", "reviewer": "Auditor 1"},
+    )
+    assert res2.status_code == 400
+    assert res2.json()["detail"]["code"] == "invalid_transition"
+
+    # confirmed -> under_review is valid
+    res3 = client.patch(
+        f"{API}/cases/{DUPLICATE.case_id}/status",
+        json={"status": "under_review", "reviewer_note": "Re-opening for inspection."},
+    )
+    assert res3.status_code == 200
+
+    # under_review -> dismissed is valid
+    res4 = client.patch(
+        f"{API}/cases/{DUPLICATE.case_id}/status",
+        json={"status": "dismissed", "reviewer_note": "Dismissed as false alarm."},
+    )
+    assert res4.status_code == 200
+
+    # check review history endpoint
+    reviews_res = client.get(f"{API}/cases/{DUPLICATE.case_id}/reviews")
+    assert reviews_res.status_code == 200
+    history = reviews_res.json()
+    assert len(history) == 3
+    assert history[0]["previous_status"] == "new"
+    assert history[0]["new_status"] == "confirmed"
+    assert history[1]["previous_status"] == "confirmed"
+    assert history[1]["new_status"] == "under_review"
+    assert history[2]["previous_status"] == "under_review"
+    assert history[2]["new_status"] == "dismissed"
+
+
+def test_trigger_investigation_and_status_polling(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from spendguard.api import cases as cases_module
+
+    monkeypatch.setattr(
+        cases_module,
+        "_run_investigation_worker",
+        lambda case_id, engine, duckdb_path: cases_module._set_job(
+            case_id, "completed", "Test investigation completed", finished=True
+        ),
+    )
+
+    # Trigger background investigation
+    res = client.post(f"{API}/cases/{SPLIT.case_id}/investigate")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["case_id"] == SPLIT.case_id
+    assert data["state"] in ("queued", "completed")
+
+    # Poll investigation status
+    poll = client.get(f"{API}/cases/{SPLIT.case_id}/investigate")
+    assert poll.status_code == 200
+    assert poll.json()["state"] == "completed"
+
+
+def test_case_report_export_markdown_and_html(client: TestClient) -> None:
+    # Markdown export
+    md_res = client.get(f"{API}/cases/{DUPLICATE.case_id}/export")
+    assert md_res.status_code == 200
+    assert "SpendGuard Case Report" in md_res.text
+    assert "Detector Facts" in md_res.text
+    assert "AI Investigation" in md_res.text
+    assert "Verification" in md_res.text
+    assert "Evidence Transactions" in md_res.text
+    assert "Human Review History" in md_res.text
+
+    # HTML export
+    html_res = client.get(f"{API}/cases/{DUPLICATE.case_id}/export?format=html")
+    assert html_res.status_code == 200
+    assert "<!DOCTYPE html>" in html_res.text
+    assert "SpendGuard Case Report" in html_res.text
+
+
 # ------------------------------------------------------------------ metrics, runs, health
 
 
@@ -375,7 +474,39 @@ def test_a_missing_database_degrades_health_and_is_a_structured_503(paths: dict[
     client = TestClient(app)
     assert client.get(f"{API}/health").json()["status"] == "degraded"
     response = client.get(f"{API}/metrics")
-    assert response.status_code == 503 and response.json()["detail"]["code"] == "duckdb_unavailable"
+    assert response.status_code == 503
+    assert response.json()["detail"]["code"] in ("dataset_not_initialized", "duckdb_unavailable")
+
+
+def test_list_transactions_explorer(client: TestClient) -> None:
+    # All transactions
+    res = client.get(f"{API}/transactions")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] == 32
+    assert len(data["items"]) == 32
+    assert data["currency"] == "INR"
+    assert data["vendor_count"] >= 1
+
+    # Search filter
+    search_res = client.get(f"{API}/transactions", params={"search": "Sharma"})
+    assert search_res.status_code == 200
+    search_data = search_res.json()
+    assert search_data["total"] >= 1
+    for item in search_data["items"]:
+        assert "sharma" in (item["vendor_name"] + item["vendor_key"]).lower()
+
+
+def test_demo_reset_endpoint(client: TestClient) -> None:
+    # confirm=false is rejected with 400
+    res_bad = client.post(f"{API}/demo/reset")
+    assert res_bad.status_code == 400
+    assert res_bad.json()["detail"]["code"] == "confirmation_required"
+
+    # confirm=true succeeds
+    res_ok = client.post(f"{API}/demo/reset", params={"confirm": "true"})
+    assert res_ok.status_code == 200
+    assert res_ok.json()["status"] == "ok"
 
 
 # ------------------------------------------------------------------ evaluation
