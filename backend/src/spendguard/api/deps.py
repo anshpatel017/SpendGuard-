@@ -32,9 +32,33 @@ def stores(request: Request) -> AppStores:
 
 def duck(store: Annotated[AppStores, Depends(stores)]) -> Iterator[duckdb.DuckDBPyConnection]:
     """A read-only connection per request (API-CONTRACT: DuckDB opened read-only, always)."""
+    if not store.duckdb_path.exists():
+        raise HTTPException(
+            503,
+            detail={
+                "code": "dataset_not_initialized",
+                "message": (
+                    f"Dataset is not initialized ({store.duckdb_path.name} not found). "
+                    "Run the ingestion pipeline with `spendguard ingest <path-to-csv>` before requesting cases."
+                ),
+            },
+        )
+
     try:
         con = duckdb.connect(str(store.duckdb_path), read_only=True)
     except duckdb.Error as exc:
+        msg = str(exc).lower()
+        if "lock" in msg or "conflict" in msg or "resource temporarily unavailable" in msg:
+            raise HTTPException(
+                503,
+                detail={
+                    "code": "database_locked",
+                    "message": (
+                        "DuckDB database is currently locked by an active process (such as ingestion or detection). "
+                        "Wait for the background pipeline write to complete before requesting data."
+                    ),
+                },
+            ) from exc
         raise HTTPException(
             503,
             detail={

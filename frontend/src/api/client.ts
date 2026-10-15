@@ -1,16 +1,21 @@
 // The one place the frontend talks to the backend. Every response is validated;
 // every error arrives as an ApiError carrying the API's own code and message.
-import type { z } from "zod";
+import { z } from "zod";
 
 import type { CaseStatus, DemoInjectRequest, StatusUpdateRequest } from "./types";
 import {
   caseDetailSchema,
   caseListSchema,
+  caseReviewItemSchema,
   caseSchema,
   demoSchema,
   evaluationSchema,
   healthSchema,
+  investigationJobResponseSchema,
+  investigationStatusSchema,
   metricsSchema,
+  runSummarySchema,
+  transactionListSchema,
   transactionSchema,
 } from "./validate";
 
@@ -53,12 +58,15 @@ async function request<T>(path: string, schema: z.ZodType<T>, init?: RequestInit
 
 export interface CaseFilters {
   anomaly_type?: string;
+  detector?: string;
   severity_band?: string;
+  severity?: string;
   status?: string;
   verdict?: string;
   verification_status?: string;
   investigated?: string;
   dismissed_by_agent?: string;
+  search?: string;
   sort?: string;
   order?: string;
   page?: number;
@@ -74,21 +82,62 @@ function query(filters: CaseFilters): string {
   return text ? `?${text}` : "";
 }
 
+export interface TransactionFilters {
+  search?: string;
+  vendor?: string;
+  min_amount?: number;
+  max_amount?: number;
+  page?: number;
+  page_size?: number;
+}
+
 export const api = {
   metrics: () => request("/metrics", metricsSchema),
   cases: (filters: CaseFilters) => request(`/cases${query(filters)}`, caseListSchema),
   caseDetail: (caseId: string) => request(`/cases/${encodeURIComponent(caseId)}`, caseDetailSchema),
-  updateStatus: (caseId: string, status: CaseStatus, reviewerNote: string | null) =>
+  updateStatus: (
+    caseId: string,
+    status: CaseStatus,
+    reviewerNote: string | null,
+    reviewer: string = "Demo Reviewer",
+  ) =>
     request(`/cases/${encodeURIComponent(caseId)}/status`, caseSchema, {
       method: "PATCH",
-      body: JSON.stringify({ status, reviewer_note: reviewerNote } satisfies StatusUpdateRequest),
+      body: JSON.stringify({
+        status,
+        reviewer_note: reviewerNote,
+        reviewer,
+      } satisfies StatusUpdateRequest),
     }),
+  triggerInvestigation: (caseId: string) =>
+    request(`/cases/${encodeURIComponent(caseId)}/investigate`, investigationJobResponseSchema, {
+      method: "POST",
+    }),
+  investigationStatus: (caseId: string) =>
+    request(`/cases/${encodeURIComponent(caseId)}/investigate`, investigationStatusSchema),
+  caseReviews: (caseId: string) =>
+    request(`/cases/${encodeURIComponent(caseId)}/reviews`, z.array(caseReviewItemSchema)),
+  exportReportUrl: (caseId: string, format: "markdown" | "html" = "markdown") =>
+    `${BASE}/cases/${encodeURIComponent(caseId)}/export?format=${format}`,
+  transactions: (filters: TransactionFilters = {}) => {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+    }
+    const q = params.toString() ? `?${params.toString()}` : "";
+    return request(`/transactions${q}`, transactionListSchema);
+  },
   transaction: (rowId: number) => request(`/transactions/${rowId}`, transactionSchema),
+  runs: (limit: number = 50) => request(`/runs?limit=${limit}`, z.array(runSummarySchema)),
   evaluation: (seed: number) => request(`/evaluation?seed=${seed}`, evaluationSchema),
   health: () => request("/health", healthSchema),
   demoInject: (anomalyCount: number, seed: number | null) =>
     request("/demo/inject", demoSchema, {
       method: "POST",
       body: JSON.stringify({ anomaly_count: anomalyCount, seed } satisfies DemoInjectRequest),
+    }),
+  demoReset: () =>
+    request<{ status: string; message: string }>("/demo/reset?confirm=true", z.object({ status: z.string(), message: z.string() }), {
+      method: "POST",
     }),
 };
