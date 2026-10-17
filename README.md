@@ -24,6 +24,7 @@ Runs **fully local** on commodity GPU hardware. No paid APIs in the runtime syst
 
 | Layer | Technology |
 |---|---|
+<<<<<<< HEAD
 | Frontend | React 18 + TypeScript, Vite, TanStack Query, TanStack Table, Tailwind + shadcn/ui, Recharts, Zod |
 | Backend | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2.0 + Alembic, uvicorn |
 | Analytical store | DuckDB (transactions, detector output, evaluation results) |
@@ -32,6 +33,15 @@ Runs **fully local** on commodity GPU hardware. No paid APIs in the runtime syst
 | LLM | Groq for development; Qwen2.5-3B-Instruct (Q4_K_M) via Ollama for the fully-local run; 7B on a Colab T4 for comparison |
 | Policy RAG | sentence-transformers (bge-small-en-v1.5) + FAISS |
 | Tracking | MLflow (local) |
+=======
+| Frontend | React 18 + TypeScript, Vite, TanStack Query, Custom CSS, Zod |
+| Backend | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2.0, uvicorn |
+| Analytical store | DuckDB (transactions, detector output, evaluation results) |
+| Operational store | SQLite (cases, status, audit notes, traces) — PostgreSQL is a one-line swap via SQLAlchemy |
+| Detection / ML | scikit-learn, scipy, rapidfuzz, pandas / Polars |
+| LLM | Groq for development; Qwen2.5-3B-Instruct (Q4_K_M) via Ollama for the fully-local run; 7B on a Colab T4 for comparison |
+| Policy RAG | sentence-transformers (bge-small-en-v1.5) + FAISS |
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 | Tooling | pytest, ruff, mypy, ESLint, Prettier, GitHub Actions |
 
 ---
@@ -47,17 +57,35 @@ SpendGuard/
 │   │   ├── agent/           tools, investigator, verifier
 │   │   ├── eval/            injection harness, metrics, ablations
 │   │   ├── api/             FastAPI routers, Pydantic schemas
+<<<<<<< HEAD
 │   │   └── db/              DuckDB + SQLAlchemy models, Alembic migrations
 │   ├── mappings/            per-dataset column mappings (YAML)
 │   └── tests/
 ├── frontend/                React + TypeScript (Vite)
 ├── data/                    raw and processed datasets (gitignored)
+=======
+│   │   └── db/              DuckDB + SQLAlchemy models
+│   ├── mappings/            per-dataset column mappings (YAML)
+│   └── tests/
+├── frontend/                React + TypeScript (Vite)
+├── data/                    raw and processed datasets (committed synthetic data: data/raw/)
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 ├── docs/                    design, requirements, architecture, contracts
 └── policy/                  procurement policy used for RAG
 ```
 
 ---
 
+<<<<<<< HEAD
+=======
+## Datasets and Demo Scope
+
+- **Primary Dataset:** `data/raw/synthetic_inr_seed42_50000.csv` is committed and bundled for deterministic evaluation and demos. Real-world datasets (e.g. California PO extract) are external reference benchmarks and are not bundled locally.
+- **Interactive Live Demo:** The isolated `/demo` sandbox plants synthetic anomalies in a temporary copy to demonstrate detection for **Duplicate Purchases (D1)**, **Split Purchases (D2)**, and **Price Inflation (D3)**.
+
+---
+
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 ## How work flows
 
 The slow work happens **offline in batch scripts**, not inside HTTP requests:
@@ -99,7 +127,11 @@ Verify the install:
 
 Dependency groups are installed as each phase needs them, so the initial install
 stays light: `detect` for the detectors, `agent` for the LLM layer and policy
+<<<<<<< HEAD
 retrieval, `api` for FastAPI, `track` for MLflow, `linkage` for optional Splink.
+=======
+retrieval, `api` for FastAPI. Table creation is managed directly via SQLAlchemy metadata.
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
 ---
 

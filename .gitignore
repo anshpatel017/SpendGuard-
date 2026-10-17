@@ -77,3 +77,9 @@ desktop.ini
 # --- Local tooling ---
 .claude/launch.json
 frontend/*.tsbuildinfo
+<<<<<<< HEAD
+=======
+
+# --- UI Reference ---
+/Frontend_Reference
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1

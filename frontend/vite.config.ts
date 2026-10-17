@@ -1,11 +1,19 @@
 /// <reference types="vitest/config" />
+<<<<<<< HEAD
+=======
+import tailwindcss from "@tailwindcss/vite";
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
 // During development the API runs separately (`spendguard serve`); Vite proxies
 // /api to it so the browser sees one origin, exactly as in the built app.
 export default defineConfig({
+<<<<<<< HEAD
   plugins: [react()],
+=======
+  plugins: [react(), tailwindcss()],
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
   server: {
     port: 5173,
     proxy: { "/api": "http://127.0.0.1:8000" },

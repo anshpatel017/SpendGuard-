@@ -64,6 +64,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+<<<<<<< HEAD
+=======
+    "/api/v1/cases/{case_id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Case Report
+         * @description Export an evidence-backed audit report for a case in Markdown or HTML (P1).
+         */
+        get: operations["export_case_report_api_v1_cases__case_id__export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cases/{case_id}/investigate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Investigation Status
+         * @description Check the real-time or historical investigation status of a case.
+         */
+        get: operations["get_investigation_status_api_v1_cases__case_id__investigate_get"];
+        put?: never;
+        /**
+         * Trigger Investigation
+         * @description Trigger an AI investigation for a case in the background.
+         */
+        post: operations["trigger_investigation_api_v1_cases__case_id__investigate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cases/{case_id}/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Case Reviews
+         * @description Retrieve full audit history of human reviews and status changes for this case.
+         */
+        get: operations["list_case_reviews_api_v1_cases__case_id__reviews_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     "/api/v1/cases/{case_id}/status": {
         parameters: {
             query?: never;
@@ -104,6 +171,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+<<<<<<< HEAD
+=======
+    "/api/v1/demo/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset Demo
+         * @description Reset temporary live demo state. Source dataset is never deleted (P2).
+         */
+        post: operations["reset_demo_api_v1_demo_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     "/api/v1/evaluation": {
         parameters: {
             query?: never;
@@ -184,6 +274,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+<<<<<<< HEAD
+=======
+    "/api/v1/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Transactions
+         * @description Read-only transaction explorer for auditing procurement transactions (P2).
+         */
+        get: operations["list_transactions_api_v1_transactions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     "/api/v1/transactions/{row_id}": {
         parameters: {
             query?: never;
@@ -373,6 +486,15 @@ export interface components {
             evidence_rows: components["schemas"]["TransactionRow"][];
             /** Evidence Total */
             evidence_total: number;
+<<<<<<< HEAD
+=======
+            investigation_status?: components["schemas"]["InvestigationStatus"] | null;
+            /**
+             * Reviews
+             * @default []
+             */
+            reviews: components["schemas"]["CaseReviewItem"][];
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
             /** Trace */
             trace: components["schemas"]["TraceStep"][];
         };
@@ -389,6 +511,32 @@ export interface components {
             /** Total */
             total: number;
         };
+<<<<<<< HEAD
+=======
+        /** CaseReviewItem */
+        CaseReviewItem: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Id */
+            id: string;
+            /** New Status */
+            new_status: string;
+            /** Note */
+            note: string | null;
+            /** Previous Status */
+            previous_status: string;
+            /** Reviewer */
+            reviewer: string;
+        };
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
         /**
          * CaseSummary
          * @description A queue row: the case, plus enough of its note to triage from the list.
@@ -627,6 +775,40 @@ export interface components {
              */
             status: "ok" | "degraded";
         };
+<<<<<<< HEAD
+=======
+        /** InvestigationJobResponse */
+        InvestigationJobResponse: {
+            /**
+             * Case Id
+             * Format: uuid
+             */
+            case_id: string;
+            /** Message */
+            message: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "not_investigated" | "queued" | "investigating" | "verifying" | "completed" | "failed";
+        };
+        /** InvestigationStatus */
+        InvestigationStatus: {
+            /** Error */
+            error?: string | null;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Stage */
+            stage?: string | null;
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "not_investigated" | "queued" | "investigating" | "verifying" | "completed" | "failed";
+        };
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
         /** MetricsResponse */
         MetricsResponse: {
             /** By Anomaly Type */
@@ -706,6 +888,14 @@ export interface components {
         };
         /** StatusUpdateRequest */
         StatusUpdateRequest: {
+<<<<<<< HEAD
+=======
+            /**
+             * Reviewer
+             * @default Demo Reviewer
+             */
+            reviewer: string | null;
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
             /** Reviewer Note */
             reviewer_note?: string | null;
             /**
@@ -744,6 +934,41 @@ export interface components {
             /** Tool Result */
             tool_result: unknown;
         };
+<<<<<<< HEAD
+=======
+        /** TransactionListResponse */
+        TransactionListResponse: {
+            /**
+             * Currency
+             * @default INR
+             */
+            currency: string;
+            /** Dataset */
+            dataset?: string | null;
+            /** Date Max */
+            date_max?: string | null;
+            /** Date Min */
+            date_min?: string | null;
+            /** Items */
+            items: components["schemas"]["TransactionRow"][];
+            /** Page */
+            page: number;
+            /** Page Size */
+            page_size: number;
+            /** Total */
+            total: number;
+            /**
+             * Total Amount
+             * @default 0.00
+             */
+            total_amount: string;
+            /**
+             * Vendor Count
+             * @default 0
+             */
+            vendor_count: number;
+        };
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
         /** TransactionRow */
         TransactionRow: {
             /** Amount */
@@ -790,11 +1015,21 @@ export interface operations {
             query?: {
                 status?: ("new" | "under_review" | "confirmed" | "dismissed")[] | null;
                 anomaly_type?: ("duplicate" | "split" | "inflation" | "vendor_flag")[] | null;
+<<<<<<< HEAD
                 severity_band?: ("high" | "medium" | "low")[] | null;
+=======
+                detector?: string[] | null;
+                severity_band?: ("high" | "medium" | "low")[] | null;
+                severity?: ("high" | "medium" | "low")[] | null;
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
                 verdict?: ("likely_true_positive" | "likely_false_positive" | "inconclusive")[] | null;
                 verification_status?: ("verified" | "unverified" | "failed_after_retries")[] | null;
                 investigated?: boolean | null;
                 dismissed_by_agent?: boolean | null;
+<<<<<<< HEAD
+=======
+                search?: string | null;
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
                 min_amount?: number | string | null;
                 sort?: "severity_prelim" | "severity_final" | "amount_at_risk" | "created_at";
                 order?: "asc" | "desc";
@@ -915,6 +1150,165 @@ export interface operations {
             };
         };
     };
+<<<<<<< HEAD
+=======
+    export_case_report_api_v1_cases__case_id__export_get: {
+        parameters: {
+            query?: {
+                format?: "markdown" | "html";
+            };
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Formatted case report */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "text/html": unknown;
+                    "text/markdown": unknown;
+                };
+            };
+            /** @description Unknown case */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_investigation_status_api_v1_cases__case_id__investigate_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvestigationStatus"];
+                };
+            };
+            /** @description Unknown case */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    trigger_investigation_api_v1_cases__case_id__investigate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvestigationJobResponse"];
+                };
+            };
+            /** @description Unknown case */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_case_reviews_api_v1_cases__case_id__reviews_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaseReviewItem"][];
+                };
+            };
+            /** @description Unknown case */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     update_status_api_v1_cases__case_id__status_patch: {
         parameters: {
             query?: never;
@@ -939,6 +1333,16 @@ export interface operations {
                     "application/json": components["schemas"]["Case"];
                 };
             };
+<<<<<<< HEAD
+=======
+            /** @description Invalid status transition */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
             /** @description Unknown case */
             404: {
                 headers: {
@@ -1006,6 +1410,58 @@ export interface operations {
             };
         };
     };
+<<<<<<< HEAD
+=======
+    reset_demo_api_v1_demo_reset_post: {
+        parameters: {
+            query?: {
+                confirm?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Confirmation required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     evaluation_api_v1_evaluation_get: {
         parameters: {
             query?: {
@@ -1162,6 +1618,56 @@ export interface operations {
             };
         };
     };
+<<<<<<< HEAD
+=======
+    list_transactions_api_v1_transactions_get: {
+        parameters: {
+            query?: {
+                /** @description Search vendor, description, or invoice */
+                search?: string | null;
+                /** @description Filter by vendor key */
+                vendor?: string | null;
+                min_amount?: number | string | null;
+                max_amount?: number | string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionListResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     transaction_api_v1_transactions__row_id__get: {
         parameters: {
             query?: never;

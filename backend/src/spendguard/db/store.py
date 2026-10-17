@@ -223,6 +223,50 @@ class FlagReviewRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
+<<<<<<< HEAD
+=======
+class InvalidTransitionError(ValueError):
+    """The requested status transition is not permitted."""
+
+
+VALID_TRANSITIONS: dict[str, set[str]] = {
+    CaseStatus.NEW.value: {
+        CaseStatus.NEW.value,
+        CaseStatus.UNDER_REVIEW.value,
+        CaseStatus.CONFIRMED.value,
+        CaseStatus.DISMISSED.value,
+    },
+    CaseStatus.UNDER_REVIEW.value: {
+        CaseStatus.UNDER_REVIEW.value,
+        CaseStatus.CONFIRMED.value,
+        CaseStatus.DISMISSED.value,
+    },
+    CaseStatus.CONFIRMED.value: {
+        CaseStatus.CONFIRMED.value,
+        CaseStatus.UNDER_REVIEW.value,
+    },
+    CaseStatus.DISMISSED.value: {
+        CaseStatus.DISMISSED.value,
+        CaseStatus.UNDER_REVIEW.value,
+    },
+}
+
+
+class CaseReviewRecord(Base):
+    """History of status changes and review notes by human reviewers."""
+
+    __tablename__ = "case_reviews"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    case_id: Mapped[str] = mapped_column(String(36), index=True)
+    previous_status: Mapped[str] = mapped_column(String(20))
+    new_status: Mapped[str] = mapped_column(String(20))
+    note: Mapped[str | None] = mapped_column(Text)
+    reviewer: Mapped[str] = mapped_column(String(100), default="Demo Reviewer")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
+
+
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 class StoreMismatchError(RuntimeError):
     """The store already holds cases for a different dataset."""
 
@@ -249,7 +293,12 @@ def _ensure_parent(url: str) -> None:
 def get_engine(url: str | None = None) -> Engine:
     url = url or settings.database_url
     _ensure_parent(url)
+<<<<<<< HEAD
     engine = create_engine(url)
+=======
+    connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
+    engine = create_engine(url, connect_args=connect_args)
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     Base.metadata.create_all(engine)
     return engine
 
@@ -352,10 +401,22 @@ def record_run(
 
 
 def set_status(
+<<<<<<< HEAD
     engine: Engine, case_id: str, status: CaseStatus, note: str | None = None
 ) -> CaseRecord:
     """The human-in-the-loop action (decision D-07). Only people call this, never the agent.
 
+=======
+    engine: Engine,
+    case_id: str,
+    status: CaseStatus,
+    note: str | None = None,
+    reviewer: str | None = "Demo Reviewer",
+) -> CaseRecord:
+    """The human-in-the-loop action (decision D-07). Only people call this, never the agent.
+
+    Validates status transitions according to the case lifecycle and records review history.
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     ``note=None`` leaves the reviewer's note as it is; an empty or blank note
     clears it - to null, never to an empty string (API-CONTRACT: explicit nulls).
     """
@@ -363,12 +424,54 @@ def set_status(
         record = session.get(CaseRecord, case_id)
         if record is None:
             raise KeyError(f"No case {case_id}")
+<<<<<<< HEAD
         record.status = status.value
         if note is not None:
             record.reviewer_note = note.strip() or None
     return record
 
 
+=======
+
+        prev_status = record.status
+        allowed = VALID_TRANSITIONS.get(prev_status, {prev_status})
+        if status.value not in allowed:
+            raise InvalidTransitionError(
+                f"Cannot move case from {prev_status} to {status.value} directly. Return it to under_review first."
+            )
+
+        record.status = status.value
+        clean_note = note.strip() or None if note is not None else record.reviewer_note
+        if note is not None:
+            record.reviewer_note = clean_note
+
+        session.add(
+            CaseReviewRecord(
+                id=str(uuid.uuid4()),
+                case_id=case_id,
+                previous_status=prev_status,
+                new_status=status.value,
+                note=clean_note,
+                reviewer=(reviewer or "Demo Reviewer").strip() or "Demo Reviewer",
+                created_at=_now(),
+            )
+        )
+    return record
+
+
+def get_case_reviews(engine: Engine, case_id: str) -> list[CaseReviewRecord]:
+    """Retrieve full human review history for a case, oldest first."""
+    with Session(engine) as session:
+        return list(
+            session.scalars(
+                select(CaseReviewRecord)
+                .where(CaseReviewRecord.case_id == case_id)
+                .order_by(CaseReviewRecord.created_at.asc())
+            )
+        )
+
+
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 # ------------------------------------------------------------------ investigation
 
 # Tool results are stored for the trace view, capped so one 50-row query cannot
