@@ -285,5 +285,17 @@
   }
  ],
  "trace": [],
+<<<<<<< HEAD
  "currency": "INR"
+=======
+ "currency": "INR",
+ "investigation_status": {
+  "state": "not_investigated",
+  "stage": "Not investigated",
+  "started_at": null,
+  "finished_at": null,
+  "error": null
+ },
+ "reviews": []
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 }

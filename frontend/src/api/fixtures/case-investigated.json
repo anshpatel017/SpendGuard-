@@ -732,5 +732,17 @@
    "error": null
   }
  ],
+<<<<<<< HEAD
  "currency": "INR"
+=======
+ "currency": "INR",
+ "investigation_status": {
+  "state": "completed",
+  "stage": "Completed",
+  "started_at": "2026-09-21T15:43:35.436953",
+  "finished_at": "2026-09-21T15:43:35.436953",
+  "error": null
+ },
+ "reviews": []
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 }
