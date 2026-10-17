@@ -34,6 +34,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+<<<<<<< HEAD
+=======
+from sqlalchemy.orm import Session
+
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 from spendguard.ablations import ARMS as ABLATION_ARMS
 from spendguard.ablations import NO_VERIFIER as NO_VERIFIER_ARM
 from spendguard.ablations import TEMPLATE as TEMPLATE_ARM
@@ -46,6 +51,10 @@ from spendguard.db.duck import connect, table_exists
 from spendguard.db.store import (
     CaseRecord,
     attempts_by_case,
+<<<<<<< HEAD
+=======
+    case_from_record,
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     cases_to_investigate,
     get_engine,
     latest_note,
@@ -228,7 +237,10 @@ def run_investigation(
         include_investigated=include_investigated,
     )
     run_id = f"investigate-{started:%Y%m%dT%H%M%S}"
+<<<<<<< HEAD
     from sqlalchemy.orm import Session
+=======
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
     with Session(engine) as session:
         first = session.get(CaseRecord, cases[0].case_id) if cases else None
@@ -268,6 +280,61 @@ def run_investigation(
     return run
 
 
+<<<<<<< HEAD
+=======
+def investigate_case_by_id(
+    case_id: str,
+    *,
+    db_path: Path | None = None,
+    engine: Any | None = None,
+    store_url: str | None = None,
+    llm: Any | None = None,
+    verify: bool | None = None,
+    on_stage: Callable[[str], None] | None = None,
+) -> InvestigationResult:
+    """Investigate a single case by ID for background execution or interactive trigger.
+
+    1. Loads the case from the operational store.
+    2. Runs the investigator and verifier with stage updates.
+    3. Persists the note, citations, verification, and trace.
+    4. Handles failures cleanly so previous notes are preserved and the case remains usable.
+    """
+    verify = settings.verifier_enabled if verify is None else verify
+    engine = engine or get_engine(store_url)
+    db_path = db_path or settings.duckdb_path
+
+    with Session(engine) as session:
+        record = session.get(CaseRecord, case_id)
+        if record is None:
+            raise KeyError(f"No case with id {case_id}")
+        case = case_from_record(record)
+
+    llm = llm or _default_llm()
+    started = datetime.now(UTC).replace(tzinfo=None)
+    run_id = f"investigate-{started:%Y%m%dT%H%M%S}"
+
+    with connect(db_path, read_only=True) as con:
+        if table_exists(con, "injection_runs"):
+            raise EvaluationDatabaseError(
+                f"{db_path.name} contains planted anomalies. Use eval-seed for it."
+            )
+        investigator = Investigator(llm, con)
+        verifier = Verifier(llm, con)
+        result = investigate_and_verify(
+            investigator,
+            verifier,
+            case,
+            enabled=verify,
+            on_stage=on_stage,
+        )
+
+    save_investigation(engine, run_id, result)
+    if on_stage:
+        on_stage("completed" if result.note is not None else "failed")
+    return result
+
+
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 # ------------------------------------------------------------------ evaluation
 
 

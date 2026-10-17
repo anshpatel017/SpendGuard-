@@ -140,6 +140,50 @@ class TransactionRow(BaseModel):
     cited: bool  # additive: the audit note cites this row
 
 
+<<<<<<< HEAD
+=======
+class TransactionListResponse(BaseModel):
+    items: list[TransactionRow]
+    total: int
+    page: int
+    page_size: int
+    dataset: str | None = None
+    date_min: date | None = None
+    date_max: date | None = None
+    vendor_count: int = 0
+    total_amount: Decimal = Decimal("0.00")
+    currency: str = "INR"
+
+
+class CaseReviewItem(BaseModel):
+    id: str
+    case_id: UUID
+    previous_status: str
+    new_status: str
+    note: str | None
+    reviewer: str
+    created_at: datetime
+
+
+class InvestigationStatus(BaseModel):
+    state: Literal[
+        "not_investigated", "queued", "investigating", "verifying", "completed", "failed"
+    ]
+    stage: str | None = None
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    error: str | None = None
+
+
+class InvestigationJobResponse(BaseModel):
+    case_id: UUID
+    state: Literal[
+        "not_investigated", "queued", "investigating", "verifying", "completed", "failed"
+    ]
+    message: str
+
+
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 class CaseDetailResponse(BaseModel):
     case: Case
     audit_note: AuditNote | None  # null when not yet investigated, never a note full of nulls
@@ -148,6 +192,11 @@ class CaseDetailResponse(BaseModel):
     context_rows: list[TransactionRow]  # rows the note cites outside the case, then nearby rows
     trace: list[TraceStep]
     currency: str
+<<<<<<< HEAD
+=======
+    investigation_status: InvestigationStatus | None = None
+    reviews: list[CaseReviewItem] = []
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
 
 class EvidenceResponse(BaseModel):
@@ -160,6 +209,10 @@ class StatusUpdateRequest(BaseModel):
     status: StatusName
     # null leaves the note unchanged; "" clears it.
     reviewer_note: str | None = Field(default=None, max_length=4000)
+<<<<<<< HEAD
+=======
+    reviewer: str | None = Field(default="Demo Reviewer", max_length=100)
+>>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
 
 # ------------------------------------------------------------------ overview
