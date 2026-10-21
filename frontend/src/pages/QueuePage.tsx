@@ -209,7 +209,7 @@ function CaseRow({
             {VERDICT_LABEL[c.verdict]}
           </span>
         ) : (
-          <span className="text-slate-400 text-[11px]">queued</span>
+          <span className="text-slate-500 text-[11px]">queued</span>
         )}
       </td>
 
@@ -222,7 +222,7 @@ function CaseRow({
             checked={c.citations_checked}
           />
         ) : (
-          <span className="text-slate-400 text-[11px]">—</span>
+          <span className="text-slate-500 text-[11px]">—</span>
         )}
       </td>
 
@@ -406,7 +406,7 @@ export function QueuePage() {
               onClick={resetAllFilters}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
               <span>Reset Filters</span>
             </button>
           )}
@@ -435,19 +435,19 @@ export function QueuePage() {
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
           {/* Search Input */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
               aria-label="Search"
               value={searchVal}
               onChange={(e) => setParam("search", e.target.value)}
               placeholder="Search supplier, case ID, or keyword..."
-              className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-600 focus:bg-white transition-all text-slate-800 placeholder:text-slate-400"
+              className="w-full pl-9 pr-4 py-2 text-xs sm:text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-cyan-600 focus:bg-white transition-all text-slate-800 placeholder:text-slate-500"
             />
           </div>
 
           <div className="flex items-center gap-1.5 text-xs text-slate-500 shrink-0">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500" />
             <span>Filters</span>
           </div>
         </div>
@@ -587,7 +587,7 @@ export function QueuePage() {
         {cases.data && cases.data.items.length === 0 && (
           <div className="py-12 text-center text-slate-500">
             <div className="max-w-sm mx-auto flex flex-col items-center">
-              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mb-3">
                 <Search className="w-5 h-5" />
               </div>
               <h4 className="text-sm font-bold text-slate-800">No cases match these filters</h4>
@@ -618,7 +618,7 @@ export function QueuePage() {
                     >
                       <div className="inline-flex items-center gap-1">
                         <span>Severity</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        <ArrowUpDown className="w-3 h-3 text-slate-500" />
                       </div>
                     </th>
                     <th className="py-3 px-4">Type</th>
@@ -629,7 +629,7 @@ export function QueuePage() {
                     >
                       <div className="inline-flex items-center gap-1 justify-end">
                         <span>At Risk</span>
-                        <ArrowUpDown className="w-3 h-3 text-slate-400" />
+                        <ArrowUpDown className="w-3 h-3 text-slate-500" />
                       </div>
                     </th>
                     <th className="py-3 px-4 text-right">Score</th>
