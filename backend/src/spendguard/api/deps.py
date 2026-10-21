@@ -32,11 +32,6 @@ def stores(request: Request) -> AppStores:
 
 def duck(store: Annotated[AppStores, Depends(stores)]) -> Iterator[duckdb.DuckDBPyConnection]:
     """A read-only connection per request (API-CONTRACT: DuckDB opened read-only, always)."""
-<<<<<<< HEAD
-    try:
-        con = duckdb.connect(str(store.duckdb_path), read_only=True)
-    except duckdb.Error as exc:
-=======
     if not store.duckdb_path.exists():
         raise HTTPException(
             503,
@@ -64,7 +59,6 @@ def duck(store: Annotated[AppStores, Depends(stores)]) -> Iterator[duckdb.DuckDB
                     ),
                 },
             ) from exc
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
         raise HTTPException(
             503,
             detail={

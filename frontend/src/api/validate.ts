@@ -12,27 +12,19 @@ import type {
   Case,
   CaseDetailResponse,
   CaseListResponse,
-<<<<<<< HEAD
-=======
   CaseReviewItem,
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
   CaseSummary,
   Citation,
   DemoInjectResponse,
   DetectorMetrics,
   EvaluationResponse,
   HealthResponse,
-<<<<<<< HEAD
-  MetricsResponse,
-  TraceStep,
-=======
   InvestigationJobResponse,
   InvestigationStatus,
   MetricsResponse,
   RunSummary,
   TraceStep,
   TransactionListResponse,
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
   TransactionRow,
 } from "./types";
 
@@ -146,8 +138,6 @@ export const transactionSchema = z.object({
   cited: z.boolean(),
 }) satisfies z.ZodType<TransactionRow>;
 
-<<<<<<< HEAD
-=======
 export const transactionListSchema = z.object({
   items: z.array(transactionSchema),
   total: z.number(),
@@ -209,7 +199,6 @@ export const investigationJobResponseSchema = z.object({
   message: z.string(),
 }) satisfies z.ZodType<InvestigationJobResponse>;
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 export const caseDetailSchema = z.object({
   case: caseSchema,
   audit_note: noteSchema.nullable(),
@@ -218,11 +207,8 @@ export const caseDetailSchema = z.object({
   context_rows: z.array(transactionSchema),
   trace: z.array(traceSchema),
   currency: z.string(),
-<<<<<<< HEAD
-=======
   investigation_status: investigationStatusSchema.nullable().optional(),
   reviews: z.array(caseReviewItemSchema),
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 }) satisfies z.ZodType<CaseDetailResponse>;
 
 const count = z.record(z.string(), z.number());

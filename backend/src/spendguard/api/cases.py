@@ -6,27 +6,18 @@ it is a person's: nothing in the agent layer calls it (D-04, D-07).
 
 from __future__ import annotations
 
-<<<<<<< HEAD
-from decimal import Decimal
-=======
 import threading
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
 import duckdb
-<<<<<<< HEAD
-from fastapi import APIRouter, Query
-from sqlalchemy import ColumnElement, Select, and_, func, select
-=======
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from sqlalchemy import ColumnElement, Select, and_, func, or_, select
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 from sqlalchemy.orm import Session, aliased
 
 from spendguard.api.deps import Duck, Stores, not_found
@@ -37,18 +28,12 @@ from spendguard.api.schemas import (
     Case,
     CaseDetailResponse,
     CaseListResponse,
-<<<<<<< HEAD
-    CaseSummary,
-    Citation,
-    EvidenceResponse,
-=======
     CaseReviewItem,
     CaseSummary,
     Citation,
     EvidenceResponse,
     InvestigationJobResponse,
     InvestigationStatus,
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     StatusName,
     StatusUpdateRequest,
     TraceStep,
@@ -63,12 +48,6 @@ from spendguard.db.store import (
     CaseRecord,
     CaseStatus,
     CitationRecord,
-<<<<<<< HEAD
-    TraceRecord,
-    latest_note,
-    set_status,
-)
-=======
     InvalidTransitionError,
     TraceRecord,
     get_case_reviews,
@@ -76,7 +55,6 @@ from spendguard.db.store import (
     set_status,
 )
 from spendguard.investigation import investigate_case_by_id
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
 router = APIRouter(prefix="/cases", tags=["cases"])
 
@@ -89,8 +67,6 @@ SORTS = {
 }
 
 
-<<<<<<< HEAD
-=======
 DETECTOR_MAP = {
     "duplicate": "duplicate",
     "duplicates": "duplicate",
@@ -218,7 +194,6 @@ def _run_investigation_worker(case_id: str, engine: Any, duckdb_path: Path) -> N
         _set_job(case_id, "failed", "Investigation failed", error=str(exc), finished=True)
 
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 def money(value: float | None) -> Decimal | None:
     return None if value is None else Decimal(f"{value:.2f}")
 
@@ -277,21 +252,14 @@ def list_cases(
     store: Stores,
     status: Annotated[list[StatusName] | None, Query()] = None,
     anomaly_type: Annotated[list[AnomalyTypeName] | None, Query()] = None,
-<<<<<<< HEAD
-    severity_band: Annotated[list[BandName] | None, Query()] = None,
-=======
     detector: Annotated[list[str] | None, Query()] = None,
     severity_band: Annotated[list[BandName] | None, Query()] = None,
     severity: Annotated[list[BandName] | None, Query()] = None,
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     verdict: Annotated[list[VerdictName] | None, Query()] = None,
     verification_status: Annotated[list[VerificationName] | None, Query()] = None,
     investigated: bool | None = None,
     dismissed_by_agent: bool | None = None,
-<<<<<<< HEAD
-=======
     search: Annotated[str | None, Query()] = None,
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     min_amount: Annotated[Decimal | None, Query(ge=0)] = None,
     sort: Literal["severity_prelim", "severity_final", "amount_at_risk", "created_at"] = (
         "severity_prelim"
@@ -308,12 +276,6 @@ def list_cases(
     filters: list[ColumnElement[bool]] = []
     if status:
         filters.append(CaseRecord.status.in_(status))
-<<<<<<< HEAD
-    if anomaly_type:
-        filters.append(CaseRecord.anomaly_type.in_(anomaly_type))
-    if severity_band:
-        filters.append(CaseRecord.severity_band.in_(severity_band))
-=======
 
     target_types: set[str] = set()
     if anomaly_type:
@@ -327,7 +289,6 @@ def list_cases(
     if target_severities:
         filters.append(CaseRecord.severity_band.in_(target_severities))
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     if verdict:
         filters.append(note.verdict.in_(verdict))
     if verification_status:
@@ -336,8 +297,6 @@ def list_cases(
         filters.append(CaseRecord.investigated.is_(investigated))
     if dismissed_by_agent is not None:
         filters.append(CaseRecord.dismissed_by_agent.is_(dismissed_by_agent))
-<<<<<<< HEAD
-=======
     if search and search.strip():
         s = search.strip()
         filters.append(
@@ -347,7 +306,6 @@ def list_cases(
                 CaseRecord.detector.ilike(f"%{s}%"),
             )
         )
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     if min_amount is not None:
         filters.append(CaseRecord.amount_at_risk >= float(min_amount))
     if filters:
@@ -499,8 +457,6 @@ def case_detail(case_id: UUID, store: Stores, con: Duck) -> CaseDetailResponse:
         note = _note(session, note_record) if note_record else None
         trace = _trace(session, note_record.note_id) if note_record else []
         case = to_case(record)
-<<<<<<< HEAD
-=======
         review_records = get_case_reviews(store.engine, record.case_id)
         reviews = [
             CaseReviewItem(
@@ -515,7 +471,6 @@ def case_detail(case_id: UUID, store: Stores, con: Duck) -> CaseDetailResponse:
             for r in review_records
         ]
         inv_status = _get_case_investigation_status(record.case_id, record)
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
     case_rows = list(record.row_ids)
     cited = {c.row_id for c in note.citations} if note else set()
@@ -532,11 +487,8 @@ def case_detail(case_id: UUID, store: Stores, con: Duck) -> CaseDetailResponse:
         context_rows=[to_row(r, False, cited) for r in context],
         trace=trace,
         currency=settings.currency,
-<<<<<<< HEAD
-=======
         investigation_status=inv_status,
         reviews=reviews,
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     )
 
 
@@ -568,23 +520,14 @@ def case_evidence(
 @router.patch(
     "/{case_id}/status",
     response_model=Case,
-<<<<<<< HEAD
-    responses={404: {"description": "Unknown case"}},
-=======
     responses={
         404: {"description": "Unknown case"},
         400: {"description": "Invalid status transition"},
     },
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 )
 def update_status(case_id: UUID, body: StatusUpdateRequest, store: Stores) -> Case:
     """The human decision (FR-5.2). The agent never calls this."""
     try:
-<<<<<<< HEAD
-        set_status(store.engine, str(case_id), CaseStatus(body.status), body.reviewer_note)
-    except KeyError:
-        raise not_found("case", case_id) from None
-=======
         set_status(
             store.engine,
             str(case_id),
@@ -600,13 +543,10 @@ def update_status(case_id: UUID, body: StatusUpdateRequest, store: Stores) -> Ca
             detail={"code": "invalid_transition", "message": str(exc)},
         ) from None
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     with Session(store.engine) as session:
         record = session.get(CaseRecord, str(case_id))
         assert record is not None
         return to_case(record)
-<<<<<<< HEAD
-=======
 
 
 @router.post(
@@ -915,4 +855,3 @@ def export_case_report(
         media_type="text/markdown",
         headers={"Content-Disposition": f'attachment; filename="spendguard-case-{case_id}.md"'},
     )
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1

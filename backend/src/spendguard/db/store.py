@@ -223,8 +223,6 @@ class FlagReviewRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
-<<<<<<< HEAD
-=======
 class InvalidTransitionError(ValueError):
     """The requested status transition is not permitted."""
 
@@ -266,7 +264,6 @@ class CaseReviewRecord(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_now)
 
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 class StoreMismatchError(RuntimeError):
     """The store already holds cases for a different dataset."""
 
@@ -293,12 +290,8 @@ def _ensure_parent(url: str) -> None:
 def get_engine(url: str | None = None) -> Engine:
     url = url or settings.database_url
     _ensure_parent(url)
-<<<<<<< HEAD
-    engine = create_engine(url)
-=======
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
     engine = create_engine(url, connect_args=connect_args)
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     Base.metadata.create_all(engine)
     return engine
 
@@ -401,12 +394,6 @@ def record_run(
 
 
 def set_status(
-<<<<<<< HEAD
-    engine: Engine, case_id: str, status: CaseStatus, note: str | None = None
-) -> CaseRecord:
-    """The human-in-the-loop action (decision D-07). Only people call this, never the agent.
-
-=======
     engine: Engine,
     case_id: str,
     status: CaseStatus,
@@ -416,7 +403,6 @@ def set_status(
     """The human-in-the-loop action (decision D-07). Only people call this, never the agent.
 
     Validates status transitions according to the case lifecycle and records review history.
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     ``note=None`` leaves the reviewer's note as it is; an empty or blank note
     clears it - to null, never to an empty string (API-CONTRACT: explicit nulls).
     """
@@ -424,14 +410,6 @@ def set_status(
         record = session.get(CaseRecord, case_id)
         if record is None:
             raise KeyError(f"No case {case_id}")
-<<<<<<< HEAD
-        record.status = status.value
-        if note is not None:
-            record.reviewer_note = note.strip() or None
-    return record
-
-
-=======
 
         prev_status = record.status
         allowed = VALID_TRANSITIONS.get(prev_status, {prev_status})
@@ -471,7 +449,6 @@ def get_case_reviews(engine: Engine, case_id: str) -> list[CaseReviewRecord]:
         )
 
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 # ------------------------------------------------------------------ investigation
 
 # Tool results are stored for the trace view, capped so one 50-row query cannot

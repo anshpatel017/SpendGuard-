@@ -56,8 +56,6 @@ def inject_demo(body: DemoInjectRequest, store: Stores) -> DemoInjectResponse:
         ],
         elapsed_seconds=run.elapsed_seconds,
     )
-<<<<<<< HEAD
-=======
 
 
 @router.post(
@@ -75,4 +73,3 @@ def reset_demo(confirm: bool = False) -> dict[str, str]:
             },
         )
     return {"status": "ok", "message": "Demo state reset successfully."}
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1

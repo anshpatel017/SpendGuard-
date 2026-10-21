@@ -140,8 +140,6 @@ class TransactionRow(BaseModel):
     cited: bool  # additive: the audit note cites this row
 
 
-<<<<<<< HEAD
-=======
 class TransactionListResponse(BaseModel):
     items: list[TransactionRow]
     total: int
@@ -183,7 +181,6 @@ class InvestigationJobResponse(BaseModel):
     message: str
 
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 class CaseDetailResponse(BaseModel):
     case: Case
     audit_note: AuditNote | None  # null when not yet investigated, never a note full of nulls
@@ -192,11 +189,8 @@ class CaseDetailResponse(BaseModel):
     context_rows: list[TransactionRow]  # rows the note cites outside the case, then nearby rows
     trace: list[TraceStep]
     currency: str
-<<<<<<< HEAD
-=======
     investigation_status: InvestigationStatus | None = None
     reviews: list[CaseReviewItem] = []
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
 
 class EvidenceResponse(BaseModel):
@@ -209,10 +203,7 @@ class StatusUpdateRequest(BaseModel):
     status: StatusName
     # null leaves the note unchanged; "" clears it.
     reviewer_note: str | None = Field(default=None, max_length=4000)
-<<<<<<< HEAD
-=======
     reviewer: str | None = Field(default="Demo Reviewer", max_length=100)
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
 
 # ------------------------------------------------------------------ overview

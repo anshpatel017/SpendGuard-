@@ -134,8 +134,6 @@ def test_an_in_memory_store_needs_no_directory() -> None:
     engine = get_engine("sqlite:///:memory:")
     save_cases(engine, "run-1", "dataset", [_case([1, 2])])
     assert cases_to_investigate(engine)
-<<<<<<< HEAD
-=======
 
 
 def test_status_transition_validation_and_review_history() -> None:
@@ -190,4 +188,3 @@ def test_status_transition_validation_and_review_history() -> None:
     reviews = get_case_reviews(engine, case.case_id)
     assert len(reviews) == 4
     assert reviews[-1].new_status == "dismissed"
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1

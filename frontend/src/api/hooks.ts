@@ -3,24 +3,17 @@
 // so nothing on screen contradicts what was just saved.
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-<<<<<<< HEAD
-import { api, type CaseFilters } from "./client";
-=======
 import { api, type CaseFilters, type TransactionFilters } from "./client";
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 import type { CaseStatus } from "./types";
 
 export const keys = {
   metrics: ["metrics"] as const,
   cases: (filters: CaseFilters) => ["cases", filters] as const,
   caseDetail: (caseId: string) => ["case", caseId] as const,
-<<<<<<< HEAD
-=======
   investigationStatus: (caseId: string) => ["investigation-status", caseId] as const,
   transactions: (filters: TransactionFilters) => ["transactions", filters] as const,
   runs: ["runs"] as const,
   health: ["health"] as const,
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
   evaluation: (seed: number) => ["evaluation", seed] as const,
 };
 
@@ -40,8 +33,6 @@ export function useCaseDetail(caseId: string) {
   return useQuery({ queryKey: keys.caseDetail(caseId), queryFn: () => api.caseDetail(caseId) });
 }
 
-<<<<<<< HEAD
-=======
 export function useInvestigationStatus(caseId: string, enabled: boolean) {
   const client = useQueryClient();
   return useQuery({
@@ -74,7 +65,6 @@ export function useTriggerInvestigation(caseId: string) {
   });
 }
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 export function useEvaluation(seed: number) {
   return useQuery({ queryKey: keys.evaluation(seed), queryFn: () => api.evaluation(seed) });
 }
@@ -89,10 +79,6 @@ export function useDemoInject() {
 export function useUpdateStatus(caseId: string) {
   const client = useQueryClient();
   return useMutation({
-<<<<<<< HEAD
-    mutationFn: ({ status, note }: { status: CaseStatus; note: string }) =>
-      api.updateStatus(caseId, status, note),
-=======
     mutationFn: ({
       status,
       note,
@@ -102,7 +88,6 @@ export function useUpdateStatus(caseId: string) {
       note: string;
       reviewer?: string;
     }) => api.updateStatus(caseId, status, note, reviewer),
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     onSuccess: async () => {
       await Promise.all([
         client.invalidateQueries({ queryKey: keys.caseDetail(caseId) }),
@@ -112,8 +97,6 @@ export function useUpdateStatus(caseId: string) {
     },
   });
 }
-<<<<<<< HEAD
-=======
 
 export function useTransactions(filters: TransactionFilters = {}) {
   return useQuery({
@@ -151,4 +134,3 @@ export function useDemoReset() {
     },
   });
 }
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1

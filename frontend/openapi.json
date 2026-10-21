@@ -493,8 +493,6 @@
             "title": "Evidence Total",
             "type": "integer"
           },
-<<<<<<< HEAD
-=======
           "investigation_status": {
             "anyOf": [
               {
@@ -513,7 +511,6 @@
             "title": "Reviews",
             "type": "array"
           },
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
           "trace": {
             "items": {
               "$ref": "#/components/schemas/TraceStep"
@@ -570,8 +567,6 @@
         "title": "CaseListResponse",
         "type": "object"
       },
-<<<<<<< HEAD
-=======
       "CaseReviewItem": {
         "properties": {
           "case_id": {
@@ -624,7 +619,6 @@
         "title": "CaseReviewItem",
         "type": "object"
       },
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
       "CaseSummary": {
         "description": "A queue row: the case, plus enough of its note to triage from the list.",
         "properties": {
@@ -1338,8 +1332,6 @@
         "title": "HealthResponse",
         "type": "object"
       },
-<<<<<<< HEAD
-=======
       "InvestigationJobResponse": {
         "properties": {
           "case_id": {
@@ -1439,7 +1431,6 @@
         "title": "InvestigationStatus",
         "type": "object"
       },
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
       "MetricsResponse": {
         "properties": {
           "by_anomaly_type": {
@@ -1665,8 +1656,6 @@
       },
       "StatusUpdateRequest": {
         "properties": {
-<<<<<<< HEAD
-=======
           "reviewer": {
             "anyOf": [
               {
@@ -1680,7 +1669,6 @@
             "default": "Demo Reviewer",
             "title": "Reviewer"
           },
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
           "reviewer_note": {
             "anyOf": [
               {
@@ -1819,8 +1807,6 @@
         "title": "TraceStep",
         "type": "object"
       },
-<<<<<<< HEAD
-=======
       "TransactionListResponse": {
         "properties": {
           "currency": {
@@ -1903,7 +1889,6 @@
         "title": "TransactionListResponse",
         "type": "object"
       },
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
       "TransactionRow": {
         "properties": {
           "amount": {
@@ -2088,8 +2073,6 @@
           },
           {
             "in": "query",
-<<<<<<< HEAD
-=======
             "name": "detector",
             "required": false,
             "schema": {
@@ -2109,7 +2092,6 @@
           },
           {
             "in": "query",
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
             "name": "severity_band",
             "required": false,
             "schema": {
@@ -2134,8 +2116,6 @@
           },
           {
             "in": "query",
-<<<<<<< HEAD
-=======
             "name": "severity",
             "required": false,
             "schema": {
@@ -2160,7 +2140,6 @@
           },
           {
             "in": "query",
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
             "name": "verdict",
             "required": false,
             "schema": {
@@ -2241,8 +2220,6 @@
           },
           {
             "in": "query",
-<<<<<<< HEAD
-=======
             "name": "search",
             "required": false,
             "schema": {
@@ -2259,7 +2236,6 @@
           },
           {
             "in": "query",
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
             "name": "min_amount",
             "required": false,
             "schema": {
@@ -2486,8 +2462,6 @@
         ]
       }
     },
-<<<<<<< HEAD
-=======
     "/api/v1/cases/{case_id}/export": {
       "get": {
         "description": "Export an evidence-backed audit report for a case in Markdown or HTML (P1).",
@@ -2692,7 +2666,6 @@
         ]
       }
     },
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     "/api/v1/cases/{case_id}/status": {
       "patch": {
         "description": "The human decision (FR-5.2). The agent never calls this.",
@@ -2730,12 +2703,9 @@
             },
             "description": "Successful Response"
           },
-<<<<<<< HEAD
-=======
           "400": {
             "description": "Invalid status transition"
           },
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
           "404": {
             "description": "Unknown case"
           },
@@ -2811,8 +2781,6 @@
         ]
       }
     },
-<<<<<<< HEAD
-=======
     "/api/v1/demo/reset": {
       "post": {
         "description": "Reset temporary live demo state. Source dataset is never deleted (P2).",
@@ -2874,7 +2842,6 @@
         ]
       }
     },
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     "/api/v1/evaluation": {
       "get": {
         "description": "Detector metrics against the baseline, agent metrics and ablations for one seed (FR-5.8).",
@@ -3073,8 +3040,6 @@
         ]
       }
     },
-<<<<<<< HEAD
-=======
     "/api/v1/transactions": {
       "get": {
         "description": "Read-only transaction explorer for auditing procurement transactions (P2).",
@@ -3219,7 +3184,6 @@
         ]
       }
     },
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     "/api/v1/transactions/{row_id}": {
       "get": {
         "description": "One row, for inspecting a citation. Read from the audit view: never the answer key.",

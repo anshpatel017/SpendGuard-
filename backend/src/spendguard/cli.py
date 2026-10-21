@@ -1150,8 +1150,6 @@ def check_policy() -> None:
     console.print("[green]Policy and configuration agree.[/green]")
 
 
-<<<<<<< HEAD
-=======
 @app.command()
 def reset(
     demo_only: Annotated[bool, typer.Option(help="Only reset temporary live demo state.")] = False,
@@ -1199,6 +1197,5 @@ def reset(
         )
 
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 if __name__ == "__main__":
     app()
