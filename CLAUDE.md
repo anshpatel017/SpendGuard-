@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 806 backend + 29 frontend tests passing · CI green.
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 826 backend + 34 frontend tests · CI green · agent evaluation at 14 notes of a 20-case sample, template ablation complete. **What is left, and what needs a person, is at the end of PROGRESS.**
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -19,7 +19,7 @@ SpendGuard audits **100% of an organization's procurement transactions**, detect
 | Layer | Choice |
 |---|---|
 | Language | Python 3.12+ (dev machine runs 3.13) |
-| Analytical store | **DuckDB** — transactions, detector output, evaluation results |
+| Analytical store | **DuckDB** — transactions, detector output, evaluation results. Pinned `<2`: 2.0 removes `.pl()`, which every detector calls |
 | Operational store | **SQLite** via SQLAlchemy 2.0 — cases, review status, notes, runs. Postgres is a one-line `DATABASE_URL` swap |
 | Data | Polars (primary), pandas, PyArrow |
 | Detection / ML | numpy, scikit-learn, scipy, rapidfuzz |
