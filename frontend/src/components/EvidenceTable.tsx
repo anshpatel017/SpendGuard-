@@ -36,15 +36,23 @@ export function EvidenceTable({
   total,
   context,
   highlight,
+  focusTick,
 }: {
   evidence: TransactionRow[];
   total: number;
   context: TransactionRow[];
   highlight: number | null;
+  focusTick: number;
 }) {
+  // Instant, not smooth. The evidence table sits well over a thousand pixels
+  // down the case page, and a smooth scroll of that length reads as nothing
+  // happening - which is the worst possible response to the one click the
+  // walkthrough asks a presenter to make (DEMO.md 3).
   useEffect(() => {
-    if (highlight !== null) document.getElementById(`row-${highlight}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [highlight]);
+    if (highlight !== null) {
+      document.getElementById(`row-${highlight}`)?.scrollIntoView({ block: "center" });
+    }
+  }, [highlight, focusTick]);
 
   return (
     <Card
