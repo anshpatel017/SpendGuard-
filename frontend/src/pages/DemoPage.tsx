@@ -1,14 +1,10 @@
 import {
-  Building2,
-  Copy,
   Eye,
   FlaskConical,
   Info,
   Play,
   RotateCcw,
-  Scissors,
   Sparkles,
-  TrendingUp,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -18,8 +14,6 @@ import Scanner from "../components/common/Scanner";
 import { useToast } from "../context/ToastContext";
 import { missExplanation } from "../lib/demo";
 import { ANOMALY_LABEL, formatCount, formatMoney } from "../lib/format";
-
-type DetectorType = "Duplicate" | "Split Purchase" | "Price Inflation" | "Vendor Risk";
 
 interface DemoItem {
   id: string;
@@ -32,8 +26,7 @@ interface DemoItem {
 }
 
 export function DemoPage() {
-  const [selectedDetector, setSelectedDetector] = useState<DetectorType>("Split Purchase");
-  const [datasetBatch, setDatasetBatch] = useState<string>("sample_q4_fiscal_surge");
+  const [count, setCount] = useState(3);
   const [selectedInspectItem, setSelectedInspectItem] = useState<DemoItem | null>(null);
 
   const { showToast } = useToast();
@@ -49,30 +42,9 @@ export function DemoPage() {
     .filter((r) => !r.detected)
     .map((r) => r.anomaly_type);
 
-  const sampleDatasets = [
-    {
-      id: "sample_q4_fiscal_surge",
-      name: "Fiscal Year-End Surge (520 Records)",
-      description: "Synthetic transactions simulating end-of-quarter budget expending rush.",
-      count: 520,
-    },
-    {
-      id: "sample_it_infrastructure",
-      name: "IT Infrastructure & Hardware (340 Records)",
-      description: "Server compute, peripheral, and telecom line items across 14 suppliers.",
-      count: 340,
-    },
-    {
-      id: "sample_facilities_mro",
-      name: "Facilities & Ops Maintenance (610 Records)",
-      description: "Cleaning contracts, construction supplies, and office ergonomics.",
-      count: 610,
-    },
-  ];
-
   const handleRunDetection = () => {
     demoMutation.mutate(
-      { count: 3, seed: null },
+      { count, seed: null },
       {
         onSuccess: (data) => {
           showToast(`Completed sandbox run: caught ${data.caught} of ${data.results.length} anomalies`, "info");
@@ -106,13 +78,6 @@ export function DemoPage() {
     triggerSignal: `${ANOMALY_LABEL[r.anomaly_type] || r.anomaly_type} planted across ${r.injected_row_ids.length} row${r.injected_row_ids.length === 1 ? "" : "s"}`,
     detector: ANOMALY_LABEL[r.anomaly_type] || r.anomaly_type,
   }));
-
-  const filteredResults = displayResults.filter((r) => {
-    if (!runData) return true;
-    const norm = selectedDetector.toLowerCase().replace(/\s+/g, "");
-    const dNorm = r.detector.toLowerCase().replace(/\s+/g, "");
-    return dNorm.includes(norm) || norm.includes(dNorm) || true;
-  });
 
   return (
     <div className="space-y-6">
@@ -148,7 +113,9 @@ export function DemoPage() {
             Isolated Sandbox Protocol
           </strong>
           <span className="text-slate-600">
-            This sandbox environment is strictly air-gapped from the primary enterprise ledger. Test injections and experimental detection parameters execute in isolated volatile memory without modifying live case records.
+            Anomalies are planted into a temporary copy of the data, never the served
+            dataset, and the copy is dropped when the run ends. A test hashes the
+            served data before and after a run and fails if a single byte moved.
           </span>
         </div>
       </div>
@@ -173,10 +140,12 @@ export function DemoPage() {
               <span>Real-Time Anomaly Radar</span>
             </div>
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Sub-Second Statistical Invariant Scanning
+              Deterministic Statistical Scanning
             </h3>
             <p className="text-xs sm:text-sm text-slate-300 max-w-lg mt-1 leading-relaxed">
-              Evaluating transactions using temporal clustering, robust z-scores, and token collision analysis without black-box hallucination.
+              Every row of the copy is scanned by the same four detectors that run in
+              production: Fellegi-Sunter record linkage, minimal split runs, robust
+              z-scores against category medians, and peer tests combined by Fisher.
             </p>
           </div>
         </div>
@@ -184,135 +153,34 @@ export function DemoPage() {
 
       {/* 4. Input Controls & Detector Selector */}
       <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-xs p-5 space-y-5">
-        {/* Dataset Sample Selector */}
+        {/* The one parameter POST /demo/inject takes. A dataset batch and a
+            detector used to sit here; the endpoint accepts neither, and the
+            three batches on offer were not real datasets. */}
         <div>
-          <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-            1. Select Test Sample Batch
+          <label
+            htmlFor="demo-count"
+            className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2"
+          >
+            Anomalies to plant
           </label>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {sampleDatasets.map((ds) => (
-              <button
-                key={ds.id}
-                type="button"
-                onClick={() => setDatasetBatch(ds.id)}
-                className={`p-3 rounded-lg border text-left transition-all cursor-pointer ${
-                  datasetBatch === ds.id
-                    ? "border-2 border-black bg-neutral-50 shadow-xs"
-                    : "border-slate-200 hover:border-slate-300 bg-white"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-900">{ds.name}</span>
-                  <span
-                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                      datasetBatch === ds.id
-                        ? "text-black bg-neutral-200 font-semibold border border-neutral-300"
-                        : "text-slate-600 bg-slate-100"
-                    }`}
-                  >
-                    {ds.count} rows
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-500 mt-1">{ds.description}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Detector Selector Cards */}
-        <div>
-          <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-            2. Choose Anomaly Detector
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Duplicate */}
-            <button
-              type="button"
-              onClick={() => setSelectedDetector("Duplicate")}
-              className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
-                selectedDetector === "Duplicate"
-                  ? "border-2 border-black bg-neutral-50 shadow-xs ring-1 ring-black"
-                  : "border-slate-200 hover:border-slate-300 bg-white"
-              }`}
-            >
-              <div>
-                <div className="w-8 h-8 rounded-lg bg-slate-100 text-black flex items-center justify-center mb-2 border border-slate-200">
-                  <Copy className="w-4 h-4" />
-                </div>
-                <h4 className="text-xs font-bold text-slate-900">Duplicate Purchases</h4>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Blocked on amount and date, then each pair scored by a
-                  Fellegi-Sunter model.
-                </p>
-              </div>
-              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: match probability</div>
-            </button>
-
-            {/* Split Purchase */}
-            <button
-              type="button"
-              onClick={() => setSelectedDetector("Split Purchase")}
-              className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
-                selectedDetector === "Split Purchase"
-                  ? "border-2 border-black bg-neutral-50 shadow-xs ring-1 ring-black"
-                  : "border-slate-200 hover:border-slate-300 bg-white"
-              }`}
-            >
-              <div>
-                <div className="w-8 h-8 rounded-lg bg-slate-100 text-black flex items-center justify-center mb-2 border border-slate-200">
-                  <Scissors className="w-4 h-4" />
-                </div>
-                <h4 className="text-xs font-bold text-slate-900">Split Purchases</h4>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Runs of orders that stay just under the ₹2,50,000 approval limit.
-                </p>
-              </div>
-              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: proximity to threshold</div>
-            </button>
-
-            {/* Price Inflation */}
-            <button
-              type="button"
-              onClick={() => setSelectedDetector("Price Inflation")}
-              className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
-                selectedDetector === "Price Inflation"
-                  ? "border-2 border-black bg-neutral-50 shadow-xs ring-1 ring-black"
-                  : "border-slate-200 hover:border-slate-300 bg-white"
-              }`}
-            >
-              <div>
-                <div className="w-8 h-8 rounded-lg bg-slate-100 text-black flex items-center justify-center mb-2 border border-slate-200">
-                  <TrendingUp className="w-4 h-4" />
-                </div>
-                <h4 className="text-xs font-bold text-slate-900">Price Inflation</h4>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Robust MAD z-score vs historical peer catalog.
-                </p>
-              </div>
-              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: robust z-score</div>
-            </button>
-
-            {/* Vendor Risk */}
-            <button
-              type="button"
-              onClick={() => setSelectedDetector("Vendor Risk")}
-              className={`p-3.5 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
-                selectedDetector === "Vendor Risk"
-                  ? "border-2 border-black bg-neutral-50 shadow-xs ring-1 ring-black"
-                  : "border-slate-200 hover:border-slate-300 bg-white"
-              }`}
-            >
-              <div>
-                <div className="w-8 h-8 rounded-lg bg-slate-100 text-black flex items-center justify-center mb-2 border border-slate-200">
-                  <Building2 className="w-4 h-4" />
-                </div>
-                <h4 className="text-xs font-bold text-slate-900">Vendor Risk</h4>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Each supplier tested against its peers, combined by Fisher.
-                </p>
-              </div>
-              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: combined p-value</div>
-            </button>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <input
+              id="demo-count"
+              type="number"
+              min={1}
+              max={10}
+              value={count}
+              onChange={(e) =>
+                setCount(Math.max(1, Math.min(10, Number(e.target.value) || 1)))
+              }
+              className="w-20 px-3 py-2 text-sm font-mono rounded-lg border border-slate-200 bg-slate-50 text-slate-800 focus:outline-none focus:ring-1 focus:ring-cyan-600 focus:bg-white"
+            />
+            <p className="text-[11px] text-slate-500 leading-relaxed flex-1 min-w-0">
+              Duplicates, split runs and price inflation are planted into a temporary copy
+              of the last three months of the clean dataset. Vendor flags are excluded:
+              they need months of a supplier&apos;s history. All four detectors then scan
+              every row of the copy, which is dropped afterwards.
+            </p>
           </div>
         </div>
 
@@ -331,7 +199,7 @@ export function DemoPage() {
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Run {selectedDetector} Anomaly Simulation</span>
+                <span>Plant {count} anomal{count === 1 ? "y" : "ies"} and run detection</span>
               </>
             )}
           </button>
@@ -357,9 +225,9 @@ export function DemoPage() {
           </div>
 
           <div>
-            <span className="text-slate-500 block text-[11px]">Detector Focus</span>
-            <span className="font-semibold text-slate-900 text-sm">
-              {selectedDetector}
+            <span className="text-slate-500 block text-[11px]">Scan time</span>
+            <span className="font-mono font-bold text-slate-900 text-base tabular-nums">
+              {runData ? `${runData.elapsed_seconds.toFixed(1)}s` : "—"}
             </span>
           </div>
 
@@ -377,7 +245,7 @@ export function DemoPage() {
         <div className="bg-white rounded-xl border border-[#E2E8F0] shadow-xs overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
             <span className="text-xs font-bold text-slate-800">
-              Sandbox Detected Cases ({filteredResults.length})
+              Sandbox Detected Cases ({displayResults.length})
             </span>
             <span className="text-[11px] text-slate-500 font-mono">
               Live anomaly detection verified
@@ -398,7 +266,7 @@ export function DemoPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredResults.map((item) => (
+                {displayResults.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-2.5 px-3 font-mono font-semibold text-slate-800">
                       {item.id}
@@ -444,7 +312,7 @@ export function DemoPage() {
               </tbody>
             </table>
 
-            {filteredResults.length === 0 && (
+            {displayResults.length === 0 && (
               <p className="px-4 py-8 text-center text-xs text-slate-500">
                 No run yet. Inject anomalies to see what the detectors catch and
                 what they miss.
