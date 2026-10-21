@@ -27,18 +27,11 @@ from spendguard.api.schemas import (
     HealthResponse,
     MetricsResponse,
     RunSummary,
-<<<<<<< HEAD
-    TransactionRow,
-)
-from spendguard.config import settings
-from spendguard.db.duck import AUDIT_VIEW, table_exists
-=======
     TransactionListResponse,
     TransactionRow,
 )
 from spendguard.config import settings
 from spendguard.db.duck import AUDIT_FIELDS, AUDIT_VIEW, table_exists
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 from spendguard.db.store import (
     AuditNoteRecord,
     CaseRecord,
@@ -146,8 +139,6 @@ def runs(store: Stores, limit: Annotated[int, Query(ge=1, le=200)] = 20) -> list
         ]
 
 
-<<<<<<< HEAD
-=======
 @router.get("/transactions", response_model=TransactionListResponse)
 def list_transactions(
     con: Duck,
@@ -215,7 +206,6 @@ def list_transactions(
     )
 
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 @router.get(
     "/transactions/{row_id}",
     response_model=TransactionRow,

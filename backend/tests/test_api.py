@@ -176,8 +176,6 @@ def test_money_leaves_as_a_string(client: TestClient) -> None:
     [
         ({"anomaly_type": "split"}, {SPLIT.case_id}),
         ({"anomaly_type": ["split", "duplicate"]}, {SPLIT.case_id, DUPLICATE.case_id}),
-<<<<<<< HEAD
-=======
         ({"detector": "duplicate"}, {DUPLICATE.case_id}),
         ({"detector": ["split", "duplicate"]}, {SPLIT.case_id, DUPLICATE.case_id}),
         (
@@ -185,7 +183,6 @@ def test_money_leaves_as_a_string(client: TestClient) -> None:
             {DUPLICATE.case_id, SPLIT.case_id, INFLATION.case_id, *(c.case_id for c in QUEUED)},
         ),
         ({"search": "nonexistent"}, set()),
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
         ({"investigated": "true"}, {DUPLICATE.case_id, INFLATION.case_id}),
         ({"verdict": "likely_false_positive"}, {INFLATION.case_id}),
         ({"dismissed_by_agent": "true"}, {INFLATION.case_id}),
@@ -338,8 +335,6 @@ def test_the_review_action_refuses_bad_input(client: TestClient) -> None:
     assert missing.status_code == 404
 
 
-<<<<<<< HEAD
-=======
 def test_the_review_action_refuses_invalid_status_transition(client: TestClient) -> None:
     # DUPLICATE starts as 'new'
     # new -> confirmed is valid
@@ -432,7 +427,6 @@ def test_case_report_export_markdown_and_html(client: TestClient) -> None:
     assert "SpendGuard Case Report" in html_res.text
 
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 # ------------------------------------------------------------------ metrics, runs, health
 
 
@@ -480,9 +474,6 @@ def test_a_missing_database_degrades_health_and_is_a_structured_503(paths: dict[
     client = TestClient(app)
     assert client.get(f"{API}/health").json()["status"] == "degraded"
     response = client.get(f"{API}/metrics")
-<<<<<<< HEAD
-    assert response.status_code == 503 and response.json()["detail"]["code"] == "duckdb_unavailable"
-=======
     assert response.status_code == 503
     assert response.json()["detail"]["code"] in ("dataset_not_initialized", "duckdb_unavailable")
 
@@ -516,7 +507,6 @@ def test_demo_reset_endpoint(client: TestClient) -> None:
     res_ok = client.post(f"{API}/demo/reset", params={"confirm": "true"})
     assert res_ok.status_code == 200
     assert res_ok.json()["status"] == "ok"
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
 
 # ------------------------------------------------------------------ evaluation

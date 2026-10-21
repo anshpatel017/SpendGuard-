@@ -28,10 +28,7 @@ from __future__ import annotations
 
 import json
 import time
-<<<<<<< HEAD
-=======
 from collections.abc import Callable
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 from typing import Any
 
 import duckdb
@@ -272,10 +269,7 @@ def investigate_and_verify(
     *,
     max_retries: int | None = None,
     enabled: bool | None = None,
-<<<<<<< HEAD
-=======
     on_stage: Callable[[str], None] | None = None,
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 ) -> InvestigationResult:
     """Investigate one case, then verify and regenerate until it passes or retries run out.
 
@@ -283,11 +277,8 @@ def investigate_and_verify(
     ``unverified`` and never regenerated - but the deterministic check still
     runs, so the ablation's citation validity is measured the same way.
     """
-<<<<<<< HEAD
-=======
     if on_stage:
         on_stage("investigating")
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     enabled = settings.verifier_enabled if enabled is None else enabled
     max_retries = settings.verifier_max_retries if max_retries is None else max_retries
 
@@ -295,11 +286,8 @@ def investigate_and_verify(
     if result.note is None or verifier is None:
         return result
 
-<<<<<<< HEAD
-=======
     if on_stage:
         on_stage("verifying")
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     report = verifier.check(result, semantic=None if enabled else False)
     result.first_check = report
     drafts: list[tuple[InvestigatorNote, VerificationReport]] = [(result.note, report)]

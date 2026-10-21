@@ -40,16 +40,12 @@ from spendguard.detection import EvaluationDatabaseError, run_detection
 from spendguard.eval.injection import InjectionResult
 from spendguard.eval.matching import TruthGroup
 from spendguard.eval.triage import TriageItem, triage_metrics
-<<<<<<< HEAD
-from spendguard.investigation import evaluate_investigation, run_investigation, sample_for_triage
-=======
 from spendguard.investigation import (
     evaluate_investigation,
     investigate_case_by_id,
     run_investigation,
     sample_for_triage,
 )
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 from spendguard.pipeline.ingest import IngestResult
 
 from .conftest import build_db
@@ -464,8 +460,6 @@ def test_a_case_that_keeps_failing_stops_going_first_every_day(
 
 def engine_for(report_dir: Path) -> Any:
     return get_engine(f"sqlite:///{(report_dir / 'investigation_seed11.sqlite').as_posix()}")
-<<<<<<< HEAD
-=======
 
 
 def test_investigate_case_by_id_executes_and_saves(tmp_path: Path) -> None:
@@ -504,4 +498,3 @@ def test_investigate_case_by_id_executes_and_saves(tmp_path: Path) -> None:
     # Non-existent case raises KeyError
     with pytest.raises(KeyError, match="No case with id"):
         investigate_case_by_id("non-existent-id", db_path=tmp_path / "t.duckdb", engine=engine)
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1

@@ -1,17 +1,11 @@
-<<<<<<< HEAD
-=======
 @import "tailwindcss";
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 /* SpendGuard dashboard. One stylesheet, design tokens as CSS variables, light and dark. */
 
 :root {
   color-scheme: light dark;
-<<<<<<< HEAD
-=======
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
   --bg: #f6f7f9;
   --surface: #ffffff;
   --surface-2: #f0f2f5;
@@ -33,13 +27,8 @@
   --highlight: #ffe8a3;
   --radius: 8px;
   --shadow: 0 1px 2px rgba(20, 30, 50, 0.06), 0 1px 1px rgba(20, 30, 50, 0.04);
-<<<<<<< HEAD
-  --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
-  font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", sans-serif;
-=======
   --mono: var(--font-mono);
   font-family: var(--font-sans);
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
   font-size: 14px;
   line-height: 1.45;
 }
@@ -176,12 +165,6 @@ label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--
   color: var(--text); cursor: pointer;
 }
 .btn:hover:not(:disabled) { background: var(--surface-2); }
-<<<<<<< HEAD
-.btn:disabled { opacity: 0.5; cursor: default; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.primary:hover:not(:disabled) { filter: brightness(1.08); background: var(--accent); }
-.btn.selected { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-=======
 .btn.primary {
   background: #000000;
   border-color: #000000;
@@ -201,7 +184,6 @@ label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--
   color: #ffffff;
   font-weight: 600;
 }
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 .pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 10px; }
 
 /* ------------------------------------------------------------ note */
@@ -212,9 +194,6 @@ label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--
 .claim.failed { border-color: var(--bad); background: var(--bad-soft); }
 .claim .cites { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
 .failure { color: var(--bad); font-size: 12.5px; margin-top: 4px; }
-<<<<<<< HEAD
-.recommendation { margin-top: 14px; padding: 10px 12px; border-left: 3px solid var(--accent); background: var(--accent-soft); }
-=======
 .recommendation {
   margin-top: 14px;
   padding: 12px 14px;
@@ -222,7 +201,6 @@ label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--
   border-radius: 8px;
   background: #f8fafc;
 }
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
 /* ------------------------------------------------------------ trace */
 
@@ -246,8 +224,6 @@ details > summary { cursor: pointer; color: var(--accent); font-size: 12.5px; }
 .kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 0; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
-<<<<<<< HEAD
-=======
 
 .font-mono {
   font-family: var(--font-mono);
@@ -271,4 +247,3 @@ details > summary { cursor: pointer; color: var(--accent); font-size: 12.5px; }
 ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
