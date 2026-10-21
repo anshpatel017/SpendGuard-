@@ -33,8 +33,8 @@ That single decision is what keeps the serving layer thin: nothing slow ever hap
 |                                                               |
 |  ingest  ->  detect  ->  investigate  ->  verify  ->  evaluate|
 |                                                               |
-|  pandas / Polars - scikit-learn - PyOD - rapidfuzz - Splink   |
-|  scipy - sentence-transformers + FAISS - MLflow               |
+|  pandas / Polars - scikit-learn - rapidfuzz - scipy           |
+|  sentence-transformers + FAISS                                |
 |  Ollama serving Qwen2.5-7B-Instruct (Q4_K_M)                  |
 +---------------------------------------------------------------+
 ```
@@ -76,7 +76,7 @@ Every detector implements the same interface and returns the same Case shape. Th
 
 A **rule-based baseline** implements the same interface, deliberately naive, so that every claim of improvement has something concrete to be measured against.
 
-**Technology:** scikit-learn, PyOD, rapidfuzz, Splink, scipy.stats, DuckDB SQL.
+**Technology:** scikit-learn, rapidfuzz, scipy.stats, numpy, DuckDB SQL.
 
 ### 2.3 Agentic layer
 
