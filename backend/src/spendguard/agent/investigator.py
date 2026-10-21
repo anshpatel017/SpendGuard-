@@ -205,7 +205,7 @@ class InvestigationResult:
 
 
 def final_severity(prelim: float, verdict: Verdict) -> tuple[float, SeverityBand]:
-    """Stage-2 severity after investigation (decision D-08; open issue O-04).
+    """Stage-2 severity after investigation (decisions D-08 and O-04).
 
     ``likely_false_positive`` drops the case to Low, ``inconclusive`` caps it at
     Medium, ``likely_true_positive`` keeps its preliminary severity.
@@ -213,8 +213,8 @@ def final_severity(prelim: float, verdict: Verdict) -> tuple[float, SeverityBand
     The *number* moves with the band - capped just below the band edge - rather
     than only the label changing. That keeps sorting by severity and filtering by
     band in agreement, and preserves the relative order of cases within a band.
-    This is the recommended resolution of O-04, isolated here so it is one
-    function to change if the decision goes the other way.
+    O-04, confirmed 2026-10-22. Kept as one function so the rule lives in a
+    single place rather than being spread across the callers.
     """
     if verdict is Verdict.LIKELY_FALSE_POSITIVE:
         value = min(prelim, settings.severity_band_medium - 0.01)

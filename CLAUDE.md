@@ -196,4 +196,4 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-37
 - **D-35** Ablation arms (`template`, `no-verifier`) are stored, scored and reported *beside* the main run: their notes never stand as a case's note and never enter the agent's numbers.
 - **D-36** Grading rubric: five dimensions scored **0-1-2**; agreement is **ordinal Krippendorff's alpha**, pinned to published values; blinding is enforced by a test.
 - **Real data (EVALUATION 4.0c):** on California POs D3's taxonomy gives no price norm (5.63× spread vs 1.11× synthetic) and 48.7% of D1's flags pair two lines of one order. Evidence for **O-05**/**O-07**.
-- **O-04** implemented as recommended (the number moves with the band), awaiting confirmation. **O-05** open.
+- **O-04** resolved (2026-10-22): a dropped case's severity *number* moves with its band, so sorting and filtering agree. **O-03**, **O-05**, **O-07** remain open.

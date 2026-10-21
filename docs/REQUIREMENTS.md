@@ -169,7 +169,7 @@ The system is complete when all of the following hold:
 | ~~Reporting currency~~ | **Resolved — INR (`₹`). See D-15.** |
 | ~~Approval threshold figure~~ | **Resolved — ₹2,50,000. See D-16 and `policy/policy.md` SG-PP-2.2.** |
 | Reference amount used in `amount_weight` (fixed constant vs percentile vs run maximum) | Open — see [DECISIONS.md](DECISIONS.md) O-03 |
-| `severity_final` semantics when the agent drops a case to Low | Open — see [DECISIONS.md](DECISIONS.md) O-04 |
+| `severity_final` semantics when the agent drops a case to Low | Resolved — see [DECISIONS.md](DECISIONS.md) O-04. The number moves with the band. |
 | Whether D3 pseudo-categories from description clustering are core or deferred | Open — see [DECISIONS.md](DECISIONS.md) O-05 |
 
 ### Requirements added by the currency and threshold decisions
