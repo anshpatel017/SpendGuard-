@@ -345,12 +345,121 @@ Found by checking after a push rather than assuming. **Ten consecutive runs fail
 - **Verified** by simulating CI's environment locally (blocking the heavy packages at import): **791 passed, 14 skipped, 0 failed**, against 26 failures before.
 - **So it cannot rot silently again:** a CI badge now sits at the top of the README, and CLAUDE.md states what CI installs and says plainly that it was red for four phases because nobody looked.
 
-## Next Steps
+### Between steps — a merge broke the build, and three libraries had moved under it (2026-10-21/22)
 
-**Nothing is blocking.** `LLM_PROVIDER=groq` is set and passes `spendguard check-llm`, including the new second-turn check. Steps 1-5 are complete; step 6 needs only calendar time.
+**The repository would not import for six days and nobody looked.** Merging a teammate's branch into the rewritten history committed unresolved conflict markers into **39 files** — Python sources included — so `spendguard --help` died with a `SyntaxError` at `cli.py:1202` and CI had been red since. `frontend/package-lock.json` alone carried 164 markers.
 
-1. **Run `spendguard investigate --matrix` once a day** until the plan is complete — about ten investigations a day (D-30), so roughly a week. It stops itself when the quota is spent and continues from there next time. `spendguard report agent` rewrites `docs/results/agent.md` from whatever has landed.
-2. **Then step 7:** final numbers traced to commands, the headline sentence, the final freeze, the demo walkthrough.
-3. **Decisions.** **O-04 is resolved** (2026-10-22). Still open and none blocking: **O-03** (a fixed `reference_amount`, so severity is comparable across runs); **O-05** (D3 pseudo-categories — now has measured evidence, EVALUATION 4.0c Finding 1); **O-07** (a document id for detectors — EVALUATION 4.0c Finding 2).
-4. **Later, when there is disk space:** install Ollama and `ollama pull qwen2.5:3b-instruct-q4_K_M`, then `LLM_PROVIDER=ollama`. D-37 makes this more valuable than it looked: three free-tier models have now been lost to retirement or an API change, so the local proof is the only runtime nobody else can withdraw.
-5. **Housekeeping:** `main` matches GitHub as of `717ad52` and CI is green. Commit authorship has been normalised onto one email, so every hash from the start of the project changed - anyone holding an older clone should re-clone rather than pull. The stale `Om` branch (a copy of `main` three commits behind, carrying no unique content) was deleted from the remote.
+- **The merge could not have worked.** Rewriting history left the teammate's branch with no common ancestor, so `git merge` refused outright and `--allow-unrelated-histories` treats every file as an add/add conflict. Cherry-picking the eight feature commits does work, because each carries its own parent and therefore a real diff: six applied untouched, and the only true collision was `DemoPage.tsx`, which both sides had rewritten. Resolved as instructed — our side everywhere, the teammate's UI re-applied — and landed as one commit on top of the merge rather than another force-push, so nobody has to re-clone again.
+- **The redesign had dropped the miss explanation** and replaced it with a fixed sentence calling every miss an intentional hand-off to human review. That is the defect `lib/demo.ts` exists to prevent, reintroduced; `missExplanation` is back.
+
+**Three dependencies had shipped releases this project breaks on, and only CI noticed.** A type check that passes locally failed in CI with 11 identical errors: `"DuckDBPyConnection" has no attribute "pl"`. Reproduced in a venv built the way CI builds one.
+
+- **DuckDB 2.0 removes `.pl()`** from the connection and the result object alike. `pyproject` asked for `duckdb>=1.1` with no ceiling, so a fresh install resolved to 2.0 and *every* detector, agent tool and three API handlers raised `AttributeError` on contact with data. Anyone cloning the repository installed a broken system; this machine only looked fine because it still had 1.5.5. There is no rename to follow — 2.0 offers pandas and Arrow and no Polars path at all.
+- **Polars had done the same** (1.44 here, 2.0 on a fresh resolve) and is capped before it bites.
+- **Pydantic 2.14 was quieter and worse.** It stops emitting `pattern` in the JSON schema for constrained strings, dropping the money regex from **13 fields** of the committed contract — the rule that money travels as a string, stated in the one artefact the frontend compiles against. The contract would have gone on matching by name while constraining nothing. The schema-drift test caught it.
+- All three are pinned below the majors they were evaluated against. Moving the data layer is a migration with its own re-evaluation, not a version bump: every figure in `docs/results` was produced on the 1.x line.
+
+**The UI had a dark theme fighting a light design.** `styles.css` carries a `prefers-color-scheme: dark` block; the redesign is light throughout and opts into no dark variant anywhere. On a machine set to dark mode the tokens flipped anyway — dark body under light cards, and the queue's search box rendering near-black on near-black along with all six filter selects. Invisible on a laptop set to light, which is exactly how it reaches a borrowed projector.
+
+- **Tailwind v4 is why the old rules won.** Utilities live in `@layer`, and unlayered CSS beats a layered rule whatever the specificity. The element selectors are now scoped — `:not([class])` for controls, `.table-wrap` for tables — so they still dress the two components that rely on them and leave everything else alone. The `th { position: sticky }` that came with them is deleted: a sticky cell resolves against its nearest scroll container, and every table sits in an `overflow-x: auto` wrapper, so it had never once applied.
+- **Contrast was measured, not eyeballed.** An audit over every rendered text node on all eight pages found **94 failures**, almost all `text-slate-400` on white at 2.63:1 against the 4.5 required. It also caught the regression the blanket fix introduced on `/data`'s black panel. Zero failures now, with the browser still in dark mode.
+- **`/data` scrolled sideways**, which TEST-CHECKLIST rules out for the projector. A crore-scale rupee figure is 226px of unbreakable text in a 162px grid cell, and grid items default to `min-width: auto` — which is also why the `truncate` already on the cell beside it did nothing.
+
+**The demo page was rendering fabricated data.** Its own comment said so: *"Map backend results or fallback to interactive simulated items"*. `POST /demo/inject` returns no vendor and no severity, so both columns were invented; a null amount became 14,750.00 and a null score became 0.94 or 0.42 depending on whether the anomaly had been caught; with no run at all, two fictional cases rendered as results, priced in dollars. The two selectors above the Run button reached nothing — the endpoint takes `anomaly_count` and a seed, and the three "sample batches" on offer were not real datasets. Both are gone, replaced by the one parameter that exists and had been pinned at 3 in the mutate call while the CLI exposed it all along.
+
+**The citation click — the one moment the walkthrough is built around — did nothing.** The handler cleared the highlight and restored it inside a `requestAnimationFrame`; the round-trip existed so a repeat click would re-fire the scroll. But a frame callback does not fire in a tab the compositor is not painting, and when it does not, the clearing line has already run. A counter does the same job with no frame callback.
+
+**Also:** the grading sheets still held the scores this log records as invented to exercise the pipeline and deleted afterwards — `grades-a` carried the identical row `2,1,0,1,1,"restates the detector"` five times. Blanked, with the blind ids kept so real graders can use them.
+
+### Phase 9 step 6 — the ablation finally says what it was built to say (2026-10-21/22)
+
+The template arm had five notes drawn at `per_type=1` against a plan asking for three, so the ablation was being compared across two different samples, which is not a comparison. It now stands at 14 of 15, the same sample the agent arm is worked through:
+
+| Arm | Notes | Released (deterministic) | Model-judged | Real kept | Spurious filtered | Decisive accuracy |
+|---|---:|---:|---:|---:|---:|---:|
+| agent | 14 | 100% | 86.1% | 82% | **100%** | **100%** |
+| template | 17 | 100% | 73.0% | 100% | **0%** | **79%** |
+
+The template keeps every real anomaly because it never dismisses anything, and filters none of the spurious ones for the same reason — it cannot weigh an innocent explanation, which is the entire claim the agent layer makes. **The arm is not free**, as had been assumed: writing a template note costs no model call, but the Verifier's semantic judge still runs over it, so it spends quota and stopped one case short.
+
+**The agent arm goes to `per_type=4`, because 20 notes was unreachable by construction.** `headline.md` will not quote a citation rate below 20 notes, and the arm's sample was 15 — finishing it as planned could only ever have reached 15. Twenty cases is six more investigations, about a day of quota. Nothing already done is discarded: the pools are shuffled from a seed independent of how many are drawn, so the sample for 3 is contained in the sample for 4, which is what that fix was for.
+
+**O-04 is resolved** (confirmed 2026-10-22): a dismissed case's severity *number* moves with its band, so a queue ordered by severity and a queue filtered by band agree about the same case. No code changed — it was already the implemented behaviour, kept in one function precisely so it was one place to change. Four documents stopped describing it as pending.
+
+## What remains
+
+Complete inventory as of 2026-10-22, checked against the live state rather than listed from memory. **Nothing here blocks the system from running** — it builds, CI is green, and every number in `docs/results` traces to a command. What follows is what is unfinished, and which of it needs a person.
+
+### 🧑 Needs a person — cannot be done by running something
+
+| What | State | Who | Effort |
+|---|---|---|---|
+| **Real-data review** | 3 sheets in `data/review/`, **46 rows each, all empty** | 3 reviewers | ~1 h each |
+| **Blinded grading** | 7 notes exported, sheets blank in `data/grading/seed42/` | 3 graders | ~30 min each |
+| **Grading report** | never generated — needs the sheets back | one command | minutes |
+| **Demo rehearsal** | walkthrough never run end to end on the real machine | presenter | 3 passes |
+| **Projector test** | untested at presentation resolution | presenter | 20 min |
+| **Video fallback** | does not exist | presenter | 1 h |
+| **Read 10 notes end to end** | checking for invented entities, by eye | anyone | 30 min |
+
+The review batch is the **only** thing that replaces *"Value implicated in real spend: not yet measured"* in the headline sentence. Nothing automated can produce that number — unlabelled real data has no answer key, which is the whole reason the review kit exists.
+
+### ⏳ Quota-bound — needs calendar days, not work
+
+`spendguard investigate --matrix`, once a day. It stops itself when the provider's daily quota is spent and resumes from the same place next time (D-30).
+
+| # | Run | Sample | Done | Left |
+|---|---|---:|---|---|
+| 1 | seed 42, agent | **20** (widened) | 14 notes | **6 cases → unlocks a quotable citation rate** |
+| 2 | seed 42, template | 15 | 14 notes | 1 case |
+| 3 | seed 42, no-verifier | 15 | **0 — not started** | 15 cases |
+| 4 | seed 7, agent | 5 | **0 — no store exists** | 5 cases |
+| 5 | seed 2026, agent | 5 | **0 — no store exists** | 5 cases |
+
+**32 investigations at roughly ten a day.** Run 1 is the one that matters: `headline.md` refuses to quote a citation rate below 20 notes and currently reads *"100.0% over only 14 note(s)"*, which is the honest form and stays honest if the rest never land.
+
+### 🤔 Decisions — one line each, all yours
+
+| ID | Question | State |
+|---|---|---|
+| **O-03** | `reference_amount` in `amount_weight`. Max-in-run makes severity non-comparable across runs — one large transaction rescales every other case | Fixed reference recommended, awaiting decision |
+| **O-05** | D3 pseudo-categories from description clustering | **Measured.** On real data the published UNSPSC taxonomy is not a price norm at any level — this is the difference between D3 working and not. EVALUATION 4.0c, Finding 1 |
+| **O-07** | Should detectors get a first-class `document_id`? | 48.7% of D1's real-data flags pair two lines of the same purchase order. Three options written up. EVALUATION 4.0c, Finding 2 |
+
+~~O-04~~ resolved 2026-10-22.
+
+### 📦 Before the demo
+
+- **Re-freeze.** `spendguard freeze --seed 42`. The snapshot holds 12 notes; there are now 14, and the walkthrough's centrepiece is a case page with a verification badge.
+- **The 3–8 second claim.** `docs/DEMO.md:112` and `DECISIONS.md` D-34 both state it; one measured run took **12.5 s**. Time a few runs and state what is true, or the presenter waits out dead air in front of the panel.
+- **Cold-start timing.** Model loaded, database up, API up, frontend up, within the setup time available. Never measured.
+
+### 🚫 Deliberately not finished
+
+Each is accurately described as absent in the reports, which is better than a rushed number.
+
+- **Ollama local-runtime proof.** The "fully local" claim rests on it; the provider is still Groq. Needs disk space and `ollama pull qwen2.5:3b-instruct-q4_K_M`. D-37 makes it more valuable than it looked — three free-tier models have now been lost to retirement or an API change, so the local runtime is the only one nobody else can withdraw.
+- **MLflow.** Declared in the `track` extra, imported nowhere. Runs are logged to DuckDB `eval_results` plus JSON and Markdown reports.
+- **Alembic.** Declared, and **no migrations directory exists at all**. A TEST-CHECKLIST item asserts migrations apply cleanly to an empty database; it cannot pass.
+- **Held-out seeds 7 and 2026 for the agent.** No store exists for either. Any claim about generalisation across seeds currently rests on detection metrics, which do have all three seeds.
+
+### ⚠️ Known problems that are results, not bugs
+
+- **D3 ties or loses to the baseline on F1.** True, documented (D-23), and DEMO.md already scripts an honest answer. Honest premium purchases share the injected price band, which is the argument for the investigation layer rather than against the detector.
+- **Some cases never produce a note.** `dd3f8ece` failed on consecutive days before succeeding; others may not. The attempts-ordering stops them starving the queue, and the failure is reported rather than hidden.
+- **Attribution regression.** The broken merge re-attached the pre-rewrite history, so `main` again carries 47 `Co-Authored-By` trailers and 50 commits on the old email. Removing them means another full rewrite and force-push — which is what collided with the teammate's clone the first time. Left deliberately.
+
+### ✅ Remaining checklist items: 39
+
+```
+ 12  Pre-demonstration      rehearsals, projector, video fallback, cold start
+  8  Evaluation             multi-seed reporting, real review batch, grading batch
+  6  System and privacy     local-only run, no paid key, VRAM ceiling, clean-machine setup
+  3  Data pipeline          exchange-rate pinning verified, 20-row spot check
+  3  Investigator agent     ten notes read end to end
+  3  Database               Alembic, concurrent DuckDB read during a batch write
+  3  Frontend               Zod contract breach shown live, projector layout
+  1  Verifier agent         corrupt a note by hand, confirm rejection
+```
+
+Section 12 is almost entirely manual and almost entirely undone.
