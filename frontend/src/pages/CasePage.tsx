@@ -80,6 +80,8 @@ export function CasePage() {
 
   const detail = useCaseDetail(caseId);
   const [highlight, setHighlight] = useState<number | null>(null);
+  // Bumped on every citation click so clicking the same one twice scrolls again.
+  const [focusTick, setFocusTick] = useState(0);
   const trigger = useTriggerInvestigation(caseId);
 
   const initialStatus = detail.data?.investigation_status;
@@ -108,8 +110,8 @@ export function CasePage() {
   };
 
   const inspect = (rowId: number) => {
-    setHighlight(null);
-    requestAnimationFrame(() => setHighlight(rowId));
+    setHighlight(rowId);
+    setFocusTick((t) => t + 1);
   };
 
   if (detail.isPending) {
@@ -381,6 +383,7 @@ export function CasePage() {
             total={detail.data.evidence_total}
             context={detail.data.context_rows}
             highlight={highlight}
+            focusTick={focusTick}
           />
 
           {note && <TraceTimeline trace={detail.data.trace} />}
