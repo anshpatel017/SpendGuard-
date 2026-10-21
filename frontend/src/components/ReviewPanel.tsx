@@ -3,21 +3,12 @@
 import { useEffect, useState } from "react";
 
 import { useUpdateStatus } from "../api/hooks";
-<<<<<<< HEAD
-import type { Case, CaseStatus } from "../api/types";
-=======
 import type { Case, CaseReviewItem, CaseStatus } from "../api/types";
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 import { STATUS_LABEL, formatDateTime } from "../lib/format";
 import { Card, ErrorBanner } from "./common";
 
 const CHOICES: CaseStatus[] = ["under_review", "confirmed", "dismissed", "new"];
 
-<<<<<<< HEAD
-export function ReviewPanel({ c }: { c: Case }) {
-  const [status, setStatus] = useState<CaseStatus>(c.status);
-  const [note, setNote] = useState(c.reviewer_note ?? "");
-=======
 const VALID_NEXT: Record<CaseStatus, CaseStatus[]> = {
   new: ["under_review", "confirmed", "dismissed"],
   under_review: ["confirmed", "dismissed"],
@@ -29,7 +20,6 @@ export function ReviewPanel({ c, reviews = [] }: { c: Case; reviews?: CaseReview
   const [status, setStatus] = useState<CaseStatus>(c.status);
   const [note, setNote] = useState(c.reviewer_note ?? "");
   const [reviewer, setReviewer] = useState("Demo Reviewer");
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
   const save = useUpdateStatus(c.case_id);
 
   // A saved change refetches the case; start again from what the server holds.
@@ -38,37 +28,16 @@ export function ReviewPanel({ c, reviews = [] }: { c: Case; reviews?: CaseReview
     setNote(c.reviewer_note ?? "");
   }, [c.status, c.reviewer_note]);
 
-<<<<<<< HEAD
-  const dirty = status !== c.status || note !== (c.reviewer_note ?? "");
-  return (
-    <Card title="Review">
-=======
   const allowed = VALID_NEXT[c.status] ?? [];
   const dirty = status !== c.status || note !== (c.reviewer_note ?? "");
 
   return (
     <Card title="Human Review & Decision">
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
       <div className="stack" style={{ gap: 10 }}>
         <div className="small">
           Current status: <strong>{STATUS_LABEL[c.status]}</strong>
           <span className="muted"> · updated {formatDateTime(c.updated_at)}</span>
         </div>
-<<<<<<< HEAD
-        <div className="row" role="radiogroup" aria-label="New status">
-          {CHOICES.map((choice) => (
-            <button key={choice} type="button" role="radio" aria-checked={status === choice}
-              className={`btn ${status === choice ? "selected" : ""}`} onClick={() => setStatus(choice)}>
-              {STATUS_LABEL[choice]}
-            </button>
-          ))}
-        </div>
-        <textarea aria-label="Reviewer note" placeholder="Reviewer note - what you checked and why you decided"
-          value={note} maxLength={4000} onChange={(e) => setNote(e.target.value)} />
-        <div className="row">
-          <button type="button" className="btn primary" disabled={!dirty || save.isPending}
-            onClick={() => save.mutate({ status, note: note.trim() })}>
-=======
 
         <div className="row" role="radiogroup" aria-label="New status">
           {CHOICES.map((choice) => {
@@ -125,17 +94,11 @@ export function ReviewPanel({ c, reviews = [] }: { c: Case; reviews?: CaseReview
             disabled={!dirty || save.isPending}
             onClick={() => save.mutate({ status, note: note.trim(), reviewer: reviewer.trim() || "Demo Reviewer" })}
           >
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
             {save.isPending ? "Saving…" : "Save decision"}
           </button>
           {save.isSuccess && !dirty && <span className="chip ok">Saved</span>}
         </div>
         {save.error && <ErrorBanner error={save.error} />}
-<<<<<<< HEAD
-        <div className="muted small">
-          The agent's verdict is a recommendation. The case changes only when you save a decision here.
-        </div>
-=======
 
         <div className="muted small">
           The AI's verdict is a recommendation. The case changes only when a human reviewer saves a decision here.
@@ -168,7 +131,6 @@ export function ReviewPanel({ c, reviews = [] }: { c: Case; reviews?: CaseReview
             </div>
           </div>
         )}
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
       </div>
     </Card>
   );

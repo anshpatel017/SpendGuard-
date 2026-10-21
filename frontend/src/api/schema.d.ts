@@ -64,8 +64,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-<<<<<<< HEAD
-=======
     "/api/v1/cases/{case_id}/export": {
         parameters: {
             query?: never;
@@ -130,7 +128,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     "/api/v1/cases/{case_id}/status": {
         parameters: {
             query?: never;
@@ -171,8 +168,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-<<<<<<< HEAD
-=======
     "/api/v1/demo/reset": {
         parameters: {
             query?: never;
@@ -193,7 +188,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     "/api/v1/evaluation": {
         parameters: {
             query?: never;
@@ -274,8 +268,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-<<<<<<< HEAD
-=======
     "/api/v1/transactions": {
         parameters: {
             query?: never;
@@ -296,7 +288,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     "/api/v1/transactions/{row_id}": {
         parameters: {
             query?: never;
@@ -486,15 +477,12 @@ export interface components {
             evidence_rows: components["schemas"]["TransactionRow"][];
             /** Evidence Total */
             evidence_total: number;
-<<<<<<< HEAD
-=======
             investigation_status?: components["schemas"]["InvestigationStatus"] | null;
             /**
              * Reviews
              * @default []
              */
             reviews: components["schemas"]["CaseReviewItem"][];
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
             /** Trace */
             trace: components["schemas"]["TraceStep"][];
         };
@@ -511,8 +499,6 @@ export interface components {
             /** Total */
             total: number;
         };
-<<<<<<< HEAD
-=======
         /** CaseReviewItem */
         CaseReviewItem: {
             /**
@@ -536,7 +522,6 @@ export interface components {
             /** Reviewer */
             reviewer: string;
         };
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
         /**
          * CaseSummary
          * @description A queue row: the case, plus enough of its note to triage from the list.
@@ -775,8 +760,6 @@ export interface components {
              */
             status: "ok" | "degraded";
         };
-<<<<<<< HEAD
-=======
         /** InvestigationJobResponse */
         InvestigationJobResponse: {
             /**
@@ -808,7 +791,6 @@ export interface components {
              */
             state: "not_investigated" | "queued" | "investigating" | "verifying" | "completed" | "failed";
         };
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
         /** MetricsResponse */
         MetricsResponse: {
             /** By Anomaly Type */
@@ -888,14 +870,11 @@ export interface components {
         };
         /** StatusUpdateRequest */
         StatusUpdateRequest: {
-<<<<<<< HEAD
-=======
             /**
              * Reviewer
              * @default Demo Reviewer
              */
             reviewer: string | null;
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
             /** Reviewer Note */
             reviewer_note?: string | null;
             /**
@@ -934,8 +913,6 @@ export interface components {
             /** Tool Result */
             tool_result: unknown;
         };
-<<<<<<< HEAD
-=======
         /** TransactionListResponse */
         TransactionListResponse: {
             /**
@@ -968,7 +945,6 @@ export interface components {
              */
             vendor_count: number;
         };
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
         /** TransactionRow */
         TransactionRow: {
             /** Amount */
@@ -1015,21 +991,14 @@ export interface operations {
             query?: {
                 status?: ("new" | "under_review" | "confirmed" | "dismissed")[] | null;
                 anomaly_type?: ("duplicate" | "split" | "inflation" | "vendor_flag")[] | null;
-<<<<<<< HEAD
-                severity_band?: ("high" | "medium" | "low")[] | null;
-=======
                 detector?: string[] | null;
                 severity_band?: ("high" | "medium" | "low")[] | null;
                 severity?: ("high" | "medium" | "low")[] | null;
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
                 verdict?: ("likely_true_positive" | "likely_false_positive" | "inconclusive")[] | null;
                 verification_status?: ("verified" | "unverified" | "failed_after_retries")[] | null;
                 investigated?: boolean | null;
                 dismissed_by_agent?: boolean | null;
-<<<<<<< HEAD
-=======
                 search?: string | null;
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
                 min_amount?: number | string | null;
                 sort?: "severity_prelim" | "severity_final" | "amount_at_risk" | "created_at";
                 order?: "asc" | "desc";
@@ -1150,8 +1119,6 @@ export interface operations {
             };
         };
     };
-<<<<<<< HEAD
-=======
     export_case_report_api_v1_cases__case_id__export_get: {
         parameters: {
             query?: {
@@ -1308,7 +1275,6 @@ export interface operations {
             };
         };
     };
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     update_status_api_v1_cases__case_id__status_patch: {
         parameters: {
             query?: never;
@@ -1333,8 +1299,6 @@ export interface operations {
                     "application/json": components["schemas"]["Case"];
                 };
             };
-<<<<<<< HEAD
-=======
             /** @description Invalid status transition */
             400: {
                 headers: {
@@ -1342,7 +1306,6 @@ export interface operations {
                 };
                 content?: never;
             };
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
             /** @description Unknown case */
             404: {
                 headers: {
@@ -1410,8 +1373,6 @@ export interface operations {
             };
         };
     };
-<<<<<<< HEAD
-=======
     reset_demo_api_v1_demo_reset_post: {
         parameters: {
             query?: {
@@ -1461,7 +1422,6 @@ export interface operations {
             };
         };
     };
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     evaluation_api_v1_evaluation_get: {
         parameters: {
             query?: {
@@ -1618,8 +1578,6 @@ export interface operations {
             };
         };
     };
-<<<<<<< HEAD
-=======
     list_transactions_api_v1_transactions_get: {
         parameters: {
             query?: {
@@ -1667,7 +1625,6 @@ export interface operations {
             };
         };
     };
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     transaction_api_v1_transactions__row_id__get: {
         parameters: {
             query?: never;

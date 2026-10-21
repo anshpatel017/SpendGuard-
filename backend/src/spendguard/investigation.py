@@ -34,11 +34,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-<<<<<<< HEAD
-=======
 from sqlalchemy.orm import Session
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 from spendguard.ablations import ARMS as ABLATION_ARMS
 from spendguard.ablations import NO_VERIFIER as NO_VERIFIER_ARM
 from spendguard.ablations import TEMPLATE as TEMPLATE_ARM
@@ -51,10 +48,7 @@ from spendguard.db.duck import connect, table_exists
 from spendguard.db.store import (
     CaseRecord,
     attempts_by_case,
-<<<<<<< HEAD
-=======
     case_from_record,
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
     cases_to_investigate,
     get_engine,
     latest_note,
@@ -237,10 +231,6 @@ def run_investigation(
         include_investigated=include_investigated,
     )
     run_id = f"investigate-{started:%Y%m%dT%H%M%S}"
-<<<<<<< HEAD
-    from sqlalchemy.orm import Session
-=======
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 
     with Session(engine) as session:
         first = session.get(CaseRecord, cases[0].case_id) if cases else None
@@ -280,8 +270,6 @@ def run_investigation(
     return run
 
 
-<<<<<<< HEAD
-=======
 def investigate_case_by_id(
     case_id: str,
     *,
@@ -334,7 +322,6 @@ def investigate_case_by_id(
     return result
 
 
->>>>>>> 890422049cb83dd44defa08113fbdf6cc4b832d1
 # ------------------------------------------------------------------ evaluation
 
 
