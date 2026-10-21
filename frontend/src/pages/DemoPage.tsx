@@ -14,21 +14,20 @@ import {
 import { useState } from "react";
 
 import { useDemoInject, useDemoReset } from "../api/hooks";
-import { SeverityBadge } from "../components/common/Badge";
 import Scanner from "../components/common/Scanner";
 import { useToast } from "../context/ToastContext";
 import { missExplanation } from "../lib/demo";
-import { ANOMALY_LABEL } from "../lib/format";
+import { ANOMALY_LABEL, formatCount, formatMoney } from "../lib/format";
 
 type DetectorType = "Duplicate" | "Split Purchase" | "Price Inflation" | "Vendor Risk";
 
 interface DemoItem {
   id: string;
-  vendor: string;
-  amount: number;
-  score: number;
+  caught: boolean;
+  detectedBy: string | null;
+  amount: string | null;
+  score: number | null;
   triggerSignal: string;
-  severity: "Critical" | "High" | "Medium" | "Low";
   detector: string;
 }
 
@@ -94,37 +93,19 @@ export function DemoPage() {
     });
   };
 
-  const activeDatasetObj = sampleDatasets.find((d) => d.id === datasetBatch) || sampleDatasets[0]!;
-
-  // Map backend results or fallback to interactive simulated items
-  const displayResults: DemoItem[] = runData?.results?.map((r, i) => ({
+  // Every field here comes from the run. An earlier version substituted a
+  // vendor name, an amount and a score whenever the real ones were null, and
+  // rendered two invented cases when there was no run at all - fabricated
+  // detector output on the page the walkthrough demonstrates live (D-34).
+  const displayResults: DemoItem[] = (runData?.results ?? []).map((r, i) => ({
     id: `ANOM-DEMO-${String(i + 1).padStart(2, "0")}`,
-    vendor: r.detected_by ? `${r.detected_by} Detection` : "Apex Office Logistics",
-    amount: parseFloat(r.amount_at_risk || "0") || 14750.0,
-    score: r.detector_score ?? (r.detected ? 0.94 : 0.42),
-    triggerSignal: `${ANOMALY_LABEL[r.anomaly_type] || r.anomaly_type} flagged across ${r.injected_row_ids.length} transactions`,
-    severity: (r.detected ? "Critical" : "Medium") as DemoItem["severity"],
-    detector: ANOMALY_LABEL[r.anomaly_type] || selectedDetector,
-  })) || [
-    {
-      id: "DEMO-SPLIT-01",
-      vendor: "Apex Office Logistics",
-      amount: 14750.0,
-      score: 0.94,
-      triggerSignal: "3 transactions ($4,920, $4,880, $4,950) issued in 72h below $5k limit",
-      severity: "Critical",
-      detector: "Split Purchase",
-    },
-    {
-      id: "DEMO-SPLIT-02",
-      vendor: "ByteWave Software Labs",
-      amount: 9800.0,
-      score: 0.88,
-      triggerSignal: "Consecutive software invoices $4,900 and $4,900 on consecutive business days",
-      severity: "High",
-      detector: "Split Purchase",
-    },
-  ];
+    caught: r.detected,
+    detectedBy: r.detected_by,
+    amount: r.amount_at_risk ?? null,
+    score: r.detector_score,
+    triggerSignal: `${ANOMALY_LABEL[r.anomaly_type] || r.anomaly_type} planted across ${r.injected_row_ids.length} row${r.injected_row_ids.length === 1 ? "" : "s"}`,
+    detector: ANOMALY_LABEL[r.anomaly_type] || r.anomaly_type,
+  }));
 
   const filteredResults = displayResults.filter((r) => {
     if (!runData) return true;
@@ -260,10 +241,11 @@ export function DemoPage() {
                 </div>
                 <h4 className="text-xs font-bold text-slate-900">Duplicate Purchases</h4>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Temporal matching & Levenshtein invoice collision.
+                  Blocked on amount and date, then each pair scored by a
+                  Fellegi-Sunter model.
                 </p>
               </div>
-              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: Exact Match</div>
+              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: match probability</div>
             </button>
 
             {/* Split Purchase */}
@@ -282,10 +264,10 @@ export function DemoPage() {
                 </div>
                 <h4 className="text-xs font-bold text-slate-900">Split Purchases</h4>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Single-signature sub-$5,000 threshold evasion.
+                  Runs of orders that stay just under the ₹2,50,000 approval limit.
                 </p>
               </div>
-              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: Cluster Density</div>
+              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: proximity to threshold</div>
             </button>
 
             {/* Price Inflation */}
@@ -307,7 +289,7 @@ export function DemoPage() {
                   Robust MAD z-score vs historical peer catalog.
                 </p>
               </div>
-              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: Z-Score Outlier</div>
+              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: robust z-score</div>
             </button>
 
             {/* Vendor Risk */}
@@ -326,10 +308,10 @@ export function DemoPage() {
                 </div>
                 <h4 className="text-xs font-bold text-slate-900">Vendor Risk</h4>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Incorporation age & bank routing change flags.
+                  Each supplier tested against its peers, combined by Fisher.
                 </p>
               </div>
-              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: Shell Entity Index</div>
+              <div className="mt-3 text-[10px] font-mono text-slate-700">Score: combined p-value</div>
             </button>
           </div>
         </div>
@@ -363,14 +345,14 @@ export function DemoPage() {
           <div>
             <span className="text-slate-500 block text-[11px]">Transactions Analyzed</span>
             <span className="font-mono font-bold text-slate-900 text-base tabular-nums">
-              {activeDatasetObj.count}
+              {runData ? formatCount(runData.dataset_rows) : "—"}
             </span>
           </div>
 
           <div>
             <span className="text-slate-500 block text-[11px]">Anomalies Caught</span>
             <span className="font-mono font-bold text-red-600 text-base tabular-nums">
-              {runData ? `${runData.caught} / ${runData.results.length}` : `${filteredResults.length} / ${filteredResults.length}`}
+              {runData ? `${runData.caught} / ${runData.results.length}` : "—"}
             </span>
           </div>
 
@@ -382,9 +364,11 @@ export function DemoPage() {
           </div>
 
           <div>
-            <span className="text-slate-500 block text-[11px]">Recall Rate</span>
+            <span className="text-slate-500 block text-[11px]">Caught this run</span>
             <span className="font-mono font-bold text-emerald-700 text-base tabular-nums">
-              {runData ? `${Math.round((runData.caught / Math.max(1, runData.results.length)) * 100)}%` : "100%"}
+              {runData && runData.results.length > 0
+                ? `${Math.round((runData.caught / runData.results.length) * 100)}%`
+                : "—"}
             </span>
           </div>
         </div>
@@ -405,11 +389,11 @@ export function DemoPage() {
               <thead>
                 <tr className="border-b border-[#E2E8F0] text-[11px] font-semibold text-slate-500 uppercase tracking-wider bg-slate-50">
                   <th className="py-2.5 px-3">Sandbox ID</th>
-                  <th className="py-2.5 px-3">Vendor</th>
+                  <th className="py-2.5 px-3">Detected by</th>
                   <th className="py-2.5 px-3 text-right">Suspicious Amount</th>
                   <th className="py-2.5 px-3 text-center">Score</th>
                   <th className="py-2.5 px-3">Detection Signal</th>
-                  <th className="py-2.5 px-3">Severity</th>
+                  <th className="py-2.5 px-3">Result</th>
                   <th className="py-2.5 px-3 text-center">Inspect</th>
                 </tr>
               </thead>
@@ -419,20 +403,32 @@ export function DemoPage() {
                     <td className="py-2.5 px-3 font-mono font-semibold text-slate-800">
                       {item.id}
                     </td>
-                    <td className="py-2.5 px-3 font-medium text-slate-900">
-                      {item.vendor}
+                    <td className="py-2.5 px-3 font-mono font-medium text-slate-900 uppercase">
+                      {item.detectedBy ?? <span className="text-slate-400">&mdash;</span>}
                     </td>
                     <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 tabular-nums">
-                      ${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {formatMoney(item.amount)}
                     </td>
                     <td className="py-2.5 px-3 text-center font-mono font-semibold text-cyan-800 tabular-nums">
-                      {item.score.toFixed(2)}
+                      {item.score === null ? (
+                        <span className="text-slate-400">&mdash;</span>
+                      ) : (
+                        item.score.toFixed(2)
+                      )}
                     </td>
                     <td className="py-2.5 px-3 text-slate-600 text-[11px]">
                       {item.triggerSignal}
                     </td>
                     <td className="py-2.5 px-3">
-                      <SeverityBadge severity={item.severity} />
+                      {item.caught ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          Caught
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-red-50 text-red-700 border border-red-200">
+                          Missed
+                        </span>
+                      )}
                     </td>
                     <td className="py-2.5 px-3 text-center">
                       <button
@@ -447,13 +443,22 @@ export function DemoPage() {
                 ))}
               </tbody>
             </table>
+
+            {filteredResults.length === 0 && (
+              <p className="px-4 py-8 text-center text-xs text-slate-500">
+                No run yet. Inject anomalies to see what the detectors catch and
+                what they miss.
+              </p>
+            )}
           </div>
 
-          <div className="p-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
-            <p className="leading-relaxed" data-testid="demo-explanation">
-              {missExplanation(missed)}
-            </p>
-          </div>
+          {runData && (
+            <div className="p-4 bg-slate-50 border-t border-slate-200 text-xs text-slate-500">
+              <p className="leading-relaxed" data-testid="demo-explanation">
+                {missExplanation(missed)}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -479,13 +484,15 @@ export function DemoPage() {
             <div className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Target Vendor</span>
-                  <span className="font-bold text-slate-900">{selectedInspectItem.vendor}</span>
+                  <span className="text-slate-400 block text-[11px]">Detected by</span>
+                  <span className="font-bold text-slate-900 uppercase">
+                    {selectedInspectItem.detectedBy ?? "not detected"}
+                  </span>
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[11px]">Flagged Amount</span>
                   <span className="font-mono font-bold text-slate-900">
-                    ${selectedInspectItem.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    {formatMoney(selectedInspectItem.amount)}
                   </span>
                 </div>
                 <div>
@@ -495,7 +502,9 @@ export function DemoPage() {
                 <div>
                   <span className="text-slate-400 block text-[11px]">Confidence Score</span>
                   <span className="font-mono font-bold text-cyan-800">
-                    {selectedInspectItem.score.toFixed(2)}
+                    {selectedInspectItem.score === null
+                      ? "—"
+                      : selectedInspectItem.score.toFixed(2)}
                   </span>
                 </div>
               </div>

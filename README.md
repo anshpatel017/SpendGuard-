@@ -28,10 +28,10 @@ Runs **fully local** on commodity GPU hardware. No paid APIs in the runtime syst
 | Backend | Python 3.12+, FastAPI, Pydantic v2, SQLAlchemy 2.0 + Alembic, uvicorn |
 | Analytical store | DuckDB (transactions, detector output, evaluation results) |
 | Operational store | SQLite (cases, status, audit notes, traces) — PostgreSQL is a one-line swap via SQLAlchemy |
-| Detection / ML | scikit-learn, PyOD, rapidfuzz, Splink, scipy, pandas / Polars |
+| Detection / ML | scikit-learn, rapidfuzz, scipy, numpy, pandas / Polars |
 | LLM | Groq for development; Qwen2.5-3B-Instruct (Q4_K_M) via Ollama for the fully-local run; 7B on a Colab T4 for comparison |
 | Policy RAG | sentence-transformers (bge-small-en-v1.5) + FAISS |
-| Tracking | MLflow (local) |
+| Tracking | DuckDB `eval_results` + generated reports; MLflow planned (Phase 10) |
 | Tooling | pytest, ruff, mypy, ESLint, Prettier, GitHub Actions |
 
 ---
