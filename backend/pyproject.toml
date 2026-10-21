@@ -10,12 +10,24 @@ requires-python = ">=3.12"
 
 # Core: needed from Phase 1 onward. Kept deliberately light.
 dependencies = [
-    "duckdb>=1.1",
+    # Capped below 2.0 deliberately. DuckDB 2.0 removes .pl() from both the
+    # connection and the result object, and every detector, agent tool and API
+    # handler calls it - a fresh `pip install` picked up 2.0 and the whole
+    # system raised AttributeError while the lockless `>=1.1` looked fine.
+    # Polars 2.0 is the same shape of risk, untested here. Every figure in
+    # docs/results was produced on the 1.x line; moving the data layer is a
+    # migration with its own re-evaluation, not a version bump.
+    "duckdb>=1.1,<2",
     "pandas>=2.2",
-    "polars>=1.1",
+    "polars>=1.1,<2",
     "pyarrow>=17.0",
     "numpy>=1.26",
-    "pydantic>=2.9",
+    # Capped below 2.14: it stops emitting `pattern` in the JSON schema for
+    # constrained strings, which silently drops the money regex from 13 fields
+    # of the committed contract - the rule that money travels as a string
+    # (convention 11), expressed in the one artefact the frontend compiles
+    # against. The schema-drift test catches it; the pin stops it happening.
+    "pydantic>=2.9,<2.14",
     "pydantic-settings>=2.5",
     "python-dateutil>=2.9",
     "pyyaml>=6.0",
