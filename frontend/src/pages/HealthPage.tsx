@@ -112,7 +112,7 @@ export function HealthPage() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400 font-sans text-[11px]">Protocol: HTTP/REST</span>
+            <span className="text-slate-500 font-sans text-[11px]">Protocol: HTTP/REST</span>
             <span className="text-slate-700">Status: 200 OK</span>
           </div>
         </div>
@@ -142,7 +142,7 @@ export function HealthPage() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400 font-sans text-[11px]">Storage: Memory-Mapped Parquet</span>
+            <span className="text-slate-500 font-sans text-[11px]">Storage: Memory-Mapped Parquet</span>
             <span className="text-slate-700">{health?.duckdb ? "Ready" : "Inactive"}</span>
           </div>
         </div>
@@ -172,7 +172,7 @@ export function HealthPage() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400 font-sans text-[11px]">Engine: SQLite WAL</span>
+            <span className="text-slate-500 font-sans text-[11px]">Engine: SQLite WAL</span>
             <span className="text-slate-700">Integrity: Verified</span>
           </div>
         </div>
@@ -202,7 +202,7 @@ export function HealthPage() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400 font-sans text-[11px]">Model:</span>
+            <span className="text-slate-500 font-sans text-[11px]">Model:</span>
             <span className="text-slate-700 truncate max-w-[150px]">{health?.llm_model ?? "Mock Agent / Heuristic"}</span>
           </div>
         </div>
@@ -226,7 +226,7 @@ export function HealthPage() {
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-mono">
-            <span className="text-slate-400 font-sans text-[11px]">Rules: Deterministic</span>
+            <span className="text-slate-500 font-sans text-[11px]">Rules: Deterministic</span>
             <span className="text-slate-700">Strict Citations</span>
           </div>
         </div>
@@ -238,7 +238,7 @@ export function HealthPage() {
           <span className="font-bold text-slate-800">
             Health Check Telemetry Log
           </span>
-          <span className="text-slate-400 font-mono">Automated 30-second polling cycle</span>
+          <span className="text-slate-500 font-mono">Automated 30-second polling cycle</span>
         </div>
 
         <div className="p-4 divide-y divide-slate-100 text-xs">
@@ -252,7 +252,7 @@ export function HealthPage() {
             </div>
             <div className="text-right font-mono text-[11px]">
               <span className="text-slate-700">Status 200</span>
-              <span className="text-slate-400 block text-[10px] font-sans">Active</span>
+              <span className="text-slate-500 block text-[10px] font-sans">Active</span>
             </div>
           </div>
 
@@ -266,7 +266,7 @@ export function HealthPage() {
             </div>
             <div className="text-right font-mono text-[11px]">
               <span className="text-slate-700">{health?.duckdb ? "Connected" : "Warning"}</span>
-              <span className="text-slate-400 block text-[10px] font-sans">Read-Only Pool</span>
+              <span className="text-slate-500 block text-[10px] font-sans">Read-Only Pool</span>
             </div>
           </div>
 
@@ -280,7 +280,7 @@ export function HealthPage() {
             </div>
             <div className="text-right font-mono text-[11px]">
               <span className="text-slate-700">{health?.case_store ? "Mounted" : "Unavailable"}</span>
-              <span className="text-slate-400 block text-[10px] font-sans">WAL mode</span>
+              <span className="text-slate-500 block text-[10px] font-sans">WAL mode</span>
             </div>
           </div>
 
@@ -294,7 +294,7 @@ export function HealthPage() {
             </div>
             <div className="text-right font-mono text-[11px]">
               <span className="text-slate-700">{health?.llm_configured ? "Live API" : "Simulated"}</span>
-              <span className="text-slate-400 block text-[10px] font-sans">Sandbox isolated</span>
+              <span className="text-slate-500 block text-[10px] font-sans">Sandbox isolated</span>
             </div>
           </div>
         </div>

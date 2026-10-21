@@ -122,7 +122,7 @@ export function Sidebar({
                   <button
                     type="button"
                     onClick={onToggleCollapse}
-                    className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+                    className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
                     title="Collapse sidebar"
                     aria-label="Collapse sidebar"
                   >
@@ -136,7 +136,7 @@ export function Sidebar({
           {/* Navigation Links */}
           <nav className="p-2 space-y-1">
             {!collapsed && (
-              <div className="px-3 pt-3 pb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <div className="px-3 pt-3 pb-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                 Investigation Platform
               </div>
             )}
@@ -166,7 +166,7 @@ export function Sidebar({
                   <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
                     <Icon
                       className={`w-4 h-4 shrink-0 ${
-                        isActive ? "text-black" : "text-slate-400 group-hover:text-slate-700"
+                        isActive ? "text-black" : "text-slate-500 group-hover:text-slate-700"
                       }`}
                     />
                     {!collapsed && <span>{item.name}</span>}
@@ -198,7 +198,7 @@ export function Sidebar({
             })}
 
             {!collapsed && (
-              <div className="pt-4 pb-1 px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+              <div className="pt-4 pb-1 px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                 External & Showcase
               </div>
             )}
@@ -214,11 +214,11 @@ export function Sidebar({
               title={collapsed ? "Product Landing Page" : undefined}
             >
               <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
-                <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-slate-700 shrink-0" />
+                <ExternalLink className="w-4 h-4 text-slate-500 group-hover:text-slate-700 shrink-0" />
                 {!collapsed && <span>Product Landing Page</span>}
               </div>
               {!collapsed && (
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" />
+                <ChevronRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-600" />
               )}
 
               {collapsed && (

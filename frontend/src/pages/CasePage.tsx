@@ -124,7 +124,7 @@ export function CasePage() {
     const missing = detail.error instanceof ApiError && detail.error.status === 404;
     return (
       <div className="p-12 text-center bg-white rounded-xl border border-slate-200 shadow-xs max-w-lg mx-auto mt-8">
-        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mx-auto mb-3">
+        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mx-auto mb-3">
           <ShieldAlert className="w-6 h-6" />
         </div>
         <h3 className="text-base font-bold text-slate-900">
@@ -164,18 +164,20 @@ export function CasePage() {
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
-            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 min-w-0">
               <Link to={backUrl} className="hover:text-slate-900 transition-colors">
                 Investigation Queue
               </Link>
               <span>/</span>
               <span className="font-mono text-slate-800 font-semibold">{c.case_id}</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight flex items-center gap-3 mt-0.5">
-              <span>{ANOMALY_LABEL[c.anomaly_type]}</span>
-              <span className="text-slate-400 font-normal">·</span>
-              <span className="text-slate-700 font-semibold">{c.vendor_key ?? "Unknown Supplier"}</span>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A] tracking-tight mt-0.5">
+              <span className="whitespace-nowrap">{ANOMALY_LABEL[c.anomaly_type]}</span>{" "}
+              <span className="text-slate-500 font-normal">·</span>{" "}
+              <span className="text-slate-700 font-semibold break-words">
+                {c.vendor_key ?? "Unknown Supplier"}
+              </span>
             </h1>
           </div>
         </div>
@@ -281,7 +283,7 @@ export function CasePage() {
         </div>
 
         <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 flex items-start gap-2">
-          <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+          <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
           <span>
             Case flagged on {formatDateTime(c.created_at)}. {c.row_ids.length} transactions included in initial anomaly cluster.
             {c.dismissed_by_agent && " Agent preliminary triage indicates likely false positive."}

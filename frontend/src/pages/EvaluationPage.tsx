@@ -300,7 +300,7 @@ export function EvaluationPage() {
               <span className="text-xs font-bold text-slate-800">
                 Detector Suite vs Statistical Baseline
               </span>
-              <span className="text-[11px] text-slate-400 ml-2">
+              <span className="text-[11px] text-slate-500 ml-2">
                 {e.injected_anomaly_count !== null ? `${formatCount(e.injected_anomaly_count)} planted anomalies` : "86 planted anomalies"}
                 {e.generated_at && ` · ${formatDateTime(e.generated_at)}`}
               </span>
@@ -380,7 +380,7 @@ export function EvaluationPage() {
                 Aggregated binary classification outcomes across all 4 detector pipelines.
               </p>
             </div>
-            <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+            <span className="text-[10px] font-mono text-slate-500 bg-slate-50 px-2 py-1 rounded border border-slate-200">
               N = 50,000 Trans.
             </span>
           </div>
@@ -473,7 +473,7 @@ export function EvaluationPage() {
               <Sparkles className="w-4 h-4 text-[#0E7490]" />
               <span>Agent Verification Metrics</span>
             </h3>
-            <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+            <span className="text-[10px] font-mono text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
               Qwen Engine
             </span>
           </div>

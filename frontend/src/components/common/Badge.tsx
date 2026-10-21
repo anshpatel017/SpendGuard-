@@ -77,7 +77,7 @@ export function SeverityBadge({ severity }: { severity?: string | null }) {
 export function VerificationBadge({ status }: { status?: string | null }) {
   if (!status) {
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium rounded-md whitespace-nowrap text-slate-400 bg-slate-50 border border-slate-200">
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-medium rounded-md whitespace-nowrap text-slate-500 bg-slate-50 border border-slate-200">
         <Clock className="w-3 h-3 shrink-0" />
         <span>Pending</span>
       </span>
@@ -142,7 +142,7 @@ export function AIStatusBadge({
 
   return (
     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500">
-      <Clock className="w-3.5 h-3.5 text-slate-400" />
+      <Clock className="w-3.5 h-3.5 text-slate-500" />
       <span>Pending</span>
     </span>
   );

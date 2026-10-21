@@ -1,9 +1,9 @@
 @import "tailwindcss";
 
-/* SpendGuard dashboard. One stylesheet, design tokens as CSS variables, light and dark. */
+/* SpendGuard dashboard. One stylesheet, design tokens as CSS variables. Light only. */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --bg: #f6f7f9;
@@ -33,30 +33,13 @@
   line-height: 1.45;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #11151c;
-    --surface: #181d26;
-    --surface-2: #1f2530;
-    --border: #2d3441;
-    --text: #e4e8ef;
-    --muted: #9aa4b5;
-    --accent: #7ea3ff;
-    --accent-soft: #1d2a47;
-    --ok: #5fcf84;
-    --ok-soft: #173323;
-    --warn: #f0b04c;
-    --warn-soft: #3a2c12;
-    --bad: #ff7b82;
-    --bad-soft: #3d1b1e;
-    --high: #ff7b82;
-    --medium: #f0b04c;
-    --low: #9aa4b5;
-    --case-row: #2a2616;
-    --highlight: #5a4a12;
-    --shadow: none;
-  }
-}
+/* No dark theme. The dashboard is a light design end to end - every page is
+ * built from white surfaces and slate text - and nothing opts into a dark
+ * variant. A `prefers-color-scheme: dark` block used to flip these tokens
+ * anyway, which left a dark body and dark form controls underneath light
+ * cards on any machine set to dark mode: the search box rendered near-black
+ * on near-black, and every filter select with it. Restoring dark support
+ * means designing the pages for it, not re-adding the tokens. */
 
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); }
@@ -138,10 +121,21 @@ button { font: inherit; }
 
 /* ------------------------------------------------------------ tables */
 
+/* Scoped to .table-wrap. These are unlayered rules, and unlayered CSS beats a
+ * Tailwind utility whatever the specificity, so as bare `table`/`th`/`td`
+ * selectors they were repainting the header row of every Tailwind table in
+ * the app - padding, borders, colour - over the classes those tables declare.
+ * EvidenceTable is the one table that still wants them.
+ *
+ * `position: sticky` is gone with them: it never once applied. A sticky cell
+ * resolves against its nearest scroll container, and .table-wrap is
+ * overflow-x: auto - which computes overflow-y to auto too - so the header
+ * scrolled away with the page instead of pinning. Reinstating it means giving
+ * the wrapper a height to scroll within, not re-adding the declaration. */
 .table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
-th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
-th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--surface-2); position: sticky; top: 0; }
+.table-wrap table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.table-wrap th, .table-wrap td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.table-wrap th { font-size: 12px; color: var(--muted); font-weight: 600; background: var(--surface-2); }
 th.sortable { cursor: pointer; user-select: none; }
 th.sortable:hover { color: var(--text); }
 td.num, th.num { text-align: right; }
@@ -154,11 +148,16 @@ tr.highlight td { background: var(--highlight) !important; transition: backgroun
 /* ------------------------------------------------------------ forms */
 
 .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-select, textarea, input[type="text"] {
+/* Only the controls that carry no class of their own - ReviewPanel's note
+ * box is the one left. Unscoped, these unlayered rules overrode the
+ * Tailwind classes on every filter select and the queue's search box,
+ * which is how that search box came to render as near-black on near-black
+ * whenever the machine was set to dark mode. */
+select:not([class]), textarea:not([class]), input[type="text"]:not([class]) {
   font: inherit; color: var(--text); background: var(--surface);
   border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
 }
-textarea { width: 100%; min-height: 84px; resize: vertical; }
+textarea:not([class]) { width: 100%; min-height: 84px; resize: vertical; }
 label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
 .btn {
   padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface);

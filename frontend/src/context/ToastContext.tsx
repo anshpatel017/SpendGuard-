@@ -93,7 +93,7 @@ function ToastContainer({
             </div>
             <button
               onClick={() => dismissToast(toast.id)}
-              className="p-1 text-slate-400 hover:text-black transition-colors ml-2 cursor-pointer"
+              className="p-1 text-slate-500 hover:text-black transition-colors ml-2 cursor-pointer"
               aria-label="Close notification"
             >
               <X className="w-3.5 h-3.5 text-black" />
