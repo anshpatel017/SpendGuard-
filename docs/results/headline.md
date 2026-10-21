@@ -1,6 +1,6 @@
 # Headline result
 
-Generated 2026-10-21 19:24 UTC from commit `60ebf09` **(uncommitted changes)**. Regenerate with `spendguard report headline`. **Do not edit this sentence by hand** - it exists so the most-quoted numbers in the project cannot drift from the runs that produced them.
+Generated 2026-10-21 19:38 UTC from commit `5753523` **(uncommitted changes)**. Regenerate with `spendguard report headline`. **Do not edit this sentence by hand** - it exists so the most-quoted numbers in the project cannot drift from the runs that produced them.
 
 ---
 

@@ -260,7 +260,7 @@ class Settings(BaseSettings):
     # seeds narrowly, on the main arm only, which is what they are for.
     agent_eval_plan: list[PlannedRun] = Field(
         default_factory=lambda: [
-            PlannedRun(seed=42, per_type=3),
+            PlannedRun(seed=42, per_type=4),
             PlannedRun(seed=42, per_type=3, arm="template"),
             PlannedRun(seed=42, per_type=3, arm="no-verifier"),
             PlannedRun(seed=7, per_type=1),
