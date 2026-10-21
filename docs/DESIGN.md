@@ -141,7 +141,7 @@ No public procurement dataset ships with fraud labels. Realistic, parameterized 
 
 Two distinct numbers, deliberately named differently to avoid confusion.
 
-**`detector_score`** — float 0-1, produced by the detector. Detector confidence only. Each detector normalizes its own internal statistic: Splink match probability, robust z-score through a logistic, inverted Benford chi-square p-value, split-purchase proximity to threshold.
+**`detector_score`** — float 0-1, produced by the detector. Detector confidence only. Each detector normalizes its own internal statistic: Fellegi-Sunter match probability, robust z-score through a logistic, inverted Benford chi-square p-value, split-purchase proximity to threshold.
 
 **`severity`** — float 0-100 plus a band, assigned in two stages:
 
