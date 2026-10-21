@@ -169,7 +169,7 @@ export function LandingPage() {
             {/* 01 Detect */}
             <div className="p-6 rounded-2xl border border-slate-200/80 bg-white/70 backdrop-blur-xs flex flex-col justify-between shadow-2xs">
               <div>
-                <div className="text-xs font-mono font-bold text-cyan-600">01 — Detect</div>
+                <div className="text-xs font-mono font-bold text-cyan-700">01 — Detect</div>
                 <h3 className="text-base font-bold text-slate-900 mt-2">Deterministic Anomaly Detectors</h3>
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                   Deterministic anomaly detectors identify suspicious procurement patterns using rigorous mathematical rules rather than unconstrained generation.
@@ -190,14 +190,14 @@ export function LandingPage() {
                 </p>
               </div>
               <div className="mt-5 pt-3.5 border-t border-slate-200/80 text-[11px] text-slate-500">
-                Tools: Query DB, Levenshtein, policy matcher, calculators
+                Tools: query transactions, vendor profile, similar invoices, policy lookup, digit stats, calculator
               </div>
             </div>
 
             {/* 03 Verify */}
             <div className="p-6 rounded-2xl border border-slate-200/80 bg-white/70 backdrop-blur-xs flex flex-col justify-between shadow-2xs">
               <div>
-                <div className="text-xs font-mono font-bold text-emerald-600">03 — Verify</div>
+                <div className="text-xs font-mono font-bold text-emerald-700">03 — Verify</div>
                 <h3 className="text-base font-bold text-slate-900 mt-2">Independent Verification Layer</h3>
                 <p className="text-xs text-slate-600 mt-2 leading-relaxed">
                   AI findings are checked against evidence and policy references before being presented as verified. Unsubstantiated claims are flagged or rejected.
@@ -248,7 +248,7 @@ export function LandingPage() {
               </div>
               <h3 className="text-base font-bold text-slate-900">Deterministic Detection</h3>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                Anomaly detection relies on reproducible algorithms—MAD robust z-scores, temporal clustering, and Levenshtein token distances—with ground-truth benchmarks.
+                Anomaly detection relies on reproducible algorithms—robust MAD z-scores, temporal clustering, and Fellegi–Sunter record linkage—with ground-truth benchmarks.
               </p>
             </div>
 
@@ -448,7 +448,7 @@ export function LandingPage() {
             <Link to="/health" className="hover:text-slate-900 transition-colors">Health</Link>
           </div>
 
-          <div className="text-[11px] text-slate-400">
+          <div className="text-[11px] text-slate-500">
             Release v1.0.0 (Semester Review Edition)
           </div>
         </div>

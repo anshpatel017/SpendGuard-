@@ -134,7 +134,7 @@ export function DemoPage() {
             disabled={resetMutation.isPending}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+            <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
             <span>Reset Demo State</span>
           </button>
         </div>
@@ -341,7 +341,7 @@ export function DemoPage() {
       {/* 5. Results Section */}
       <div className="space-y-4">
         {/* Telemetry Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-4 rounded-xl border border-slate-200 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-4 rounded-xl border border-slate-200 text-xs [&>*]:min-w-0">
           <div>
             <span className="text-slate-500 block text-[11px]">Transactions Analyzed</span>
             <span className="font-mono font-bold text-slate-900 text-base tabular-nums">
@@ -404,14 +404,14 @@ export function DemoPage() {
                       {item.id}
                     </td>
                     <td className="py-2.5 px-3 font-mono font-medium text-slate-900 uppercase">
-                      {item.detectedBy ?? <span className="text-slate-400">&mdash;</span>}
+                      {item.detectedBy ?? <span className="text-slate-500">&mdash;</span>}
                     </td>
                     <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 tabular-nums">
                       {formatMoney(item.amount)}
                     </td>
                     <td className="py-2.5 px-3 text-center font-mono font-semibold text-cyan-800 tabular-nums">
                       {item.score === null ? (
-                        <span className="text-slate-400">&mdash;</span>
+                        <span className="text-slate-500">&mdash;</span>
                       ) : (
                         item.score.toFixed(2)
                       )}
@@ -475,7 +475,7 @@ export function DemoPage() {
               </div>
               <button
                 onClick={() => setSelectedInspectItem(null)}
-                className="p-1 text-slate-400 hover:text-slate-800 rounded-md transition-colors cursor-pointer"
+                className="p-1 text-slate-500 hover:text-slate-800 rounded-md transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -484,23 +484,23 @@ export function DemoPage() {
             <div className="space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-lg">
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Detected by</span>
+                  <span className="text-slate-500 block text-[11px]">Detected by</span>
                   <span className="font-bold text-slate-900 uppercase">
                     {selectedInspectItem.detectedBy ?? "not detected"}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Flagged Amount</span>
+                  <span className="text-slate-500 block text-[11px]">Flagged Amount</span>
                   <span className="font-mono font-bold text-slate-900">
                     {formatMoney(selectedInspectItem.amount)}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Detector</span>
+                  <span className="text-slate-500 block text-[11px]">Detector</span>
                   <span className="font-semibold text-slate-800">{selectedInspectItem.detector}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block text-[11px]">Confidence Score</span>
+                  <span className="text-slate-500 block text-[11px]">Confidence Score</span>
                   <span className="font-mono font-bold text-cyan-800">
                     {selectedInspectItem.score === null
                       ? "—"

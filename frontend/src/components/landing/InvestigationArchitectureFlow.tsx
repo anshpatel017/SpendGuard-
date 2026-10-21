@@ -301,7 +301,7 @@ export default function InvestigationArchitectureFlow() {
                     className={`text-[10px] font-mono px-2 py-0.5 rounded border transition-colors ${
                       isActivated
                         ? 'bg-neutral-100 text-black border-neutral-300 font-semibold'
-                        : 'bg-slate-50 text-slate-400 border-slate-200'
+                        : 'bg-slate-50 text-slate-500 border-slate-200'
                     }`}
                   >
                     Active
@@ -326,7 +326,7 @@ export default function InvestigationArchitectureFlow() {
                     />
                     <span
                       className={`text-[10px] font-medium ${
-                        isActivated ? 'text-emerald-700 font-semibold' : 'text-slate-400'
+                        isActivated ? 'text-emerald-700 font-semibold' : 'text-slate-500'
                       }`}
                     >
                       {isActivated ? 'Verified' : 'Pending'}

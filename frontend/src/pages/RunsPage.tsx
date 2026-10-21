@@ -133,7 +133,7 @@ export function RunsPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 transition-colors shadow-2xs cursor-pointer"
               title="Reset temporary demo data without modifying raw records"
             >
-              <RotateCcw className="w-3.5 h-3.5 text-slate-400" />
+              <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
               <span>Reset Demo State</span>
             </button>
           ) : (
@@ -166,7 +166,7 @@ export function RunsPage() {
       </div>
 
       {/* 2. Run Status Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 [&>*]:min-w-0">
         <div className="p-4 bg-white rounded-xl border border-[#E2E8F0] shadow-xs">
           <span className="text-xs font-medium text-slate-500">Pipeline Status</span>
           <div className="mt-2 flex items-center gap-2">
@@ -176,7 +176,7 @@ export function RunsPage() {
             </span>
             <span className="text-sm font-bold text-slate-900">Operational</span>
           </div>
-          <span className="text-[11px] text-slate-400 mt-1 block">Daemon & scheduler active</span>
+          <span className="text-[11px] text-slate-500 mt-1 block">Daemon & scheduler active</span>
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-[#E2E8F0] shadow-xs">
@@ -184,7 +184,7 @@ export function RunsPage() {
           <div className="mt-2 text-2xl font-bold text-slate-900 font-mono tabular-nums">
             {runs.length}
           </div>
-          <span className="text-[11px] text-slate-400 mt-1 block">Telemetry retention window</span>
+          <span className="text-[11px] text-slate-500 mt-1 block">Telemetry retention window</span>
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-[#E2E8F0] shadow-xs">
@@ -192,7 +192,7 @@ export function RunsPage() {
           <div className="mt-2 text-2xl font-bold text-slate-900 font-mono tabular-nums">
             4 Types
           </div>
-          <span className="text-[11px] text-slate-400 mt-1 block">Detection, Ingestion, Eval, AI</span>
+          <span className="text-[11px] text-slate-500 mt-1 block">Detection, Ingestion, Eval, AI</span>
         </div>
 
         <div className="p-4 bg-white rounded-xl border border-[#E2E8F0] shadow-xs">
@@ -200,7 +200,7 @@ export function RunsPage() {
           <div className="mt-2 text-2xl font-bold text-emerald-700 font-mono tabular-nums">
             DuckDB OLAP
           </div>
-          <span className="text-[11px] text-slate-400 mt-1 block">Sub-100ms vectorized execution</span>
+          <span className="text-[11px] text-slate-500 mt-1 block">Sub-100ms vectorized execution</span>
         </div>
       </div>
 
@@ -287,7 +287,7 @@ export function RunsPage() {
                 <tr>
                   <td colSpan={7} className="py-12 text-center text-slate-500">
                     <div className="max-w-sm mx-auto flex flex-col items-center">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 mb-3">
                         <Terminal className="w-5 h-5" />
                       </div>
                       <h4 className="text-sm font-bold text-slate-800">No runs recorded</h4>
@@ -366,7 +366,7 @@ export function RunsPage() {
                           className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-slate-700 hover:text-slate-900 bg-white hover:bg-slate-50 border border-slate-300 rounded shadow-2xs cursor-pointer"
                         >
                           <span>Inspect</span>
-                          <ChevronRight className="w-3 h-3 text-slate-400" />
+                          <ChevronRight className="w-3 h-3 text-slate-500" />
                         </button>
                       </td>
                     </tr>
@@ -397,7 +397,7 @@ export function RunsPage() {
 
               <button
                 onClick={() => setSelectedRun(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="p-1 rounded-lg text-slate-500 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
