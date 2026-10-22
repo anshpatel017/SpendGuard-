@@ -93,6 +93,20 @@ CREATE OR REPLACE TABLE injection_runs (
 """
 
 # docs/DATA-SCHEMA.md 1.4
+# FR-7.10: the parameters half. eval_results holds a run's numbers and seed;
+# without the thresholds that produced them, re-running after a config change
+# silently appends incomparable rows to the same table.
+EVAL_RUNS_DDL = """
+CREATE TABLE IF NOT EXISTS eval_runs (
+    run_id        VARCHAR NOT NULL,
+    seed          INTEGER,
+    transactions  INTEGER NOT NULL,
+    detectors     VARCHAR NOT NULL,
+    config        VARCHAR NOT NULL,
+    created_at    TIMESTAMP NOT NULL
+)
+"""
+
 EVAL_RESULTS_DDL = """
 CREATE TABLE IF NOT EXISTS eval_results (
     run_id        VARCHAR NOT NULL,

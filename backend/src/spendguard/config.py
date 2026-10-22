@@ -338,6 +338,18 @@ class Settings(BaseSettings):
         return f"-{out}" if neg else out
 
 
+# The settings that decide what a detector flags. Recorded with every evaluation
+# run (FR-7.10) and printed with every report, from this one list - a run whose
+# thresholds are not stored beside its numbers is reproducible only by luck.
+DETECTOR_SETTINGS: tuple[str, ...] = (
+    "approval_threshold", "duplicate_amount_tolerance", "duplicate_date_window_days",
+    "duplicate_name_confirm", "duplicate_match_threshold", "split_window_days",
+    "split_score_threshold", "inflation_zscore_threshold", "inflation_min_category_size",
+    "vendor_min_distinct_amounts", "vendor_min_transactions", "vendor_fdr_alpha",
+    "severity_reference_amount",
+)  # fmt: skip
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Cached settings instance. Import this, never instantiate Settings directly."""
