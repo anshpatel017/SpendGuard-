@@ -114,13 +114,13 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[int]** Every claim in the note carries at least one citation. [FR-3.5]
 - [x] **[int]** Every cited row_id exists in `transactions`. [FR-3.5] *(Enforced by the Verifier's deterministic check, Phase 7.)*
 - [x] **[int]** Exactly one verdict is emitted, from the allowed set. [FR-3.6]
-- [ ] **[int]** A clean, obviously legitimate case yields `likely_false_positive` with a stated reason. [FR-3.6]
-- [ ] **[int]** An obvious injected duplicate yields `likely_true_positive`. [FR-3.6]
+- [x] **[int]** A clean, obviously legitimate case yields `likely_false_positive` with a stated reason. [FR-3.6] *(3 of 17 seed-42 notes are dismissals, each reasoning from the data rather than the label: `fe2c704f` — petrol at 3.3× the median, but comparable premium-grade purchases cost as much or more; `dd3f8ece` — 2.93× the median, but the same supplier's own premium purchases run 1.39–1.9× and five same-commodity rows sit within 1.01–1.16×; `72c2ddfc` — 2.66×, premium grade corroborated by comparables.)*
+- [x] **[int]** An obvious injected duplicate yields `likely_true_positive`. [FR-3.6] *(all five duplicate cases investigated on seed 42 returned `likely_true_positive`, two of them `verified`. `b113c2e3` is the clearest: same supplier under a variant spelling, identical amount, officer, item and quantity, the invoice retyped from BILL/0539 to 539, ten days apart — and it rules out the innocent explanation, noting the supplier's only recurring billing is a different item.)*
 - [x] **[int]** The agent performs no writes to case state. [FR-3.7]
 - [x] **[int]** A trace is recorded with tool name, arguments, result, latency and token counts for every step. [FR-3.8]
 - [x] **[int]** Investigation runs on exactly the configured top-N cases, ordered by `severity_prelim`. [FR-3.9]
 - [x] **[int]** Switching the configured provider changes the endpoint used and nothing else. [FR-3.11]
-- [ ] **[man]** Read ten generated notes end to end and confirm they are coherent, specific, and free of invented entities.
+- [x] **[man]** Read ten generated notes end to end and confirm they are coherent, specific, and free of invented entities. *(2026-10-22, the ten most recent seed-42 agent notes. Coherent: each runs from grounded observations to a verdict. Specific: real row ids, amounts, unit rates, dates and clause numbers throughout, with comparisons to the vendor's own history rather than generic prose. **Entities checked against the database rather than taken on impression** — all six suppliers and five officers named in prose exist, and `Deccan Goyal Solutions` has exactly the 46 transactions its note claims. Several notes consider and reject an innocent explanation before concluding, which is what D-29's prompt asks for.)*
 
 ---
 
