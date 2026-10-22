@@ -175,8 +175,9 @@ trust the numbers that worked.
 Local and open-source. No cloud dependency in the design: the provider is one
 line of configuration, and the same code runs against a local model.
 
-Then the honest caveats, said rather than extracted — they are in
-[EVALUATION.md](EVALUATION.md) §9, and saying them yourself is the point.
+Then the honest caveats, said rather than extracted — written out slide-ready in
+[PRESENTATION.md](PRESENTATION.md) §3, sourced from [EVALUATION.md](EVALUATION.md) §9.
+Saying them yourself is the point.
 
 ---
 
