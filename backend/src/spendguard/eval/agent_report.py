@@ -258,6 +258,13 @@ def render_markdown(report: AgentReport) -> str:
         "construction - it cannot weigh an innocent explanation - which is the comparison "
         "the arm exists to make.",
         "",
+        "**The investigated subset is severity-biased** (FR-7.6). The sample is drawn per "
+        "anomaly type, but cases are worked highest-severity first and a spent daily quota "
+        "stops the run where it stands, so an arm whose *Investigated* count is below its "
+        "*Sample* has been scored on its higher-severity cases. Those are not a random "
+        "half: a high-severity case tends to carry more rows and a larger amount, so these "
+        "rates should not be read as rates over the whole sample until the counts match.",
+        "",
         "| Seed | Model | Arm | Sample | Investigated | Real kept | Spurious filtered "
         "| Decisive accuracy |",
         "|---:|---|---|---:|---:|---:|---:|---:|",

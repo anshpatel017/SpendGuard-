@@ -1,6 +1,6 @@
 # Agent results - investigation and verification
 
-Generated 2026-10-22 06:55 UTC from commit `b4db2c9`. Regenerate with `spendguard report agent`.
+Generated 2026-10-22 07:14 UTC from commit `89fbc01` **(uncommitted changes)**. Regenerate with `spendguard report agent`.
 
 Read from the evaluation stores, not from any single run: notes accumulate a few a day against a free-tier daily quota (D-30), and the newest note per (case, model, arm) is the one that stands. **Numbers are per model** - two models are never merged into one row (D-33) - and ablation arms sit beside the main run, never inside it (D-35).
 
@@ -16,6 +16,8 @@ Read from the evaluation stores, not from any single run: notes accumulate a few
 ## Triage - what the agent filters
 
 Over the seeded sample of real and spurious cases for each seed. *Real kept* is the share of genuine anomalies the agent did not dismiss; *spurious filtered* is the share of false alarms it did. A template arm scores 0 on the second by construction - it cannot weigh an innocent explanation - which is the comparison the arm exists to make.
+
+**The investigated subset is severity-biased** (FR-7.6). The sample is drawn per anomaly type, but cases are worked highest-severity first and a spent daily quota stops the run where it stands, so an arm whose *Investigated* count is below its *Sample* has been scored on its higher-severity cases. Those are not a random half: a high-severity case tends to carry more rows and a larger amount, so these rates should not be read as rates over the whole sample until the counts match.
 
 | Seed | Model | Arm | Sample | Investigated | Real kept | Spurious filtered | Decisive accuracy |
 |---:|---|---|---:|---:|---:|---:|---:|

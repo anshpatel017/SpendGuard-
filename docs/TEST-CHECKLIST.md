@@ -182,19 +182,19 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 ## 10. Evaluation
 
-- [ ] **[int]** Per-case precision, recall, F1 and PR-AUC are produced per detector against the baseline. [FR-7.3]
-- [ ] **[int]** Per-row metrics are produced as a secondary table. [FR-7.4]
+- [x] **[int]** Per-case precision, recall, F1 and PR-AUC are produced per detector against the baseline. [FR-7.3] *(`docs/results/detection.md`, “Per case (headline)”: all four columns, every detector beside its baseline, mean ± sd across three seeds.)*
+- [x] **[int]** Per-row metrics are produced as a secondary table. [FR-7.4] *(`detection.md`, “Per row (secondary)” — labelled secondary, as D-02 requires.)*
 - [x] **[int]** The case-overlap matching rule is implemented exactly as specified and unit-tested at its boundaries. [FR-7.3]
 - [x] **[int]** D4 vendor-level cases are matched by the rule appropriate to vendor-level cases, not by row overlap. [Open issue]
 - [x] **[int]** Citation validity is reported split into deterministic and semantic. [FR-7.5]
-- [ ] **[int]** Triage accuracy is computed only over investigated cases, and the report states that this sample is severity-biased. [FR-7.6]
+- [x] **[int]** Triage accuracy is computed only over investigated cases, and the report states that this sample is severity-biased. [FR-7.6] *(2026-10-22: the table carries both Sample and Investigated, and the section now says in bold that an arm whose Investigated is below its Sample has been scored on its higher-severity cases — which are not a random half. It did not say so before.)*
 - [x] **[int]** Efficiency metrics — tool calls, tokens, latency — are recorded per case. [FR-7.7]
 - [x] **[int]** The Verifier-off ablation runs and produces a comparison table. [FR-7.8] *(`--no-verify` in evaluation mode is the `no-verifier` arm: stored, scored and reported apart, so unverified notes never replace verified ones)*
 - [x] **[int]** The template-notes ablation runs and produces a comparison table. [FR-7.9] *(`--ablation template`; needs no model to write the note, and its citations still pass the deterministic check - the arm's point is the triage column, not the citation column)*
 - [ ] **[int]** Every run is logged to the experiment tracker with its parameters, seeds and results. [FR-7.10] *(logged to DuckDB `eval_results` + JSON/Markdown reports now; MLflow wiring in Phase 10)*
-- [ ] **[int]** Re-running an evaluation with the same seed reproduces the same numbers. [NFR-4]
+- [x] **[int]** Re-running an evaluation with the same seed reproduces the same numbers. [NFR-4] *(2026-10-22, after the DuckDB/Polars/Pydantic pins: `report detection` re-detects seed 42 and prints “identical”. Every metric payload — aggregate, clean, reproduced, reproduced_cases, seeds — byte-identical across runs; only run ids and timestamps differ.)*
 - [x] **[unit]** Every sourced figure in EVALUATION.md matches the file that generated it. [Phase 9 exit] *(`spendguard check-evaluation`; catches a one-figure drift, ignores rounding in the last place, and fails loudly if it finds no sourced table at all)*
-- [ ] **[man]** Results are reported across multiple seeds with variation stated. [FR-7.11]
+- [x] **[man]** Results are reported across multiple seeds with variation stated. [FR-7.11] *(`detection.md`: seeds 42, 7 and 2026 named with 42 marked as the one every threshold was tuned on; values are mean ± sample sd, plus a per-seed F1 table. The agent numbers are seed 42 only, which the agent report says on its face.)*
 - [x] **[int]** Top-k unlabeled flags can be reviewed so precision is reported raw and adjusted. [FR-7.12] *(`spendguard review export/import/report`; the sample is seeded and recorded before any verdict, unclear verdicts stay out of the ratio, and every ratio carries a Wilson interval pinned in tests)*
 - [ ] **[man]** A real review batch is filled by three reviewers and reported. [FR-7.12]
 - [x] **[int]** A second dataset ingests, detects and stores without touching the operational store. [FR-1.3] *(California: 336,995 rows in 6.7 s via `california_po.yaml` and `detect --store`)*
@@ -210,7 +210,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [ ] **[int]** No API key for a paid provider is required for the delivered configuration. [NFR-1]
 - [ ] **[man]** The model runs within available VRAM and the memory ceiling is recorded. [NFR-2]
 - [x] **[man]** Full detection over the development dataset completes within the target time, and the figure is recorded. [NFR-6] *(2026-10-22: **15.3 s** wall for D1–D4 over 49,900 clean transactions. D1 reports no anomalies on clean data, which is the answer convention 5 exists to check.)*
-- [ ] **[man]** No credentials, API keys or raw data are committed to version control. [DR-4]
+- [x] **[man]** No credentials, API keys or raw data are committed to version control. [DR-4] *(2026-10-22, scanned all 135 commits: no `gsk_`/`sk-`/`AIza` token shapes and no PRIVATE KEY blocks anywhere in history; `.env` has never been tracked; zero files tracked under `data/`, and every subdirectory of it is git-ignored.)*
 - [ ] **[man]** A clean-machine setup from the documented commands succeeds. [NFR-10]
 
 ---
@@ -227,5 +227,5 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [ ] The machine is tested on the actual projector and resolution.
 - [x] The system starts from cold — model loaded, database up, API up, frontend up — within the setup time available. *(2026-10-22, `serve --frozen`, two consecutive runs: health answering 2.27 s, dashboard HTML +0.23 s, first queue page +0.17 s — **2.65 s total**. No language model loads on this path; health never probes the LLM, D-32.)*
 - [ ] Every number quoted in the presentation traces to a logged run.
-- [ ] Wording checks: "duplicate transaction records", never "duplicate payments" for purchase-order data. "Detects across 100% of transactions, then autonomously investigates prioritized cases", never "investigates every flagged case".
+- [x] Wording checks: "duplicate transaction records", never "duplicate payments" for purchase-order data. "Detects across 100% of transactions, then autonomously investigates prioritized cases", never "investigates every flagged case". *(2026-10-22, grepped across docs, code and the frontend: no claim of investigating every flagged case, no claim of beating commercial tools, and every “duplicate payment” hit is either the authored policy corpus — which legitimately covers payments — a test fixture exercising the rule, or a sentence drawing the PO/payment distinction explicitly. **This covers the repository, not the slides**, which still need the same pass.)*
 - [ ] The limitations section states the invoice-to-payment reconciliation gap, the authored-policy caveat, and the severity-biased triage sample.
