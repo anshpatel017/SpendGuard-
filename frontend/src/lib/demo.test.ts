@@ -32,6 +32,15 @@ describe("the live demo's explanation of its own result (D-34)", () => {
     expect(missExplanation([])).toContain("not guaranteed");
   });
 
+  it("counts a repeated miss rather than naming the same type twice", () => {
+    // Three misses across two types read as "price inflation, split purchase,
+    // split purchase" before this - accurate, and a stutter to read aloud.
+    const text = missExplanation(["inflation", "split", "split"]);
+    expect(text).toContain("price inflation");
+    expect(text).toContain("split purchase ×2");
+    expect(text.match(/split purchase/g)).toHaveLength(1);
+  });
+
   it("points at the measured recall instead of inventing a cause", () => {
     const text = missExplanation(["split"]);
     expect(text).toContain("measured recall");
