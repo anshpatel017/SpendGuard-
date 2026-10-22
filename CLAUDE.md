@@ -72,7 +72,7 @@ SpendGuard/
 │                               components · lib (format, verification)
 ├── docs/                       DESIGN · REQUIREMENTS · ARCHITECTURE · DATA-SCHEMA · results/
 │                               API-CONTRACT · EVALUATION · TEST-CHECKLIST · DECISIONS
-│                               PHASE-PLAN · DEMO (the walkthrough)
+│                               PHASE-PLAN · DEMO (walkthrough) · PRESENTATION (slides)
 ├── policy/policy.md            authored procurement policy; the RAG corpus
 └── data/                       raw · processed · frozen (all gitignored)
 ```
