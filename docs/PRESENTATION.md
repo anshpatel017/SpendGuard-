@@ -161,9 +161,10 @@ No. The synthetic anomalies are planted and known. The California flags are susp
 labelled as value implicated, never as fraud detected.
 
 **"Is it actually local?"**
-The provider is one line of configuration and the same code runs against a local model.
-*(Update this once the Ollama proof lands — until then, say the architecture is local and
-the evaluation ran on a free hosted tier, which is the true answer.)*
+Yes, and it was run that way. Qwen2.5-3B-Instruct under Ollama, 2,158 MiB of a 4 GB
+RTX 2050, writing **5 audit notes with 2 verified** while every non-loopback connection
+was blocked. The provider is one line of configuration; the evaluation numbers come from
+the hosted free tier because it is faster per case, not because anything needs it.
 
 ---
 
