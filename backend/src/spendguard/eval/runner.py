@@ -14,8 +14,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from spendguard.cases import Case
-from spendguard.config import settings
-from spendguard.db.duck import EVAL_RESULTS_DDL, connect, table_exists
+from spendguard.config import DETECTOR_SETTINGS, settings
+from spendguard.db.duck import EVAL_RESULTS_DDL, EVAL_RUNS_DDL, connect, table_exists
 from spendguard.detectors import REGISTRY
 from spendguard.eval.matching import TruthGroup, load_ground_truth
 from spendguard.eval.metrics import ALL, DetectionMetrics, evaluate_cases
@@ -32,6 +32,15 @@ class EvaluationRun:
     cases: dict[str, list[Case]] = field(default_factory=dict, repr=False)
     seconds: dict[str, float] = field(default_factory=dict)
     report_paths: tuple[Path, ...] = ()
+    # The thresholds in force when these numbers were produced (FR-7.10). Stored
+    # with the run rather than read back from config at report time, because the
+    # config may have moved since.
+    config: dict[str, object] = field(default_factory=dict)
+
+
+def detector_config() -> dict[str, object]:
+    """The thresholds that decide what gets flagged, as they stand right now."""
+    return {name: getattr(settings, name) for name in DETECTOR_SETTINGS}
 
 
 def _injection_seed(con: object) -> int | None:
@@ -66,6 +75,15 @@ def run_evaluation(
             metrics.extend(evaluate_cases(name, found, groups))
 
         run_id = f"eval-{created:%Y%m%dT%H%M%S}-seed{seed}"
+        config = detector_config()
+        con.execute(EVAL_RUNS_DDL)
+        con.execute(
+            "INSERT INTO eval_runs VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                run_id, seed, transactions, ",".join(detectors),
+                json.dumps(config, default=str), created.replace(tzinfo=None),
+            ],
+        )  # fmt: skip
         con.execute(EVAL_RESULTS_DDL)
         con.executemany(
             "INSERT INTO eval_results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -89,6 +107,7 @@ def run_evaluation(
         metrics=metrics,
         cases=all_cases,
         seconds=seconds,
+        config=config,
     )
     run.report_paths = write_report(run, report_dir or settings.processed_data_dir / "eval")
     return run
