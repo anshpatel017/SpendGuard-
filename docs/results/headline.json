@@ -1,7 +1,7 @@
 {
   "manifest": {
-    "generated_at": "2026-10-22 06:55 UTC",
-    "commit": "b4db2c9",
+    "generated_at": "2026-10-22 17:24 UTC",
+    "commit": "d921efe",
     "dirty": true,
     "python": "3.13.5",
     "packages": {
@@ -40,7 +40,7 @@
     {
       "name": "citation validity (rule-checked)",
       "value": "100.0% over 17 note(s)",
-      "source": "agent.json - provisional, sample still filling"
+      "source": "agent.json, qwen/qwen3.8-27b - provisional, sample still filling (notes from qwen2.5:3b-instruct-q4_K_M are reported separately)"
     },
     {
       "name": "value implicated",

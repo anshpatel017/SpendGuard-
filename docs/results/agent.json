@@ -1,8 +1,8 @@
 {
   "manifest": {
-    "generated_at": "2026-10-22 07:14 UTC",
-    "commit": "89fbc01",
-    "dirty": true,
+    "generated_at": "2026-10-22 17:21 UTC",
+    "commit": "d921efe",
+    "dirty": false,
     "python": "3.13.5",
     "packages": {
       "duckdb": "1.5.5",
@@ -68,6 +68,54 @@
       "triage_accuracy": 0.933,
       "real_kept": 1.0,
       "spurious_filtered": 0.75
+    },
+    {
+      "seed": 42,
+      "model": "qwen2.5:3b-instruct-q4_K_M",
+      "arm": "agent",
+      "notes": 5,
+      "sampled": 5,
+      "citations_checked": 12,
+      "deterministic_valid": 1.0,
+      "semantic_valid": 0.8333,
+      "first_draft_valid": null,
+      "regenerated": 3,
+      "released": {
+        "failed_after_retries": 2,
+        "verified": 3
+      },
+      "triage": {
+        "cases": 5,
+        "real": 4,
+        "spurious": 1,
+        "confusion": {
+          "real": {
+            "likely_true_positive": 3,
+            "likely_false_positive": 1,
+            "inconclusive": 0,
+            "failed": 0
+          },
+          "spurious": {
+            "likely_true_positive": 1,
+            "likely_false_positive": 0,
+            "inconclusive": 0,
+            "failed": 0
+          }
+        },
+        "real_kept": 0.75,
+        "real_wrongly_dismissed": 0.25,
+        "spurious_filtered": 0.0,
+        "inconclusive": 0.0,
+        "failed": 0.0,
+        "decisive_accuracy": 0.6
+      },
+      "avg_tool_calls": 17.0,
+      "avg_tokens": 27064.2,
+      "avg_seconds": 47.9078,
+      "quota_stopped": false,
+      "triage_accuracy": 0.6,
+      "real_kept": 0.75,
+      "spurious_filtered": 0.0
     },
     {
       "seed": 42,
