@@ -38,6 +38,10 @@ spendguard serve --frozen               # serve it, from a fresh working copy
 - **Know your one case.** Pick a case with a verified note beforehand and be able
   to say what the agent found and why it matters. A demo that hunts for a good
   example loses the room.
+- **Fire one live injection to warm the file cache.** The first run of the day
+  takes 13 s against 4 s for every one after it (measured, 2026-10-22). Do it
+  before anyone is watching; it costs nothing and it is the difference between
+  a crisp demonstration and ten seconds of talking over a spinner.
 
 ---
 
@@ -109,7 +113,11 @@ Open the **Live demo** page and inject 3 anomalies.
 - It plants them in a *temporary copy* of the last three months of the clean
   dataset, runs detection, and reports which were caught. The data being served
   is never touched, and a test hashes it before and after.
-- Takes 3–8 seconds.
+- **Takes about 4 seconds — but only once it is warm.** Measured over eight
+  consecutive runs on 2026-10-22: the first took **13.2 s**, every one after it
+  4.0–5.0 s (5.4–6.5 s wall, including Python start-up). The cost is the first
+  read of the DuckDB file, so it returns after a reboot or a long idle.
+  **Run one injection before the room fills** and the audience never sees it.
 
 **Misses are shown as misses.** On rehearsal seeds it catches 2 of 3. The page
 names whatever was actually missed on the run in front of you and points at the
