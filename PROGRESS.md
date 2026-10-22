@@ -410,13 +410,13 @@ The review batch is the **only** thing that replaces *"Value implicated in real 
 
 | # | Run | Sample | Done | Left |
 |---|---|---:|---|---|
-| 1 | seed 42, agent | **20** (widened) | 14 notes | **6 cases → unlocks a quotable citation rate** |
-| 2 | seed 42, template | 15 | 14 notes | 1 case |
+| 1 | seed 42, agent | **20** (widened) | **17 notes**, 15 investigated | **3 cases → unlocks a quotable citation rate** |
+| 2 | seed 42, template | 15 | 17 notes, 14 investigated | 1 case |
 | 3 | seed 42, no-verifier | 15 | **0 — not started** | 15 cases |
 | 4 | seed 7, agent | 5 | **0 — no store exists** | 5 cases |
 | 5 | seed 2026, agent | 5 | **0 — no store exists** | 5 cases |
 
-**32 investigations at roughly ten a day.** Run 1 is the one that matters: `headline.md` refuses to quote a citation rate below 20 notes and currently reads *"100.0% over only 14 note(s)"*, which is the honest form and stays honest if the rest never land.
+**29 investigations at roughly ten a day.** Run 1 is the one that matters: `headline.md` refuses to quote a citation rate below 20 notes and currently reads *"100.0% over only 17 note(s)"*, which is the honest form and stays honest if the rest never land. **One run clears it.**
 
 ### 🤔 Decisions — one line each, all yours
 
@@ -430,9 +430,9 @@ The review batch is the **only** thing that replaces *"Value implicated in real 
 
 ### 📦 Before the demo
 
-- **Re-freeze.** `spendguard freeze --seed 42`. The snapshot holds 12 notes; there are now 14, and the walkthrough's centrepiece is a case page with a verification badge.
-- **The 3–8 second claim.** `docs/DEMO.md:112` and `DECISIONS.md` D-34 both state it; one measured run took **12.5 s**. Time a few runs and state what is true, or the presenter waits out dead air in front of the panel.
-- **Cold-start timing.** Model loaded, database up, API up, frontend up, within the setup time available. Never measured.
+- ✅ **Re-frozen 2026-10-22** at 17 investigated and 9 verified, up from 12 and 6, and shown not to change under use: a case confirmed through the API while serving left all four hashes identical and came back `new` on relaunch. **Re-freeze once more after the final matrix run.**
+- ✅ **The timing claim is fixed.** It was never 3–8 s for the run that matters: measured over eight consecutive runs the first takes **13.2 s** and every one after it 4.0–5.0 s. DEMO.md now tells the presenter to fire one injection before the room fills.
+- ✅ **Cold start is 2.65 s** (`serve --frozen`): health at 2.27 s, dashboard HTML +0.23 s, first queue page +0.17 s. A full four-detector scan is 15.3 s, not the 25 s D-34 had asserted.
 
 ### 🚫 Deliberately not finished
 
@@ -449,17 +449,24 @@ Each is accurately described as absent in the reports, which is better than a ru
 - **Some cases never produce a note.** `dd3f8ece` failed on consecutive days before succeeding; others may not. The attempts-ordering stops them starving the queue, and the failure is reported rather than hidden.
 - **Attribution regression.** The broken merge re-attached the pre-rewrite history, so `main` again carries 47 `Co-Authored-By` trailers and 50 commits on the old email. Removing them means another full rewrite and force-push — which is what collided with the teammate's clone the first time. Left deliberately.
 
-### ✅ Remaining checklist items: 39
+### ✅ Remaining checklist items: 14 (from 39 on 2026-10-22)
 
 ```
- 12  Pre-demonstration      rehearsals, projector, video fallback, cold start
-  8  Evaluation             multi-seed reporting, real review batch, grading batch
-  6  System and privacy     local-only run, no paid key, VRAM ceiling, clean-machine setup
-  3  Data pipeline          exchange-rate pinning verified, 20-row spot check
-  3  Investigator agent     ten notes read end to end
-  3  Database               Alembic, concurrent DuckDB read during a batch write
-  3  Frontend               Zod contract breach shown live, projector layout
-  1  Verifier agent         corrupt a note by hand, confirm rejection
+  6  Pre-demonstration      three rehearsals, projector, video fallback,
+                            stopwatch timing, numbers traced, limitations slide
+  4  System and privacy     local-only run, no paid key, VRAM ceiling,
+                            clean-machine setup - all four wait on Ollama
+  3  Evaluation             the review batch, the grading batch, MLflow
+  1  Database               Alembic migrations, which do not exist
 ```
 
-Section 12 is almost entirely manual and almost entirely undone.
+**Twenty-five were settled on 2026-10-22, each with its figure attached rather than a tick.** The ones
+worth knowing: the Verifier rejects a note corrupted by hand on all three counts; a batch run and the
+dashboard do not collide (400 of 400 requests served during a 49,900-row scan, no lock error); the
+exchange rate is pinned, proved by ingesting twice with every socket raising; twenty rows trace back to
+the source CSV field by field; a contract breach renders a visible banner naming the field and both
+types; and ten notes were read end to end with every supplier and officer checked against the database.
+
+What is left divides cleanly: **six items are the demonstration itself**, four **wait on Ollama**, two
+**wait on three people each**, and one asks for **Alembic migrations that were never written**. None of
+them can be closed by running something.
