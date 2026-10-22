@@ -217,10 +217,10 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 ## 12. Pre-demonstration
 
-- [ ] The demo dataset is frozen and version-pinned. [NFR-9] [DR-5]
-- [ ] The demo runs from the frozen snapshot, not a live path that can change.
+- [x] The demo dataset is frozen and version-pinned. [NFR-9] [DR-5] *(re-frozen 2026-10-22 07:32 UTC at commit `7fbcb47`, now holding **17 investigated cases and 9 verified notes** — the previous snapshot predated most of them at 12 and 6. Four files under a SHA-256 manifest; `verify()` matches all four. **Re-freeze again after the final matrix run**, which will add the last few notes.)*
+- [x] The demo runs from the frozen snapshot, not a live path that can change. *(2026-10-22, demonstrated rather than asserted: with `serve --frozen` running, a case was PATCHed to `confirmed` with a reviewer note. The working copy showed the change, so the demo stays interactive — and the snapshot stayed byte-identical, same SHA-256 before and after. On relaunch the case came back `new` with no note and no reviews. A stray click during a rehearsal cannot change what the room sees.)*
 - [ ] Every screen in the demo sequence has been walked through at least three times end to end.
-- [ ] A pre-computed run exists so nothing has to be generated live.
+- [x] A pre-computed run exists so nothing has to be generated live. *(the frozen snapshot carries the completed seed-42 evaluation and its 17 audit notes, including the verified dismissal `fe2c704f` the walkthrough is built around. Nothing in the demo sequence calls a language model; the only live computation is the injection demo, which is detection only.)*
 - [ ] The live injection demonstration completes within the time allowed, rehearsed with a stopwatch.
 - [ ] The live injection demonstration reports every planted anomaly as caught or missed, and each miss is named and attributed to the measured recall rather than to a guessed cause, verified on a rehearsal run. *(Changed in Phase 9: an honest demo will sometimes miss; promising otherwise would set up a failure in front of the panel. The explanation is generated from what was actually missed - `missExplanation` in `frontend/src/lib/demo.ts`.)*
 - [ ] A recorded video fallback exists and has been played back in full.
