@@ -1,7 +1,7 @@
 {
   "manifest": {
-    "generated_at": "2026-09-29 09:54 UTC",
-    "commit": "087b998",
+    "generated_at": "2026-10-22 07:15 UTC",
+    "commit": "89fbc01",
     "dirty": true,
     "python": "3.13.5",
     "packages": {
@@ -36,7 +36,7 @@
   "runs": [
     {
       "seed": 42,
-      "run_id": "eval-20260929T095318-seed42",
+      "run_id": "eval-20261022T071513-seed42",
       "transactions": 50907,
       "ground_truth_groups": {
         "duplicate": 200,
@@ -649,7 +649,7 @@
     },
     {
       "seed": 7,
-      "run_id": "eval-20260929T095328-seed7",
+      "run_id": "eval-20261022T071525-seed7",
       "transactions": 50953,
       "ground_truth_groups": {
         "duplicate": 200,
@@ -1262,7 +1262,7 @@
     },
     {
       "seed": 2026,
-      "run_id": "eval-20260929T095336-seed2026",
+      "run_id": "eval-20261022T071533-seed2026",
       "transactions": 50963,
       "ground_truth_groups": {
         "duplicate": 200,

@@ -1,8 +1,8 @@
 {
   "manifest": {
-    "generated_at": "2026-10-22 06:55 UTC",
-    "commit": "b4db2c9",
-    "dirty": false,
+    "generated_at": "2026-10-22 07:14 UTC",
+    "commit": "89fbc01",
+    "dirty": true,
     "python": "3.13.5",
     "packages": {
       "duckdb": "1.5.5",
