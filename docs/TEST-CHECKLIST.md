@@ -143,7 +143,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 
 - [x] **[unit]** Case status transitions persist and survive a restart. [FR-5.3]
 - [x] **[unit]** Reviewer notes persist against the correct case. [FR-5.2]
-- [ ] **[int]** Alembic migrations apply cleanly to an empty database. [NFR-10]
+- [x] **[int]** Alembic migrations apply cleanly to an empty database. [NFR-10] *(2026-10-22: `backend/alembic/`, one revision covering all eight tables, generated from the models rather than written by hand. Four tests, and the one that matters is not “migrations run” but **a migrated store and a `create_all` store have the same schema** — two descriptions of one store is exactly where drift lives. Also pinned: the revision rolls back to an empty database, and autogenerate finds nothing left to do. Proved non-vacuous — adding a column to one model fails two of them and names it.)*
 - [x] **[int]** The API opens DuckDB read-only, so a batch run and the API can operate concurrently. [Architecture 2.4] *(2026-10-22: `detect` scanned 49,900 transactions against the live DuckDB while the dashboard was served, writing 154 cases to a scratch store. 400 of 400 API requests returned 200.)*
 - [x] **[int]** A batch run while the dashboard is open does not produce a lock error. [Architecture 2.4] *(2026-10-22: zero matches for lock, conflict or IO Error in either the batch log or the server log during the run above.)*
 
