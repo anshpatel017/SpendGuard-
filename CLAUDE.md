@@ -31,7 +31,7 @@ SpendGuard audits **100% of an organization's procurement transactions**, detect
 | Planned | MLflow (Phase 10; declared in the `track` extra, not yet wired) |
 | Tooling | pytest, ruff, mypy, Vitest, GitHub Actions |
 
-**LLM plan (forced by hardware):** the dev machine has a 4 GB RTX 2050 and no disk space for Ollama yet. `LLM_PROVIDER` switches in one line (D-33): **Groq** `qwen/qwen3.8-27b` for development *and* the Phase 9 evaluation (D-26), **Ollama** Qwen2.5-3B later for the "fully local" proof. **Gemini is out (D-37):** every model its free tier serves fails multi-turn tool calling. `spendguard check-llm` verifies chat, tool calling **and a second turn** - the turn Gemini failed.
+**LLM plan.** `LLM_PROVIDER` switches in one line (D-33): **Groq** `qwen/qwen3.8-27b` for the Phase 9 evaluation (D-26), **Ollama** Qwen2.5-3B for the local proof - **both working as of 2026-10-22**. Ollama lives on `D:\Ollama` with models in `D:\Ollama\models` (`OLLAMA_MODELS`); 2,158 MiB of the 4 GB RTX 2050 under load. Keep `LLM_PROVIDER=groq` so the evaluation keeps filling one model's numbers; flip to `ollama` for the local demonstration. **Gemini is out (D-37):** every model its free tier serves fails multi-turn tool calling. `spendguard check-llm` verifies chat, tool calling **and a second turn** - the turn Gemini failed.
 
 ---
 
@@ -169,7 +169,7 @@ Copy `.env.example` to `.env` (gitignored). Names only, no secrets in the repo:
 - **Stores:** `DATABASE_URL` (defaults to SQLite under `data/processed/`)
 - **API:** `API_HOST`, `API_PORT`
 
-Groq is the working provider (`spendguard check-llm`); the **Kaggle California PO dataset** is a manual download into `data/raw/` - `data/` is gitignored, so a fresh clone has neither it nor the synthetic set (`spendguard generate` makes the latter). One manual step left: **Ollama + Qwen2.5-3B** for the local-runtime proof. The `agent` extra pulls PyTorch and is a large download, so it is split: `llm` (openai, tiktoken — light, installed in CI) and `agent` (adds sentence-transformers, faiss). Tests needing the embedding model or a key skip rather than fail.
+Both providers pass `spendguard check-llm`, including the second turn. The **Kaggle California PO dataset** is a manual download into `data/raw/` - `data/` is gitignored, so a fresh clone has neither it nor the synthetic set (`spendguard generate` makes the latter). For a genuinely offline run also set `HF_HUB_OFFLINE=1` and `TRANSFORMERS_OFFLINE=1`: sentence-transformers otherwise contacts huggingface.co to check an embedding model it already has cached. The `agent` extra pulls PyTorch and is a large download, so it is split: `llm` (openai, tiktoken — light, installed in CI) and `agent` (adds sentence-transformers, faiss). Tests needing the embedding model or a key skip rather than fail.
 
 ---
 
