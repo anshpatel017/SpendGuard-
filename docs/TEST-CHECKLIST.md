@@ -19,8 +19,8 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[int]** A dataset missing `officer_id` ingests successfully and D2 degrades rather than crashing. [FR-1.6] 
 - [x] **[int]** A dataset card is written with source, row count, date range, and per-column null rates. [FR-1.7]
 - [x] **[unit]** A non-INR dataset converts using the rate pinned in its configuration, and the rate and date appear in the dataset card. [FR-1.8]
-- [ ] **[unit]** Ingestion makes no network call to fetch an exchange rate — verified, not assumed. [FR-1.8]
-- [ ] **[int]** Re-ingesting a converted dataset produces identical amounts, proving the rate is pinned and not live. [FR-1.8] [NFR-4]
+- [x] **[unit]** Ingestion makes no network call to fetch an exchange rate — verified, not assumed. [FR-1.8] *(2026-10-22: the California CSV ingested twice with `socket.socket.connect`, `socket.create_connection` and `socket.getaddrinfo` all raising. Both runs completed. The rate is `fx_rate_to_inr: 60.0` dated 2014-01-01, read from `backend/mappings/california_po.yaml`; no HTTP client is imported anywhere under `pipeline/` or `db/`.)*
+- [x] **[int]** Re-ingesting a converted dataset produces identical amounts, proving the rate is pinned and not live. [FR-1.8] [NFR-4] *(2026-10-22, two independent ingests into fresh databases: 336,995 rows each, sum 9,084,722,252,210.89, min 0.6, max 440,222,283,840.0 — identical. A live rate would have moved between runs.)*
 - [ ] **[man]** Spot-check twenty random rows against the source CSV for field-level correctness.
 
 ---
@@ -175,8 +175,8 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[man]** Metrics view renders the detector table and the ablation table. [FR-6.8]
 - [x] **[man]** Loading and error states render for every data-fetching view — no blank screens. [NFR-5]
 - [ ] **[man]** A deliberate API shape change is caught by Zod validation with a visible error. [Architecture 2.6] *(Unit-tested: a float amount or a missing field fails validation and raises a `contract_mismatch` error the page shows. Not yet shown live in the browser.)*
-- [ ] **[man]** Layout holds at a projector resolution and does not scroll horizontally.
-- [ ] **[man]** Every monetary value shows `₹` with Indian digit grouping, and converted figures are visibly marked as converted. [FR-6.10] *(₹ and Indian grouping verified, formatted from strings with no float. The converted-currency banner exists but no converted dataset has been loaded yet; Phase 9, California data.)*
+- [x] **[man]** Layout holds at a projector resolution and does not scroll horizontally. *(2026-10-22 at 1920×1080: no horizontal scroll on any of the eight pages, `scrollWidth` equal to `clientWidth` throughout. **The actual projector is still untested** — that is the separate item in section 12.)*
+- [x] **[man]** Every monetary value shows `₹` with Indian digit grouping, and converted figures are visibly marked as converted. [FR-6.10] *(2026-10-22: every one of the 52 money strings rendered on the queue matches Indian grouping, and no dollar sign appears anywhere. The conversion marker is now covered end to end — the California card records `currency: USD, fx_rate_to_inr: 60.0, converted: true`, the API maps it to `converted_from`, and five new tests pin `<DatasetBanner>` on both branches. Proved non-vacuous: disabling the converted branch fails two of them.)*
 
 ---
 
