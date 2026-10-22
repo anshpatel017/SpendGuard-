@@ -491,6 +491,16 @@ there is one list rather than two that can drift apart. Two tests pin it, one of
 a threshold and checks the snapshot follows; making the snapshot return zeros fails it.
 Re-running the evaluation after the change reproduced every figure exactly.
 
+**A clean machine builds it, and gets the same answers.** Fresh clone to a separate drive,
+fresh venv, then only the commands in CLAUDE.md §5 — including the heavy
+`pip install -e "./backend[dev,detect,agent,api]"` with PyTorch, which CI never exercises
+because it installs the light extras. Backend: 0 failures, 7 skips (the opt-in live LLM
+tests), ruff and mypy clean. Frontend: `npm install`, tsc clean, 40 tests, build succeeds.
+Then `generate` → `ingest` → `detect` from nothing, which produced **154 cases, 12 high /
+129 medium / 13 low, ₹1,79,93,524.70 at risk — identical to this machine**. The pins
+resolved exactly as intended: duckdb 1.5.6, polars 1.44.2, pydantic 2.13.5, which is the
+first independent confirmation that capping them actually works on a fresh resolve.
+
 **[PRESENTATION.md](docs/PRESENTATION.md) is the other half of the walkthrough** — which
 figures may be quoted and the sentence each belongs in, the limitations slide written out
 rather than left as eight fragments in EVALUATION §9, and a wording table for the slides,
@@ -565,14 +575,13 @@ Each is accurately described as absent in the reports, which is better than a ru
 - **Some cases never produce a note.** `dd3f8ece` failed on consecutive days before succeeding; others may not. The attempts-ordering stops them starving the queue, and the failure is reported rather than hidden.
 - **Attribution regression.** The broken merge re-attached the pre-rewrite history, so `main` again carries 47 `Co-Authored-By` trailers and 50 commits on the old email. Removing them means another full rewrite and force-push — which is what collided with the teammate's clone the first time. Left deliberately.
 
-### ✅ Remaining checklist items: 9 (from 39 on 2026-10-22)
+### ✅ Remaining checklist items: 8 (from 39 on 2026-10-22)
 
 ```
   6  Pre-demonstration      three rehearsals, projector, video fallback,
                             stopwatch timing, numbers traced, limitations slide
   2  Evaluation             the review batch and the grading batch, both
                             waiting on three people each
-  1  System and privacy     a clean-machine setup from the documented commands
 ```
 
 Of the six pre-demonstration items, **two are now transcription**: every figure is traced in
@@ -583,6 +592,7 @@ in §3. The other four need a person in a room with a projector.
 section above lists them; the local-runtime three closed last, once Ollama was in.
 
 What is left divides cleanly, and **none of it can be closed by running something**: six items are the
-demonstration itself, two wait on three people each, one is MLflow, one is Alembic migrations that were
-never written, and one is a clean-machine install from the documented commands — which CI performs on
-every push for the backend-without-agent path, but not for the heavy `agent` extra.
+demonstration itself and two wait on three people each. Two of the six are transcription — the figures
+and the limitations are already written in [PRESENTATION.md](docs/PRESENTATION.md) and the deck is laid
+out slide by slide in [SLIDES.md](docs/SLIDES.md) — but a slide has to exist before the box can be
+ticked.
