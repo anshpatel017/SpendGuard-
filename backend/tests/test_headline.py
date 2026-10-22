@@ -127,6 +127,62 @@ def test_citation_validity_is_weighted_by_citations_not_by_run(tmp_path: Path) -
     assert "95.0%" in headline.agent
 
 
+def test_two_models_are_never_pooled_to_clear_the_threshold(tmp_path: Path) -> None:
+    """D-33: numbers are per model, and the sentence quotes one rate.
+
+    The real case this is pinned against: a 27B hosted model at 17 notes and a 3B
+    local one at 5 were summed to 22, which crossed `headline_min_notes` and
+    dropped the word "provisional" while the main arm was still three notes
+    short. A thin sample dressed up as a full one, on the strength of a different
+    model's work.
+    """
+    results = tmp_path / "results"
+    _detection(results)
+    _write(
+        results,
+        "agent.json",
+        {
+            "results": [
+                {"seed": 42, "arm": "agent", "model": "big-hosted", "notes": 17,
+                 "citations_checked": 164, "deterministic_valid": 1.0},
+                {"seed": 42, "arm": "agent", "model": "small-local", "notes": 5,
+                 "citations_checked": 12, "deterministic_valid": 1.0},
+            ]
+        },
+    )  # fmt: skip
+    headline = build(results)
+
+    assert "17 note(s)" in headline.sentence(), "the two models were pooled"
+    assert "22" not in headline.sentence()
+    assert "provisional" in headline.sentence().lower(), (
+        "17 is below the threshold and the sentence must still say so"
+    )
+    source = next(f.source for f in headline.figures if "citation validity" in f.name)
+    assert "big-hosted" in source, "the model behind the rate must be named"
+    assert "small-local" in source, "the other model's notes must be acknowledged"
+
+
+def test_the_model_with_the_most_notes_is_the_one_quoted(tmp_path: Path) -> None:
+    """Whichever arm is the evaluation proper, not whichever was written first."""
+    results = tmp_path / "results"
+    _detection(results)
+    _write(
+        results,
+        "agent.json",
+        {
+            "results": [
+                {"seed": 42, "arm": "agent", "model": "small-local", "notes": 5,
+                 "citations_checked": 12, "deterministic_valid": 0.5},
+                {"seed": 42, "arm": "agent", "model": "big-hosted", "notes": 25,
+                 "citations_checked": 200, "deterministic_valid": 1.0},
+            ]
+        },
+    )  # fmt: skip
+    headline = build(results)
+    assert "over 25 notes" in headline.sentence()
+    assert "100.0%" in headline.sentence(), "it quoted the smaller model's rate"
+
+
 def test_an_ablation_arm_never_enters_the_headline(tmp_path: Path) -> None:
     results = tmp_path / "results"
     _detection(results)

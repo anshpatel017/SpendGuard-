@@ -57,6 +57,7 @@ The ± is the sample standard deviation across the three seeds, not a confidence
 | Figure | Value | Caveat you must say with it |
 |---|---|---|
 | Notes written (seed 42) | 17 of a 20-case sample | Sample still filling — 3 short of the 20 the headline needs |
+| **Local model, same seed** | **5 notes, 3 verified, 100% rule-checked** | Qwen2.5-3B under Ollama. Its own row, never pooled with the hosted model (D-33) |
 | **Citation validity, rule-checked** | **100.0%** over 164 citations | This is the headline number — no model involved |
 | Citation validity, model-judged | 87.8% | Always reported *beside* the above, never blended into it (D-13) |
 | First-draft validity | 100.0% | What the Investigator produced unaided |
