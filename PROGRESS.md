@@ -386,6 +386,88 @@ The template keeps every real anomaly because it never dismisses anything, and f
 
 **O-04 is resolved** (confirmed 2026-10-22): a dismissed case's severity *number* moves with its band, so a queue ordered by severity and a queue filtered by band agree about the same case. No code changed — it was already the implemented behaviour, kept in one function precisely so it was one place to change. Four documents stopped describing it as pending.
 
+### Phase 9 step 7 — the local runtime, and twenty-eight checklist items measured (2026-10-22)
+
+**The checklist went from 39 open to 11, and almost none of it was new code.** It was the
+difference between a box that says a thing is true and a figure that shows it. Each item
+below carries the number it was settled with, because a tick with no number is the thing
+the evaluation is supposed to prevent.
+
+**The local runtime works, which closes the claim the whole hardware argument rests on.**
+Ollama installed on `D:` (`D:\Ollama\app`, models under `D:\Ollama\models` via
+`OLLAMA_MODELS`) because `C:` had 12 GB left — and the installer's own auto-started server
+had already put 1.8 GB of model there before the variable existed, which is why the models
+directory read 0 bytes afterwards. Moved, verified by inference from the new path, then the
+duplicate removed.
+
+- Qwen2.5-3B-Instruct q4_K_M passes `check-llm` on all three counts **including the second
+  turn** — the turn Gemini could never do (D-37).
+- **2,158 MiB of the 4,096 MiB RTX 2050** under load. The 4 GB card the hardware plan is
+  built around has 1.9 GB of headroom.
+- **A full `evaluate_investigation` ran with every non-loopback connection raising** and
+  wrote 5 notes, 2 of them verified. The "fully local" claim is now demonstrated rather
+  than designed for.
+- **It found something.** That run attempted **twenty connections to huggingface.co** —
+  sentence-transformers checking the Hub for an embedding model it already has cached. All
+  twenty blocked, the run completed, so it is not a dependency; but NFR-1 says *no external
+  network calls*, and that has to mean it does not try. With `HF_HUB_OFFLINE` and
+  `TRANSFORMERS_OFFLINE` the same run contacts nothing but loopback. Both are documented in
+  `.env.example`, with the warning that setting them on a first install stops the embedding
+  model downloading at all.
+- `LLM_PROVIDER` stays on **groq**. The agent arm is three notes short of twenty and those
+  notes must come from the same model or they land in a separate row (D-33). Flip to
+  `ollama` for the demonstration, not before.
+
+**The demo's own figures were wrong, and one of them in the way that matters.** DEMO.md
+said the live injection takes 3–8 seconds. Measured over eight consecutive runs the first
+takes **13.2 s** and every one after it 4.0–5.0 s: the cost is the first read of the DuckDB
+file, so it returns after a reboot — which is exactly the state a presenter's laptop is in
+when the room fills. The walkthrough now says so and tells them to fire one injection
+before anyone is watching. A full four-detector scan is **15.3 s**, not the 25 s D-34 had
+asserted, and cold start is **2.65 s** rather than an unknown.
+
+**Things that were asserted and are now shown:**
+
+- **The Verifier rejects a note corrupted by hand** on all three counts — a stated
+  `unit_price` changed from 7885.35 to 999999999.99, a cited row replaced with 99,999,999,
+  an invented clause `SG-PP-9.9`. No model involved; these are the deterministic checks.
+- **A batch run and the dashboard do not collide.** `detect` scanned 49,900 rows against
+  the live DuckDB while the dashboard served; **400 of 400 requests returned 200** and
+  neither log contains a lock error. The checklist had carried the honest note "not yet
+  tested" since Phase 8.
+- **The exchange rate is pinned, not fetched.** The California CSV ingested twice with
+  `connect`, `create_connection` and `getaddrinfo` all raising; both completed, and the
+  sums agree to the paisa across 336,995 rows.
+- **Twenty rows trace back to the source CSV**, 160 field comparisons, money checked
+  through the pinned 60.0 rate. Two looked wrong and were not: `source_row_ref` is the
+  purchase order number, not a line number, so a multi-line PO let the comparison land on
+  the wrong line. At PO level both agree exactly — 49 lines and 41 distinct unit prices for
+  one of them. The first output looked like six field-level defects and was none.
+- **A contract breach renders a visible banner.** `amount_at_risk` rewritten at the wire
+  from a decimal string to a number — the exact breach convention 11 forbids — and the
+  queue shows *"items.0.amount_at_risk: Expected string, received number"*, naming the
+  endpoint, the field path and both types.
+- **Ten notes read end to end**, with every supplier and officer in the prose checked
+  against the database rather than taken on impression. All eleven exist, and
+  `Deccan Goyal Solutions` has exactly the 46 transactions its note claims.
+- **The frozen snapshot survives being used.** Re-frozen at **17 investigated and 9
+  verified** (it held 12 and 6). A case confirmed through the API while serving left all
+  four hashes identical and came back `new` on relaunch.
+
+**Two defects found by checking rather than by failing.** The triage table was missing the
+caveat FR-7.6 requires it to carry — cases are worked highest-severity first and a spent
+quota stops the run, so an arm whose investigated count is below its sample has been scored
+on its larger, harder cases. Added to the generator. And the live demo's miss sentence read
+"price inflation, split purchase, split purchase": true, and a stutter to read aloud. Misses
+are tallied by type now.
+
+**[PRESENTATION.md](docs/PRESENTATION.md) is the other half of the walkthrough** — which
+figures may be quoted and the sentence each belongs in, the limitations slide written out
+rather than left as eight fragments in EVALUATION §9, and a wording table for the slides,
+which have not had the pass the repository has. Every figure in it was checked against
+`detection.json` and `agent.json`, which caught the ablation table already carrying the
+agent arm's pre-widening numbers.
+
 ## What remains
 
 Complete inventory as of 2026-10-22, checked against the live state rather than listed from memory. **Nothing here blocks the system from running** — it builds, CI is green, and every number in `docs/results` traces to a command. What follows is what is unfinished, and which of it needs a person.
@@ -430,6 +512,10 @@ The review batch is the **only** thing that replaces *"Value implicated in real 
 
 ### 📦 Before the demo
 
+Everything here is measured now. What is left in this section is the one thing that has to happen tomorrow:
+
+- **Three more notes, then re-freeze.** The agent arm is at 17 of a 20-case sample and `headline.md` will not quote a citation rate below 20. One `spendguard investigate --matrix` run clears it, then `spendguard freeze --seed 42` once more so the snapshot carries the final count. **Keep `LLM_PROVIDER=groq` for that run** — notes from a different model land in a separate row (D-33) and would not advance the arm.
+
 - ✅ **Re-frozen 2026-10-22** at 17 investigated and 9 verified, up from 12 and 6, and shown not to change under use: a case confirmed through the API while serving left all four hashes identical and came back `new` on relaunch. **Re-freeze once more after the final matrix run.**
 - ✅ **The timing claim is fixed.** It was never 3–8 s for the run that matters: measured over eight consecutive runs the first takes **13.2 s** and every one after it 4.0–5.0 s. DEMO.md now tells the presenter to fire one injection before the room fills.
 - ✅ **Cold start is 2.65 s** (`serve --frozen`): health at 2.27 s, dashboard HTML +0.23 s, first queue page +0.17 s. A full four-detector scan is 15.3 s, not the 25 s D-34 had asserted.
@@ -438,7 +524,7 @@ The review batch is the **only** thing that replaces *"Value implicated in real 
 
 Each is accurately described as absent in the reports, which is better than a rushed number.
 
-- **Ollama local-runtime proof.** The "fully local" claim rests on it; the provider is still Groq. Needs disk space and `ollama pull qwen2.5:3b-instruct-q4_K_M`. D-37 makes it more valuable than it looked — three free-tier models have now been lost to retirement or an API change, so the local runtime is the only one nobody else can withdraw.
+- ~~**Ollama local-runtime proof.**~~ **Done 2026-10-22.** Installed on `D:`, 2,158 MiB of the 4 GB card, and a full investigation written with every non-loopback connection blocked. D-37 made it matter more than it looked: three free-tier models have now been lost to retirement or an API change, so the local runtime is the only one nobody can withdraw.
 - **MLflow.** Declared in the `track` extra, imported nowhere. Runs are logged to DuckDB `eval_results` plus JSON and Markdown reports.
 - **Alembic.** Declared, and **no migrations directory exists at all**. A TEST-CHECKLIST item asserts migrations apply cleanly to an empty database; it cannot pass.
 - **Held-out seeds 7 and 2026 for the agent.** No store exists for either. Any claim about generalisation across seeds currently rests on detection metrics, which do have all three seeds.
@@ -449,24 +535,20 @@ Each is accurately described as absent in the reports, which is better than a ru
 - **Some cases never produce a note.** `dd3f8ece` failed on consecutive days before succeeding; others may not. The attempts-ordering stops them starving the queue, and the failure is reported rather than hidden.
 - **Attribution regression.** The broken merge re-attached the pre-rewrite history, so `main` again carries 47 `Co-Authored-By` trailers and 50 commits on the old email. Removing them means another full rewrite and force-push — which is what collided with the teammate's clone the first time. Left deliberately.
 
-### ✅ Remaining checklist items: 14 (from 39 on 2026-10-22)
+### ✅ Remaining checklist items: 11 (from 39 on 2026-10-22)
 
 ```
   6  Pre-demonstration      three rehearsals, projector, video fallback,
                             stopwatch timing, numbers traced, limitations slide
-  4  System and privacy     local-only run, no paid key, VRAM ceiling,
-                            clean-machine setup - all four wait on Ollama
   3  Evaluation             the review batch, the grading batch, MLflow
+  1  System and privacy     a clean-machine setup from the documented commands
   1  Database               Alembic migrations, which do not exist
 ```
 
-**Twenty-five were settled on 2026-10-22, each with its figure attached rather than a tick.** The ones
-worth knowing: the Verifier rejects a note corrupted by hand on all three counts; a batch run and the
-dashboard do not collide (400 of 400 requests served during a 49,900-row scan, no lock error); the
-exchange rate is pinned, proved by ingesting twice with every socket raising; twenty rows trace back to
-the source CSV field by field; a contract breach renders a visible banner naming the field and both
-types; and ten notes were read end to end with every supplier and officer checked against the database.
+**Twenty-eight were settled on 2026-10-22, each with its figure attached rather than a tick.** The
+section above lists them; the local-runtime three closed last, once Ollama was in.
 
-What is left divides cleanly: **six items are the demonstration itself**, four **wait on Ollama**, two
-**wait on three people each**, and one asks for **Alembic migrations that were never written**. None of
-them can be closed by running something.
+What is left divides cleanly, and **none of it can be closed by running something**: six items are the
+demonstration itself, two wait on three people each, one is MLflow, one is Alembic migrations that were
+never written, and one is a clean-machine install from the documented commands — which CI performs on
+every push for the backend-without-agent path, but not for the heavy `agent` extra.
