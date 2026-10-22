@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 from datetime import date
 from pathlib import Path
 
@@ -117,6 +118,53 @@ def test_end_to_end_evaluation(tmp_path: Path, injected: InjectionResult) -> Non
             "SELECT count(*) FROM eval_results WHERE run_id = ?", [run.run_id]
         ).fetchone()
     assert stored == (len(run.metrics),)
+
+
+def test_a_run_records_the_thresholds_that_produced_its_numbers(
+    tmp_path: Path, injected: InjectionResult
+) -> None:
+    """FR-7.10: parameters, seeds and results - not two of the three.
+
+    `eval_results` carries a run's numbers and its seed. Without the thresholds
+    in force at the time, re-running after a config change appends rows that are
+    not comparable to the ones already there, and nothing says so.
+    """
+    from spendguard.config import DETECTOR_SETTINGS
+    from spendguard.eval.runner import detector_config
+
+    run = run_evaluation(injected.out_db, ["baseline"], report_dir=tmp_path)
+
+    assert set(run.config) == set(DETECTOR_SETTINGS)
+    assert run.config == detector_config(), "the run recorded settings it did not use"
+
+    with duckdb.connect(str(injected.out_db), read_only=True) as con:
+        row = con.execute(
+            "SELECT seed, transactions, detectors, config FROM eval_runs WHERE run_id = ?",
+            [run.run_id],
+        ).fetchone()
+    assert row is not None, "the run was not logged to the tracker at all"
+    seed, transactions, detectors, config_json = row
+    assert seed == run.seed
+    assert transactions == run.transactions
+    assert detectors == "baseline"
+    assert json.loads(config_json) == {
+        k: str(v) if not isinstance(v, (int, float, bool, str, type(None))) else v
+        for k, v in run.config.items()
+    }
+
+
+def test_the_recorded_thresholds_follow_the_settings_actually_in_force(
+    tmp_path: Path, injected: InjectionResult, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A snapshot that always reports the defaults would record nothing useful."""
+    from spendguard.config import settings as live
+    from spendguard.eval.runner import detector_config
+
+    monkeypatch.setattr(live, "split_window_days", 99, raising=False)
+    assert detector_config()["split_window_days"] == 99
+
+    run = run_evaluation(injected.out_db, ["baseline"], report_dir=tmp_path)
+    assert run.config["split_window_days"] == 99
 
 
 def test_unknown_detector_is_a_clear_error(injected: InjectionResult) -> None:

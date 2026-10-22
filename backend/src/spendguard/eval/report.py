@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from spendguard.cases import AnomalyType, Case
-from spendguard.config import settings
+from spendguard.config import DETECTOR_SETTINGS, settings
 from spendguard.db.duck import connect, table_exists
 from spendguard.detectors import PRODUCTION_DETECTORS, REGISTRY, owns
 from spendguard.eval.injection import InjectionConfig, default_injected_path, inject
@@ -43,14 +43,7 @@ REPORTED_DETECTORS: tuple[str, ...] = ("baseline", *PRODUCTION_DETECTORS)
 SUITE = "spendguard"
 TYPE_ORDER: tuple[str, ...] = (*(t.value for t in AnomalyType), ALL)
 PACKAGES = ("duckdb", "polars", "numpy", "scipy", "scikit-learn", "rapidfuzz")
-# Settings that decide what the detectors flag - recorded with every report.
-DETECTOR_SETTINGS = (
-    "approval_threshold", "duplicate_amount_tolerance", "duplicate_date_window_days",
-    "duplicate_name_confirm", "duplicate_match_threshold", "split_window_days",
-    "split_score_threshold", "inflation_zscore_threshold", "inflation_min_category_size",
-    "vendor_min_distinct_amounts", "vendor_min_transactions", "vendor_fdr_alpha",
-    "severity_reference_amount",
-)  # fmt: skip
+# Imported, not redeclared: the runner records the same list with every run.
 
 
 # ------------------------------------------------------------------ provenance

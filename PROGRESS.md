@@ -461,6 +461,36 @@ on its larger, harder cases. Added to the generator. And the live demo's miss se
 "price inflation, split purchase, split purchase": true, and a stutter to read aloud. Misses
 are tallied by type now.
 
+**Alembic migrations, and the test that makes them worth having.** The store builds its own
+tables with `create_all` on every connection and that stays — it is what lets a fresh clone
+work with no setup step. Migrations are for moving an *existing* store forward, and for the
+Postgres swap D-09 promises, where an application calling `create_all` against a shared
+database is not an acceptable answer. That leaves two descriptions of one schema, so the
+test written is not “migrations run” but **a migrated store and a `create_all` store have
+the same columns, types and indexes**. Without it a column added to a model and not to a
+migration passes every other test in the suite, because they all build their store with
+`create_all` and never see the migration. Proved non-vacuous: one added column fails two
+tests and names it. `alembic.ini` carries no URL — `env.py` reads `DATABASE_URL` so it stays
+the only knob (convention 1).
+
+- **It cost one scare.** The first `env.py` set the URL from settings *unconditionally*,
+  overriding what the caller passed, so the first test run pointed its migrations at the
+  live store. It failed on the tables already existing and left an empty `alembic_version`
+  behind, touching no data — 154 cases and all eight tables intact. The override is now
+  conditional and the live store is stamped at head, which is what adopting an existing
+  database looks like anyway.
+
+**An evaluation run was logging two of the three things FR-7.10 asks for.** `eval_results`
+carries a run's numbers and its seed; the *parameters* were nowhere — so a run was
+reproducible because the config happened not to have moved, not because anything recorded
+what it was. Change `DUPLICATE_DATE_WINDOW_DAYS`, re-run, and the same table quietly gains
+rows that cannot be compared with the ones already in it. An `eval_runs` row now records the
+run id, seed, transaction count, detectors and the thirteen thresholds in force, taken from
+the same `DETECTOR_SETTINGS` list the report already printed — moved into `config.py` so
+there is one list rather than two that can drift apart. Two tests pin it, one of which moves
+a threshold and checks the snapshot follows; making the snapshot return zeros fails it.
+Re-running the evaluation after the change reproduced every figure exactly.
+
 **[PRESENTATION.md](docs/PRESENTATION.md) is the other half of the walkthrough** — which
 figures may be quoted and the sentence each belongs in, the limitations slide written out
 rather than left as eight fragments in EVALUATION §9, and a wording table for the slides,
@@ -525,8 +555,8 @@ Everything here is measured now. What is left in this section is the one thing t
 Each is accurately described as absent in the reports, which is better than a rushed number.
 
 - ~~**Ollama local-runtime proof.**~~ **Done 2026-10-22.** Installed on `D:`, 2,158 MiB of the 4 GB card, and a full investigation written with every non-loopback connection blocked. D-37 made it matter more than it looked: three free-tier models have now been lost to retirement or an API change, so the local runtime is the only one nobody can withdraw.
-- **MLflow.** Declared in the `track` extra, imported nowhere. Runs are logged to DuckDB `eval_results` plus JSON and Markdown reports.
-- **Alembic.** Declared, and **no migrations directory exists at all**. A TEST-CHECKLIST item asserts migrations apply cleanly to an empty database; it cannot pass.
+- **MLflow.** Declared in the `track` extra, imported nowhere, and **no longer the gap it looked like**. FR-7.10 asks for a *local experiment tracker* carrying parameters, seeds and results; DuckDB now carries all three (see the `eval_runs` work above) and the generated reports carry them for people. MLflow would be a nicer interface over the same facts, which is Phase 10 work.
+- ~~**Alembic.**~~ **Done 2026-10-22.** `backend/alembic/`, one revision over all eight tables, generated from the models. The test that matters is not that migrations run but that a migrated store and a `create_all` store end up with the same schema — two descriptions of one store is where drift lives.
 - **Held-out seeds 7 and 2026 for the agent.** No store exists for either. Any claim about generalisation across seeds currently rests on detection metrics, which do have all three seeds.
 
 ### ⚠️ Known problems that are results, not bugs
@@ -535,15 +565,19 @@ Each is accurately described as absent in the reports, which is better than a ru
 - **Some cases never produce a note.** `dd3f8ece` failed on consecutive days before succeeding; others may not. The attempts-ordering stops them starving the queue, and the failure is reported rather than hidden.
 - **Attribution regression.** The broken merge re-attached the pre-rewrite history, so `main` again carries 47 `Co-Authored-By` trailers and 50 commits on the old email. Removing them means another full rewrite and force-push — which is what collided with the teammate's clone the first time. Left deliberately.
 
-### ✅ Remaining checklist items: 11 (from 39 on 2026-10-22)
+### ✅ Remaining checklist items: 9 (from 39 on 2026-10-22)
 
 ```
   6  Pre-demonstration      three rehearsals, projector, video fallback,
                             stopwatch timing, numbers traced, limitations slide
-  3  Evaluation             the review batch, the grading batch, MLflow
+  2  Evaluation             the review batch and the grading batch, both
+                            waiting on three people each
   1  System and privacy     a clean-machine setup from the documented commands
-  1  Database               Alembic migrations, which do not exist
 ```
+
+Of the six pre-demonstration items, **two are now transcription**: every figure is traced in
+[PRESENTATION.md](docs/PRESENTATION.md) §2 and the limitations are written out slide-ready
+in §3. The other four need a person in a room with a projector.
 
 **Twenty-eight were settled on 2026-10-22, each with its figure attached rather than a tick.** The
 section above lists them; the local-runtime three closed last, once Ollama was in.
