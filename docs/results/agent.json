@@ -1,8 +1,8 @@
 {
   "manifest": {
-    "generated_at": "2026-10-21 19:38 UTC",
-    "commit": "5753523",
-    "dirty": true,
+    "generated_at": "2026-10-22 06:55 UTC",
+    "commit": "b4db2c9",
+    "dirty": false,
     "python": "3.13.5",
     "packages": {
       "duckdb": "1.5.5",
@@ -24,50 +24,50 @@
       "seed": 42,
       "model": "qwen/qwen3.8-27b",
       "arm": "agent",
-      "notes": 14,
-      "sampled": 15,
-      "citations_checked": 137,
+      "notes": 17,
+      "sampled": 20,
+      "citations_checked": 164,
       "deterministic_valid": 1.0,
-      "semantic_valid": 0.8607,
+      "semantic_valid": 0.8777,
       "first_draft_valid": 1.0,
-      "regenerated": 9,
+      "regenerated": 10,
       "released": {
-        "failed_after_retries": 5,
+        "failed_after_retries": 6,
         "unverified": 2,
-        "verified": 7
+        "verified": 9
       },
       "triage": {
-        "cases": 14,
+        "cases": 15,
         "real": 11,
-        "spurious": 3,
+        "spurious": 4,
         "confusion": {
           "real": {
-            "likely_true_positive": 9,
+            "likely_true_positive": 11,
             "likely_false_positive": 0,
             "inconclusive": 0,
-            "failed": 2
+            "failed": 0
           },
           "spurious": {
-            "likely_true_positive": 0,
+            "likely_true_positive": 1,
             "likely_false_positive": 3,
             "inconclusive": 0,
             "failed": 0
           }
         },
-        "real_kept": 0.818,
+        "real_kept": 1.0,
         "real_wrongly_dismissed": 0.0,
-        "spurious_filtered": 1.0,
+        "spurious_filtered": 0.75,
         "inconclusive": 0.0,
-        "failed": 0.143,
-        "decisive_accuracy": 1.0
+        "failed": 0.0,
+        "decisive_accuracy": 0.933
       },
-      "avg_tool_calls": 9.4286,
-      "avg_tokens": 34355.7143,
-      "avg_seconds": 30.8904,
+      "avg_tool_calls": 9.6471,
+      "avg_tokens": 33701.5294,
+      "avg_seconds": 30.2909,
       "quota_stopped": true,
-      "triage_accuracy": 1.0,
-      "real_kept": 0.818,
-      "spurious_filtered": 1.0
+      "triage_accuracy": 0.933,
+      "real_kept": 1.0,
+      "spurious_filtered": 0.75
     },
     {
       "seed": 42,

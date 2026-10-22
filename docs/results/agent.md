@@ -1,6 +1,6 @@
 # Agent results - investigation and verification
 
-Generated 2026-10-21 19:38 UTC from commit `5753523` **(uncommitted changes)**. Regenerate with `spendguard report agent`.
+Generated 2026-10-22 06:55 UTC from commit `b4db2c9`. Regenerate with `spendguard report agent`.
 
 Read from the evaluation stores, not from any single run: notes accumulate a few a day against a free-tier daily quota (D-30), and the newest note per (case, model, arm) is the one that stands. **Numbers are per model** - two models are never merged into one row (D-33) - and ablation arms sit beside the main run, never inside it (D-35).
 
@@ -10,7 +10,7 @@ Read from the evaluation stores, not from any single run: notes accumulate a few
 
 | Seed | Model | Arm | Notes | Citations | First draft | Released (deterministic) | Supported (model-judged) | Regenerated |
 |---:|---|---|---:|---:|---:|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 14 | 137 | 100.0% | **100.0%** | 86.1% | 9 |
+| 42 | qwen/qwen3.8-27b | agent | 17 | 164 | 100.0% | **100.0%** | 87.8% | 10 |
 | 42 | template | template | 17 | 97 | 100.0% | **100.0%** | 73.0% | 0 |
 
 ## Triage - what the agent filters
@@ -19,14 +19,14 @@ Over the seeded sample of real and spurious cases for each seed. *Real kept* is 
 
 | Seed | Model | Arm | Sample | Investigated | Real kept | Spurious filtered | Decisive accuracy |
 |---:|---|---|---:|---:|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 15 | 14 | 82% | 100% | **100%** |
+| 42 | qwen/qwen3.8-27b | agent | 20 | 15 | 100% | 75% | **93%** |
 | 42 | template | template | 15 | 14 | 100% | 0% | **79%** |
 
 ## Cost per investigation
 
 | Seed | Model | Arm | Tool calls | Tokens | Seconds of model time |
 |---:|---|---|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 9.4 | 34,356 | 30.9 |
+| 42 | qwen/qwen3.8-27b | agent | 9.6 | 33,702 | 30.3 |
 | 42 | template | template | 0.0 | 391 | 0.3 |
 
 **Some runs stopped on the provider's daily quota** and have fewer notes than their sample: seed 42 / qwen/qwen3.8-27b / agent, seed 42 / template / template. Running the same command later continues where it stopped (D-30).
