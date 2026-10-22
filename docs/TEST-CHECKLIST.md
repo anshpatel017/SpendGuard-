@@ -135,7 +135,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[int]** A note that still fails is stored with an explicit unverified status. [FR-4.7]
 - [x] **[int]** `verification_status` and the passed-of-checked counts are persisted with the note. [FR-4.6]
 - [x] **[int]** Deterministic and semantic validity are recorded as two separate numbers. [FR-7.5]
-- [ ] **[man]** Deliberately corrupt a note by hand and confirm the Verifier rejects it.
+- [x] **[man]** Deliberately corrupt a note by hand and confirm the Verifier rejects it. *(2026-10-22, on stored note `7279ba74`, which passes clean at 5/5. Three corruptions, each rejected: a stated `unit_price` changed from 7885.35 to 999999999.99 → 4/5; a cited row id replaced with 99,999,999 → 4/5; an invented clause `SG-PP-9.9` → flagged. No model involved — these are the deterministic checks.)*
 
 ---
 
@@ -144,8 +144,8 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [x] **[unit]** Case status transitions persist and survive a restart. [FR-5.3]
 - [x] **[unit]** Reviewer notes persist against the correct case. [FR-5.2]
 - [ ] **[int]** Alembic migrations apply cleanly to an empty database. [NFR-10]
-- [ ] **[int]** The API opens DuckDB read-only, so a batch run and the API can operate concurrently. [Architecture 2.4] *(The API opens read-only on every request; concurrency with a writing batch run not yet tested.)*
-- [ ] **[int]** A batch run while the dashboard is open does not produce a lock error. [Architecture 2.4]
+- [x] **[int]** The API opens DuckDB read-only, so a batch run and the API can operate concurrently. [Architecture 2.4] *(2026-10-22: `detect` scanned 49,900 transactions against the live DuckDB while the dashboard was served, writing 154 cases to a scratch store. 400 of 400 API requests returned 200.)*
+- [x] **[int]** A batch run while the dashboard is open does not produce a lock error. [Architecture 2.4] *(2026-10-22: zero matches for lock, conflict or IO Error in either the batch log or the server log during the run above.)*
 
 ---
 
@@ -209,7 +209,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [ ] **[int]** A full run against the local endpoint makes no external network calls — verified by monitoring, not assumed. [NFR-1] [NFR-3]
 - [ ] **[int]** No API key for a paid provider is required for the delivered configuration. [NFR-1]
 - [ ] **[man]** The model runs within available VRAM and the memory ceiling is recorded. [NFR-2]
-- [ ] **[man]** Full detection over the development dataset completes within the target time, and the figure is recorded. [NFR-6]
+- [x] **[man]** Full detection over the development dataset completes within the target time, and the figure is recorded. [NFR-6] *(2026-10-22: **15.3 s** wall for D1–D4 over 49,900 clean transactions. D1 reports no anomalies on clean data, which is the answer convention 5 exists to check.)*
 - [ ] **[man]** No credentials, API keys or raw data are committed to version control. [DR-4]
 - [ ] **[man]** A clean-machine setup from the documented commands succeeds. [NFR-10]
 
@@ -225,7 +225,7 @@ Legend: **[unit]** automated test · **[int]** integration test · **[man]** man
 - [ ] The live injection demonstration reports every planted anomaly as caught or missed, and each miss is named and attributed to the measured recall rather than to a guessed cause, verified on a rehearsal run. *(Changed in Phase 9: an honest demo will sometimes miss; promising otherwise would set up a failure in front of the panel. The explanation is generated from what was actually missed - `missExplanation` in `frontend/src/lib/demo.ts`.)*
 - [ ] A recorded video fallback exists and has been played back in full.
 - [ ] The machine is tested on the actual projector and resolution.
-- [ ] The system starts from cold — model loaded, database up, API up, frontend up — within the setup time available.
+- [x] The system starts from cold — model loaded, database up, API up, frontend up — within the setup time available. *(2026-10-22, `serve --frozen`, two consecutive runs: health answering 2.27 s, dashboard HTML +0.23 s, first queue page +0.17 s — **2.65 s total**. No language model loads on this path; health never probes the LLM, D-32.)*
 - [ ] Every number quoted in the presentation traces to a logged run.
 - [ ] Wording checks: "duplicate transaction records", never "duplicate payments" for purchase-order data. "Detects across 100% of transactions, then autonomously investigates prioritized cases", never "investigates every flagged case".
 - [ ] The limitations section states the invoice-to-payment reconciliation gap, the authored-policy caveat, and the severity-biased triage sample.
