@@ -117,11 +117,29 @@ def build(results_dir: Path | None = None) -> Headline:
             )
 
     agent = _read(results_dir / "agent.json")
-    main = [
+    # One model, named - never pooled. D-33 says numbers are per model and two
+    # models are never merged into one row, and the agent table honours that. The
+    # sentence quotes a single rate, so it has to choose: the model with the most
+    # notes, which is the evaluation run proper. Pooling a 27B hosted model with a
+    # 3B local one crossed `headline_min_notes` on the strength of a different
+    # model's work and dropped the word "provisional" while the main arm was still
+    # three notes short - a thin sample dressed up as a full one, which is the
+    # exact failure the threshold exists to prevent.
+    candidates = [
         r
         for r in (agent or {}).get("results", [])
         if r.get("arm") == "agent" and r.get("deterministic_valid") is not None
     ]
+    by_model: dict[str, list[dict[str, Any]]] = {}
+    for row in candidates:
+        by_model.setdefault(str(row.get("model", "?")), []).append(row)
+    main = (
+        max(by_model.values(), key=lambda rows: sum(int(r.get("notes", 0)) for r in rows))
+        if by_model
+        else []
+    )
+    model_name = str(main[0].get("model", "?")) if main else None
+    other_models = sorted(set(by_model) - {model_name}) if model_name else []
     if not main:
         agent_sentence = (
             f"Citation validity: {UNMEASURED} - run `spendguard investigate --matrix`, "
@@ -140,7 +158,13 @@ def build(results_dir: Path | None = None) -> Headline:
             Figure(
                 "citation validity (rule-checked)",
                 f"{validity:.1%} over {notes} note(s)",
-                "agent.json" + ("" if enough else " - provisional, sample still filling"),
+                f"agent.json, {model_name}"
+                + ("" if enough else " - provisional, sample still filling")
+                + (
+                    f" (notes from {', '.join(other_models)} are reported separately)"
+                    if other_models
+                    else ""
+                ),
             )
         )
         if enough:

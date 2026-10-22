@@ -1,6 +1,6 @@
 # Headline result
 
-Generated 2026-10-22 06:55 UTC from commit `b4db2c9` **(uncommitted changes)**. Regenerate with `spendguard report headline`. **Do not edit this sentence by hand** - it exists so the most-quoted numbers in the project cannot drift from the runs that produced them.
+Generated 2026-10-22 17:24 UTC from commit `d921efe` **(uncommitted changes)**. Regenerate with `spendguard report headline`. **Do not edit this sentence by hand** - it exists so the most-quoted numbers in the project cannot drift from the runs that produced them.
 
 ---
 
@@ -16,7 +16,7 @@ Generated 2026-10-22 06:55 UTC from commit `b4db2c9` **(uncommitted changes)**. 
 | planted anomalies | 508 | detection.json |
 | SpendGuard F1 (per case) | 0.689 ± 0.006 | detection.json |
 | baseline F1 (per case) | 0.205 ± 0.007 | detection.json |
-| citation validity (rule-checked) | 100.0% over 17 note(s) | agent.json - provisional, sample still filling |
+| citation validity (rule-checked) | 100.0% over 17 note(s) | agent.json, qwen/qwen3.8-27b - provisional, sample still filling (notes from qwen2.5:3b-instruct-q4_K_M are reported separately) |
 | value implicated | not yet measured | real-data.json is absent |
 
 The detection figures are from the **seeded synthetic** dataset, which is the only one with an answer key; the real-data figures are from **California purchase orders**, which have none. The sentence keeps them apart on purpose: one sentence covering both would read as though the F1 had been achieved on real procurement, and it was not.
