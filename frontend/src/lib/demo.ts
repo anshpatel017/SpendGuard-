@@ -22,7 +22,14 @@ export function missExplanation(missed: AnomalyType[]): string {
       "and shown as missed."
     );
   }
-  const names = missed.map((t) => ANOMALY_LABEL[t].toLowerCase()).join(", ");
+  // Counted by type, not listed one per miss. Three misses across two types read as
+  // "price inflation, split purchase, split purchase" before this, which is accurate
+  // and sounds like a stutter when a presenter reads it aloud.
+  const tally = new Map<AnomalyType, number>();
+  for (const t of missed) tally.set(t, (tally.get(t) ?? 0) + 1);
+  const names = [...tally.entries()]
+    .map(([t, n]) => (n === 1 ? ANOMALY_LABEL[t].toLowerCase() : `${ANOMALY_LABEL[t].toLowerCase()} ×${n}`))
+    .join(", ");
   const subject = missed.length === 1 ? "this is a case" : "these are cases";
   return (
     `A miss is shown as a miss, and it is what the measured recall predicts: the Evaluation ` +
