@@ -587,9 +587,114 @@ Two corrections fell out of the re-screen, both recorded in
   order clears it. **New open issue, beside O-05 and O-07** — and itself an argument for the
   fix, since the export is what made it visible.
 
+### Phase 9 step 7c — two MUST requirements closed, and three things the UI was saying wrongly (2026-10-24)
+
+**Both outstanding MUST requirements are now met**, and the remaining six gaps are 1 MAY,
+2 SHOULDs and 3 waiting on people or quota. 885 backend tests (from 847), 40 frontend.
+
+**FR-3.11 — the delivered system defaults to local.** `config.py` shipped
+`LLMProvider.GROQ`, which reads against FR-3.11's "a local endpoint as the default for the
+delivered system" and sits badly beside NFR-1's "no paid or external API". The code default
+is now `OLLAMA`, and so is `.env.example` — the file a fresh clone actually copies, and the
+one that would have quietly undone the fix on its own. A clone with no `.env` now resolves
+to `ollama` / `localhost:11434` / no key. This machine's `.env` still says `groq`, so the
+evaluation continues on one model (D-33); that is a per-machine choice, not what ships.
+Three tests pin it, each sabotage-proved: the code default *and* that its endpoint is on
+localhost, the template agreeing with the code default, and every `*_API_KEY` shipping
+empty. The test it replaced asserted the default was Groq — true of the dev machine, wrong
+for the delivered system, which is exactly the conflation the requirement is about.
+
+**FR-7.10 — a local experiment tracker that is not the tutorial's.** Recorded in the
+"deliberately not finished" section above, with the finding worth repeating here: MLflow 3.x
+put the `./mlruns` file store in maintenance mode and *raises* on it. Because the tracker
+swallows failures by design, the tutorial default produced a tracker that reported success
+and logged nothing, caught only because a run left no store behind. The backend is SQLite.
+
+#### Three things the dashboard was asserting that were not true
+
+- **A verdict label said the opposite of what it meant.** `likely_true_positive` rendered as
+  **"Likely genuine"**, read beside "Agent recommends:". A reader takes that as *this
+  transaction is fine*; it means *the flag is real, act on it*. On a duplicate case that is
+  backwards, and it is the first thing a panel would read. Now **"Likely a real issue"** and
+  **"Likely a false alarm"** — unambiguous in isolation, which they must be, because they
+  also appear on a queue row with no context around them.
+- **The Data Explorer claimed parquet and tamper-proofing.** *"…read-only mode directly over
+  normalized procurement **parquet files**. Zero write-mutation is permitted to guarantee
+  **tamper-proof** auditability."* It is DuckDB tables, not parquet, and "tamper-proof" is
+  stronger than anything measured. Replaced with what is actually true and checkable: a
+  read-only connection, the only writes being a reviewer's decision and the live demo, and
+  the answer-key-free view detectors read.
+- **Both decks carried agent figures from before the last two notes**, and
+  `PRESENTATION.md`'s ablation table **overstated the agent on two columns at 100%** —
+  spurious filtered is 75%, decisive accuracy 88%. It also said "both arms on the same
+  15-case sample", no longer true at 17-of-20 against 14-of-15. Corrected from regenerated
+  results, with the severity-bias caveat `agent.md` already states on its face. Real kept is
+  92%, not 100%: the agent wrongly dismissed one genuine anomaly, which is the cost of being
+  able to dismiss anything at all, and `SLIDES.md` now carries that answer.
+
+#### Adding data without a command line (FR-1.3 over HTTP)
+
+A company's first act is to hand the system a CSV, and until now that needed
+`spendguard ingest` and a hand-written mapping YAML. New **Add Data** page, two steps, and
+the split is the design: `POST /datasets/preview` reads a file and reports what it would
+become while **writing nothing**; `POST /datasets` ingests, and only ever into a **new**
+DuckDB file. That restriction is not politeness — `ingest` replaces the whole `transactions`
+table, so an upload named after the served dataset would delete the rows a reviewer is
+working through, mid-session, with no undo. It returns 409 by name, and 409 again on a
+repeat name so a correction stays comparable with what it corrects.
+
+`suggest_mapping` guesses the canonical field for each header and **declines when two
+headers match equally well** — the California export has both `Creation Date` and
+`Purchase Date`, and which is the transaction date is a judgement its own mapping records in
+a comment. The preview names the candidates instead of picking one.
+
+**The bug this nearly shipped with.** The first version validated amounts and not dates. On
+the real synthetic file it reported *"usable, no problems"* — and ingestion then loaded
+**0 of 199 rows**, every one dropped for an unparseable date. A preview that does that is
+worse than no preview. Date detection now runs on the column, and immediately found
+something sharper: `01-04-2024` parses as **1 April and 4 January**, and nothing in the
+column settles which. The system reports both and makes the caller choose, in the API and in
+the UI; ingesting an ambiguous file without saying which format is a 422. 23 tests, and the
+whole flow was driven in a real browser — upload, preview, choose format, load, with the
+dates verified day-first in DuckDB afterwards.
+
+**There is deliberately no edit path, and a test enforces it**: no `PUT`/`PATCH`/`DELETE`
+route may touch a transaction. An auditor's first question about a system like this is
+whether the evidence can be altered, and the answer has to be no. A correction is a fresh
+ingestion into its own dataset. What a person may change is their own review decision, which
+is a separate append-only record (D-04).
+
+One new dependency, `python-multipart`, in the `api` extra that CI installs — FastAPI cannot
+accept an upload at all without it.
+
+#### "There are no vendor red flags" — there were, in the other store
+
+Reported as missing data across every detector filter. It was not. Plain `spendguard serve`
+opens the **clean** dataset, where D1, D2 and D4 correctly find nothing and D3 finds its 154
+— which is a *published result* (clean-data false positives), not a gap. The evaluation store
+has all four types: 177 duplicate, 98 split, 230 inflation, 6 vendor_flag. The filter was
+verified working end to end in the browser.
+
+The one dimension genuinely empty was **status**: every case was `new`, because a case only
+moves when a person decides (D-04). Fixed by the system being *used* rather than by inventing
+cases — **7 review decisions through the same endpoint the dashboard's buttons call**, with
+reviewer names and real notes. Every filter value now returns cases except
+`verdict=inconclusive`, which is honestly 0: across 20 investigations the agent was always
+decisive. Nothing reported moved - `check-evaluation` passes, `report agent` is unchanged,
+and the frozen snapshot is untouched at 511 `new`, so its hashes still verify.
+
+**A proposal was declined**: planting fabricated cases so every filter combination had an
+entry. Those 511 cases are what precision, recall and F1 are computed over, so hand-written
+ones would stop those figures being measurements of the detectors — and the frozen demo is
+hash-verified, so rows cannot be added without breaking the integrity check that is itself a
+slide. The legitimate version of this already exists and is what produced the four types in
+the first place: `spendguard inject`, which plants *labelled* anomalies on purpose.
+
+**For the demonstration, serve the evaluation store:** `spendguard serve --eval-seed 42`.
+
 ## What remains
 
-Complete inventory as of 2026-10-23, checked against the live state rather than listed from memory. **Nothing here blocks the system from running** — it builds, CI is green, and every number in `docs/results` traces to a command. What follows is what is unfinished, and which of it needs a person.
+Complete inventory as of 2026-10-24, checked against the live state rather than listed from memory. **Nothing here blocks the system from running** — it builds, CI is green, and every number in `docs/results` traces to a command. What follows is what is unfinished, and which of it needs a person.
 
 ### 🧑 Needs a person — cannot be done by running something
 
@@ -668,6 +773,8 @@ Each is accurately described as absent in the reports, which is better than a ru
 Of the six pre-demonstration items, **two are now transcription**: every figure is traced in
 [PRESENTATION.md](docs/PRESENTATION.md) §2 and the limitations are written out slide-ready
 in §3. The other four need a person in a room with a projector.
+
+**Requirements: 66 of 72 implemented, and no MUST is open.** FR-3.11 (local default) and FR-7.10 (experiment tracker) closed on 2026-10-24; what remains is FR-2.13 (MAY, open as O-05), FR-7.11 and FR-7.12 (SHOULD, waiting on quota and on people), and the grading batch. Two FR texts describe the system as designed rather than as built and should be reworded or defended aloud: **FR-2.8** says D4 tests leading digits against *Benford*, which it does not (it tests against category peers, D-24, because Benford accused 61 of 210 real suppliers), and **FR-2.12** names *Splink*, where the implementation is a custom Fellegi-Sunter by MAP-EM (D-21). Both are improvements on the spec; a marker comparing doc to code will find them either way.
 
 **Twenty-eight were settled on 2026-10-22, each with its figure attached rather than a tick.** The
 section above lists them; the local-runtime three closed last, once Ollama was in.
