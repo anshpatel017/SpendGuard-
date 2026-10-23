@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 885 backend + 40 frontend tests · CI green · agent evaluation at **19 notes of 20** (one run clears it) · **the local runtime is proved: Ollama wrote 5 notes with the network blocked** · **66 of 72 requirements, no MUST open** · the review kit exports vendor flags a person can judge — 15 of 15, from 4 · 8 checklist items left, from 39. **What is left, and what needs a person, is at the end of PROGRESS.**
+> **Status:** Phases 0–8 complete; Phase 9 nearly done (the agent sample closed 2026-10-24; **`freeze --seed 42` is the last command**) · 885 backend + 40 frontend tests · CI green · agent evaluation **complete at 20 of 20 — citation validity 100.0%, quotable** · **the local runtime is proved: Ollama wrote 5 notes with the network blocked** · **66 of 72 requirements, no MUST open** · the review kit exports vendor flags a person can judge — 15 of 15, from 4 · 8 checklist items left, from 39. **What is left, and what needs a person, is at the end of PROGRESS.**
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---

@@ -692,6 +692,47 @@ the first place: `spendguard inject`, which plants *labelled* anomalies on purpo
 
 **For the demonstration, serve the evaluation store:** `spendguard serve --eval-seed 42`.
 
+### Phase 9 step 8 — the agent sample is complete, and the headline stops hedging (2026-10-24)
+
+**20 of 20 on `qwen/qwen3.8-27b`.** Three `investigate --matrix` runs across three days, each
+stopping itself on the provider's daily quota and resuming from the same case (D-30). The
+last one added a verified vendor-flag note with **21 of 21 citations checked**, then hit 429.
+
+| | |
+|---|---|
+| Notes | **20** — 11 verified, 2 unverified, 7 failed after retries |
+| Citations | **204**, **100.0% valid by rule**, 89.4% model-judged |
+| First draft | 100.0% unaided; 12 notes regenerated after the Verifier objected |
+| Cost | 33,965 tokens, 9.9 tool calls, 30.0 s of model time per case |
+
+`headline.md` withholds a citation rate below 20 notes, and that threshold is the only
+reason this run mattered. The quotable sentence now carries the figure without a hedge:
+
+> …Every claim in a released note is checked against the data: **100.0%** of cited values
+> matched exactly, by rule and with no model involved, **over 20 notes**.
+
+The `Value implicated in real spend` clause still reads *not yet measured*, correctly - that
+one waits on the human review batch and nothing automated can produce it.
+
+**One figure moved the wrong way and is worth rehearsing.** *Real kept* fell from 92% to
+**87%**: the agent wrongly dismissed two genuine anomalies out of fifteen, not one. That is
+the price of being able to dismiss anything at all - the template arm scores 100% on that
+column precisely because it never dismisses, which is also why it filters **0%** of false
+alarms against the agent's **75%**. The trade is the ablation's whole argument, and
+`SLIDES.md` carries the answer rather than leaving it to be improvised.
+
+**One case still produces no note.** `66d1ddd8`, a vendor flag, failed again on the step
+limit, as it did the day before. Documented behaviour rather than a surprise (the
+attempts-ordering stops a repeat failure starving the queue), and the sample is complete
+without it.
+
+Both decks were re-synced from the regenerated results - notes, citations, model-judged
+rate, verified count, cost per case and the ablation row - and grepped for every superseded
+value. `check-evaluation` passes.
+
+**Still to do before the demonstration:** `spendguard freeze --seed 42`. The snapshot was
+frozen on 2026-10-22 at 17 investigated and now understates the run.
+
 ## What remains
 
 Complete inventory as of 2026-10-24, checked against the live state rather than listed from memory. **Nothing here blocks the system from running** — it builds, CI is green, and every number in `docs/results` traces to a command. What follows is what is unfinished, and which of it needs a person.
@@ -716,13 +757,15 @@ The review batch is the **only** thing that replaces *"Value implicated in real 
 
 | # | Run | Sample | Done | Left |
 |---|---|---:|---|---|
-| 1 | seed 42, agent | **20** (widened) | **17 notes**, 15 investigated | **3 cases → unlocks a quotable citation rate** |
+| 1 | seed 42, agent | **20** (widened) | ✅ **20 notes, complete 2026-10-24** | — |
 | 2 | seed 42, template | 15 | 17 notes, 14 investigated | 1 case |
 | 3 | seed 42, no-verifier | 15 | **0 — not started** | 15 cases |
 | 4 | seed 7, agent | 5 | **0 — no store exists** | 5 cases |
 | 5 | seed 2026, agent | 5 | **0 — no store exists** | 5 cases |
 
-**29 investigations at roughly ten a day.** Run 1 is the one that matters: `headline.md` refuses to quote a citation rate below 20 notes and currently reads *"100.0% over only 17 note(s)"*, which is the honest form and stays honest if the rest never land. **One run clears it.**
+**Run 1 is done — and it was the one that mattered.** `headline.md` refuses to quote a citation rate below 20 notes; the arm reached 20 on 2026-10-24 and the sentence now reads **"100.0% of cited values matched exactly, by rule and with no model involved, over 20 notes"** with no provisional hedge. The remaining 25 investigations are the no-verifier ablation and the two held-out seeds, all SHOULD-level (FR-7.11) and all described as absent in the reports.
+
+**They must not be run on Ollama to finish faster.** It would work — 47.9 s a case, about two hours for all of them — and it would make the numbers meaningless: a no-verifier arm on a 3B local model against an agent arm on a 27B hosted one changes two variables at once, so no difference could be attributed to the verifier. Same for the held-out seeds, whose whole point is that only the seed changed. D-33, and the measured gap is large (triage 89% against 60%).
 
 ### 🤔 Decisions — one line each, all yours
 
@@ -740,7 +783,7 @@ The review batch is the **only** thing that replaces *"Value implicated in real 
 
 Everything here is measured now. What is left in this section is the one thing that has to happen tomorrow:
 
-- **Three more notes, then re-freeze.** The agent arm is at 17 of a 20-case sample and `headline.md` will not quote a citation rate below 20. One `spendguard investigate --matrix` run clears it, then `spendguard freeze --seed 42` once more so the snapshot carries the final count. **Keep `LLM_PROVIDER=groq` for that run** — notes from a different model land in a separate row (D-33) and would not advance the arm.
+- ✅ **The agent arm is complete (2026-10-24).** 20 of 20 on `qwen/qwen3.8-27b`: 11 verified, 2 unverified, 7 failed, over **204 citations at 100.0% rule-checked** and 89.4% model-judged. Three runs across three days got there, each stopping itself on quota and resuming (D-30). **One thing is still outstanding: `spendguard freeze --seed 42`**, so the demo snapshot carries the final count rather than the 17 it was frozen with on 2026-10-22.
 
 - ✅ **Re-frozen 2026-10-22** at 17 investigated and 9 verified, up from 12 and 6, and shown not to change under use: a case confirmed through the API while serving left all four hashes identical and came back `new` on relaunch. **Re-freeze once more after the final matrix run.**
 - ✅ **The timing claim is fixed.** It was never 3–8 s for the run that matters: measured over eight consecutive runs the first takes **13.2 s** and every one after it 4.0–5.0 s. DEMO.md now tells the presenter to fire one injection before the room fills.
@@ -779,8 +822,9 @@ in §3. The other four need a person in a room with a projector.
 **Twenty-eight were settled on 2026-10-22, each with its figure attached rather than a tick.** The
 section above lists them; the local-runtime three closed last, once Ollama was in.
 
-What is left divides cleanly, and **none of it can be closed by running something**: six items are the
-demonstration itself and two wait on three people each. Two of the six are transcription — the figures
-and the limitations are already written in [PRESENTATION.md](docs/PRESENTATION.md) and the deck is laid
-out slide by slide in [SLIDES.md](docs/SLIDES.md) — but a slide has to exist before the box can be
-ticked.
+What is left divides cleanly. **One thing can still be closed by running something** —
+`spendguard freeze --seed 42`, so the demo snapshot carries 20 investigated rather than the 17 it was
+frozen with on 2026-10-22. Everything else cannot: six items are the demonstration itself and two wait
+on three people each. Two of the six are transcription — the figures and the limitations are already
+written in [PRESENTATION.md](docs/PRESENTATION.md) and the deck is laid out slide by slide in
+[SLIDES.md](docs/SLIDES.md) — but a slide has to exist before the box can be ticked.

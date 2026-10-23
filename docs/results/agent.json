@@ -1,8 +1,8 @@
 {
   "manifest": {
-    "generated_at": "2026-10-23 20:41 UTC",
-    "commit": "59834a2",
-    "dirty": false,
+    "generated_at": "2026-10-23 21:07 UTC",
+    "commit": "9bcdbac",
+    "dirty": true,
     "python": "3.13.5",
     "packages": {
       "duckdb": "1.5.5",
@@ -24,28 +24,28 @@
       "seed": 42,
       "model": "qwen/qwen3.8-27b",
       "arm": "agent",
-      "notes": 19,
+      "notes": 20,
       "sampled": 20,
-      "citations_checked": 183,
+      "citations_checked": 204,
       "deterministic_valid": 1.0,
-      "semantic_valid": 0.8797,
+      "semantic_valid": 0.8939,
       "first_draft_valid": 1.0,
       "regenerated": 12,
       "released": {
         "failed_after_retries": 7,
         "unverified": 2,
-        "verified": 10
+        "verified": 11
       },
       "triage": {
-        "cases": 17,
-        "real": 13,
+        "cases": 19,
+        "real": 15,
         "spurious": 4,
         "confusion": {
           "real": {
-            "likely_true_positive": 12,
+            "likely_true_positive": 13,
             "likely_false_positive": 1,
             "inconclusive": 0,
-            "failed": 0
+            "failed": 1
           },
           "spurious": {
             "likely_true_positive": 1,
@@ -54,19 +54,19 @@
             "failed": 0
           }
         },
-        "real_kept": 0.923,
-        "real_wrongly_dismissed": 0.077,
+        "real_kept": 0.867,
+        "real_wrongly_dismissed": 0.067,
         "spurious_filtered": 0.75,
         "inconclusive": 0.0,
-        "failed": 0.0,
-        "decisive_accuracy": 0.882
+        "failed": 0.053,
+        "decisive_accuracy": 0.889
       },
-      "avg_tool_calls": 10.0,
-      "avg_tokens": 34077.6842,
-      "avg_seconds": 29.8838,
+      "avg_tool_calls": 9.95,
+      "avg_tokens": 33965.3,
+      "avg_seconds": 30.0329,
       "quota_stopped": true,
-      "triage_accuracy": 0.882,
-      "real_kept": 0.923,
+      "triage_accuracy": 0.889,
+      "real_kept": 0.867,
       "spurious_filtered": 0.75
     },
     {
