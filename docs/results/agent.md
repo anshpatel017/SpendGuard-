@@ -1,6 +1,6 @@
 # Agent results - investigation and verification
 
-Generated 2026-10-23 19:08 UTC from commit `4df74a6`. Regenerate with `spendguard report agent`.
+Generated 2026-10-23 20:41 UTC from commit `59834a2`. Regenerate with `spendguard report agent`.
 
 Read from the evaluation stores, not from any single run: notes accumulate a few a day against a free-tier daily quota (D-30), and the newest note per (case, model, arm) is the one that stands. **Numbers are per model** - two models are never merged into one row (D-33) - and ablation arms sit beside the main run, never inside it (D-35).
 

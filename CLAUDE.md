@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 885 backend + 40 frontend tests · CI green · agent evaluation at 17 notes of a 20-case sample · **the local runtime is proved: Ollama wrote 5 notes with the network blocked** · **the review kit now exports vendor flags a person can actually judge — 15 of 15, from 4** · 8 checklist items left, from 39. **What is left, and what needs a person, is at the end of PROGRESS.**
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 885 backend + 40 frontend tests · CI green · agent evaluation at **19 notes of 20** (one run clears it) · **the local runtime is proved: Ollama wrote 5 notes with the network blocked** · **66 of 72 requirements, no MUST open** · the review kit exports vendor flags a person can judge — 15 of 15, from 4 · 8 checklist items left, from 39. **What is left, and what needs a person, is at the end of PROGRESS.**
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -57,16 +57,13 @@ SpendGuard/
 │   │   ├── pipeline/           generator · ingestion · vendor norm · intake (new-file preview)
 │   │   ├── detectors/          base · baseline · d1_duplicates · d2_splits · d3_inflation · d4_vendor
 │   │   ├── eval/               injection · matching · metrics · runner · triage · report
-│   │   │                    grading (blinded rubric) · grading_report · agreement (alpha)
-│   │   │                    review (real-data flags, Wilson interval)
+│   │   │                    grading · grading_report · agreement · review (Wilson interval)
 │   │   │                    agent_report · headline · evaluation_check · tracking (MLflow)
 │   │   ├── agent/              llm (provider switch) · tools (the six) · policy (RAG)
 │   │   │                    note (schema) · prompts · investigator (the loop)
-│   │   │                    checks (deterministic) · verifier (judge + revise loop)
-│   │   │                    template (the no-agent ablation arm)
-│   │   └── api/                app (factory, errors, serves the build) · schemas · deps
-│   │                        cases (queue, detail, review) · overview · datasets (upload)
-│   └── tests/                  mirrors src; 832 tests (+7 live, opt-in)
+│   │   │                    checks · verifier (judge + revise) · template (no-agent arm)
+│   │   └── api/                app · schemas · deps · cases · overview · datasets (upload)
+│   └── tests/                  mirrors src; 885 tests (+7 live, opt-in)
 ├── frontend/                   React dashboard · openapi.json (committed contract)
 │   └── src/                    api (generated schema.d.ts, validate, client, hooks) · pages
 │                               components · lib (format, verification)
@@ -100,6 +97,9 @@ SpendGuard/
 11. **The API is thin and the contract is generated.** No detector or LLM runs inside a request
     (D-10). Frontend types are never hand-written: change the API, then `spendguard openapi` and
     `npm run gen:api`; a backend test and CI fail on drift (D-32). Money travels as a string.
+12. **A transaction is never edited or deleted — a test enforces it.** A correction is a fresh
+    ingestion into its *own* dataset: `ingest` replaces a whole `transactions` table, so an
+    upload never writes to the served one. Only a reviewer's own decision is mutable (D-04).
 
 **Style**
 
