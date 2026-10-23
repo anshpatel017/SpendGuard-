@@ -19,6 +19,7 @@ from spendguard.db.duck import EVAL_RESULTS_DDL, EVAL_RUNS_DDL, connect, table_e
 from spendguard.detectors import REGISTRY
 from spendguard.eval.matching import TruthGroup, load_ground_truth
 from spendguard.eval.metrics import ALL, DetectionMetrics, evaluate_cases
+from spendguard.eval.tracking import log_run
 
 
 @dataclass
@@ -36,6 +37,9 @@ class EvaluationRun:
     # with the run rather than read back from config at report time, because the
     # config may have moved since.
     config: dict[str, object] = field(default_factory=dict)
+    # MLflow's id for this run when tracking is on, else None (FR-7.10). Recorded
+    # so a report can point at the tracked run; never read back as data.
+    tracking_run_id: str | None = None
 
 
 def detector_config() -> dict[str, object]:
@@ -110,6 +114,10 @@ def run_evaluation(
         config=config,
     )
     run.report_paths = write_report(run, report_dir or settings.processed_data_dir / "eval")
+    # FR-7.10, the tracker half. After the reports so they can ride along as
+    # artifacts, and deliberately last: DuckDB already holds the run, so nothing
+    # here is allowed to decide whether the evaluation succeeded.
+    run.tracking_run_id = log_run(run)
     return run
 
 
