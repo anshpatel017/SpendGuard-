@@ -250,6 +250,12 @@ class Settings(BaseSettings):
     review_reviewers: list[str] = Field(default_factory=lambda: ["a", "b", "c"])
     review_max_rows: int = 12  # rows shown per case; a D4 case can hold hundreds
     review_dir: Path = PROJECT_ROOT / "data" / "review"
+    # How far a supplier's share of a leading digit must sit above its peers' before
+    # the sheet spends rows pointing at that digit. D4 records a leading-digit result
+    # for every supplier it tests, significant or not, because Fisher combines them -
+    # so without a floor here a 3-point gap gets the same billing as a 35-point one
+    # and a reviewer is handed a reason that is not a reason.
+    review_digit_excess_min: float = 0.05
 
     # ------------------------------------------------- the agent evaluation plan
     # Which (seed, cases per type, arm) runs make up the reported agent results.

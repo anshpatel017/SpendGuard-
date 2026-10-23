@@ -629,8 +629,8 @@ def test_a_leading_digit_flag_shows_rows_carrying_that_digit(store: Any, tmp_pat
     block = _vendor_block(store, tmp_path, case)
 
     assert "amount starts with 3" in block
-    amounts = [float(line.split("|")[5]) for line in _row_table(block)[2:-1]]
-    assert any(str(int(a))[0] == "3" for a in amounts), "the over-used digit is visible"
+    amounts = [line.split("|")[5].strip().replace(",", "") for line in _row_table(block)[2:-1]]
+    assert any(a.startswith("3") for a in amounts), "the over-used digit is visible"
 
 
 def test_the_digit_singled_out_is_the_one_furthest_above_its_peers() -> None:
@@ -683,3 +683,50 @@ def test_the_leading_digit_here_is_the_one_the_detector_computed() -> None:
     assert _leading_digit(0) is None, "a zero amount has no leading digit"
     assert _leading_digit(-5) is None
     assert _leading_digit("not a number") is None
+
+
+def test_an_amount_is_not_shown_to_a_reviewer_as_a_raw_float(store: Any, tmp_path: Path) -> None:
+    """`32001146.999999996` in an audit sheet reads as bad data, not bad printing.
+
+    Grouping is the project's own lakh/crore convention (FR-6.10), and the symbol
+    stays in the column header rather than repeating down every row.
+    """
+    case = _vendor_case(ALL_ROWS, {"round_numbers": ROUND_TEST})
+    block = _vendor_block(store, tmp_path, case)
+    cells = [line.split("|")[5].strip() for line in _row_table(block)[2:-1]]
+
+    assert cells, "there are amounts to check"
+    assert all(cell.endswith(".00") for cell in cells), "two decimals, always"
+    assert "35,000.00" in cells, "lakh/crore grouping, not 35000.0"
+    assert settings.currency_symbol not in block.split("| row |")[1]
+
+
+def test_a_digit_barely_above_its_peers_is_not_offered_as_a_reason() -> None:
+    """D4 records a leading-digit result for every supplier, significant or not.
+
+    W.W. Grainger leads with 1 on 30.9% of its amounts against 27.5% for its
+    peers, at p = 0.83. Pointing rows at a 3-point gap hands a reviewer a reason
+    that is not a reason, and they have no way to tell it from a 35-point one.
+    """
+    from spendguard.eval.review import _most_over_represented_digit
+
+    grainger = {
+        "observed_share": [0.309, 0.133, 0.127, 0.103, 0.079, 0.085, 0.073, 0.042, 0.048],
+        "peer_share": [0.275, 0.169, 0.147, 0.109, 0.085, 0.067, 0.057, 0.049, 0.043],
+    }
+    assert _most_over_represented_digit(grainger) is None
+
+    # Sterling Adaptives, same sample: 51.5% against 16.9%, which is worth rows.
+    sterling = {
+        "observed_share": [0.094, 0.105, 0.515, 0.123, 0.041, 0.047, 0.035, 0.006, 0.035],
+        "peer_share": [0.195, 0.127, 0.169, 0.148, 0.117, 0.110, 0.049, 0.039, 0.047],
+    }
+    chosen = _most_over_represented_digit(sterling)
+    assert chosen is not None and chosen[0] == 3
+
+
+def test_the_bar_for_singling_out_a_digit_is_configurable() -> None:
+    """Rule 1: no threshold is hardcoded. A reviewer kit is no exception."""
+    from spendguard.config import settings
+
+    assert 0.0 < settings.review_digit_excess_min < 1.0

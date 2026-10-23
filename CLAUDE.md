@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 832 backend + 40 frontend tests · CI green · agent evaluation at 17 notes of a 20-case sample · **the local runtime is proved: Ollama wrote 5 notes with the network blocked** · 8 checklist items left, from 39. **What is left, and what needs a person, is at the end of PROGRESS.**
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 847 backend + 40 frontend tests · CI green · agent evaluation at 17 notes of a 20-case sample · **the local runtime is proved: Ollama wrote 5 notes with the network blocked** · **the review kit now exports vendor flags a person can actually judge — 15 of 15, from 4** · 8 checklist items left, from 39. **What is left, and what needs a person, is at the end of PROGRESS.**
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -196,4 +196,4 @@ Full log with rationale in [docs/DECISIONS.md](docs/DECISIONS.md) (D-01 … D-37
 - **D-35** Ablation arms (`template`, `no-verifier`) are stored, scored and reported *beside* the main run: their notes never stand as a case's note and never enter the agent's numbers.
 - **D-36** Grading rubric: five dimensions scored **0-1-2**; agreement is **ordinal Krippendorff's alpha**, pinned to published values; blinding is enforced by a test.
 - **Real data (EVALUATION 4.0c):** on California POs D3's taxonomy gives no price norm (5.63× spread vs 1.11× synthetic) and 48.7% of D1's flags pair two lines of one order. Evidence for **O-05**/**O-07**.
-- **O-04** resolved (2026-10-22): a dropped case's severity *number* moves with its band, so sorting and filtering agree. **O-03**, **O-05**, **O-07** remain open.
+- **O-04** resolved (2026-10-22). **O-08** opened (2026-10-23): D4's period-end test counts "or March" — India's FY end, an ordinary month on US data — and its floor counts transactions, not dates, so one supplier reads "100% period end" off two order dates. **O-03**, **O-05**, **O-07**, **O-08** open.

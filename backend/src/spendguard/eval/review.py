@@ -223,6 +223,12 @@ def _most_over_represented_digit(test: Any) -> tuple[int, float] | None:
     illustrates nothing - in the California sample `5497f8b8` was flagged because
     51.5% of its amounts start with 3 against 16.9% for its peers, and not one of
     the twelve rows shown started with a 3. The reviewer needs to see that digit.
+
+    Returns None unless the gap clears ``settings.review_digit_excess_min``. D4
+    records a leading-digit result for every supplier it tests, significant or not,
+    because Fisher combines all of them - W.W. Grainger's leads 1 only 3 points
+    above its peers at p = 0.83, and labelling rows with that invites a reviewer to
+    read a reason into noise.
     """
     if not isinstance(test, dict):
         return None
@@ -236,7 +242,22 @@ def _most_over_represented_digit(test: Any) -> tuple[int, float] | None:
     if not excesses:
         return None
     excess, digit = max(excesses)
-    return (digit, excess) if excess > 0 else None
+    return (digit, excess) if excess >= settings.review_digit_excess_min else None
+
+
+def _amount(value: Any) -> str:
+    """An amount in a reviewer's table: grouped, two decimals, no repeated symbol.
+
+    Straight out of the store an amount reads `32001146.999999996`, and in an
+    audit sheet that looks like a defect in the data rather than in the printing.
+    Grouping goes through `settings.money` so these tables use the same lakh/crore
+    convention as everything else (FR-6.10); the currency is in the column header,
+    so the symbol is dropped rather than repeated down every row.
+    """
+    try:
+        return settings.money(float(value)).removeprefix(settings.currency_symbol)
+    except (TypeError, ValueError):
+        return _cell(value)
 
 
 def _as_date(value: Any) -> date | None:
@@ -549,11 +570,11 @@ def render_cases(
                     _cell(row.get("source_row_ref"), 24),
                     _cell(row.get("vendor_name"), 34),
                     _cell(row.get("txn_date")),
-                    _cell(row.get("amount")),
+                    _amount(row.get("amount")),
                     _cell(row.get("officer_id"), 34),
                     _cell(row.get("item_desc")),
                     _cell(row.get("quantity")),
-                    _cell(row.get("unit_price")),
+                    _amount(row.get("unit_price")),
                 ]
             if labelled:
                 cells.append(_cell(why, 56))

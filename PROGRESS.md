@@ -508,9 +508,88 @@ which have not had the pass the repository has. Every figure in it was checked a
 `detection.json` and `agent.json`, which caught the ablation table already carrying the
 agent arm's pre-widening numbers.
 
+### Phase 9 step 7b — the vendor flags were unreviewable, and the sheet was the reason (2026-10-23)
+
+The model screen of the 46 real-data flags came back with **11 of 15 vendor flags answered
+`unclear`**, and the reason was not the detector. D4 asserts a combined p-value over a
+supplier's whole history — 1,029 transactions in one case — and `review export` showed the
+reviewer twelve rows picked by row id. Twelve arbitrary rows cannot establish or refute a
+claim about a distribution, so `unclear` was the only honest answer, and `unclear` is not a
+measurement. **Two thirds of one detector's output was outside the evaluation.**
+
+Three defects, all in the export, none in D4, which had recorded everything needed:
+
+- **The evidence was discarded.** `render_cases` kept only scalar detail fields, so
+  `indicators` (a dict) and `officers` (a list) never reached the sheet. Each flag now
+  carries a table of its tests — the supplier's rate, the rate expected for *its* peer
+  categories, the risk ratio, what was counted, and p — plus the leading-digit comparison.
+  An unrecognised indicator shape now prints as key/value rather than vanishing; silent
+  dropping was the whole bug, so it must not be able to recur.
+- **The rows were arbitrary.** `select_evidence_rows` now *chooses* a vendor flag's rows —
+  round amounts, period-end dates, the over-used leading digit, opening orders for a new
+  supplier — round-robin so no one test spends the whole budget, each row labelled with
+  which test put it there. D1–D3 are untouched: those cases *are* their rows.
+- **Amounts read as bad data.** `32001146.999999996` in an audit sheet looks like a defect
+  in the data rather than in the printing. Amounts now go through `settings.money` (FR-6.10),
+  symbol dropped since the column header carries it.
+
+`_is_period_end` is imported from the detector rather than restated, and `_leading_digit` —
+which has to be scalar where the detector's is vectorised — was checked against
+`first_digits` over 20,007 values, 0 mismatches. A label that disagreed with the test that
+raised the flag would be worse than no label.
+
+One threshold came out of this: D4 records a leading-digit result for *every* supplier it
+tests, significant or not, because Fisher combines them. W.W. Grainger leads with 1 on 30.9%
+of its amounts against 27.5% for peers at p = 0.83, and the first cut of the fix spent rows
+pointing at that 3-point gap. `review_digit_excess_min` (0.05, in `config.py` per rule 1)
+is the floor; the surviving labels span +7% to +35%.
+
+**18 tests, and every fix was neutered to prove its test bites** — the two that pass either
+way are deliberate regression guards (D1–D3 unchanged, no row shown twice), and the dedup
+guard was sabotaged separately to confirm it does. 847 passed, ruff/format/mypy clean,
+`check-policy` and `check-evaluation` both green.
+
+**The sample was not redrawn.** `cases.md` and `how-to-review.md` were re-rendered from the
+recorded `sample.json`; the three sheets and the manifest are byte-identical, because a
+sample drawn before anything is judged has to stay fixed.
+
+#### What the fix was worth, measured
+
+The 15 vendor flags were screened a second time against the fixed sheet:
+
+| | before | after |
+|---|---:|---:|
+| Judgeable | 4 of 15 | **15 of 15** |
+| `unclear` | 11 | **0** |
+| D4 screen rate | 100.0% on n=4 | **60.0%** on n=15 |
+
+The first number was not a better result, it was a smaller one. Nine plausible are
+suppliers clustering just under a round figure — `5497f8b8` has six amounts between
+₹3,88,725 and ₹3,98,025 — or new suppliers taking large value at once. The six implausible
+share one shape: **the trade explains the habit.** Three are bulk fuel, where contracts are
+written against round ceilings (₹7,50,00,000, ₹1,08,00,00,000); one is sack lunches priced
+per unit across thousands of units; one is annual software renewals; one is produce billed
+monthly. None of that was visible before, and all of it is D4 working as designed — it
+compares a supplier with its peers, and the residual is the judgement a human has to make.
+
+Two corrections fell out of the re-screen, both recorded in
+[docs/results/real-data-screen.md](docs/results/real-data-screen.md):
+
+- **The first pass's value figures were wrong** and are withdrawn. It reported
+  ₹11,43,01,97,991 sampled; the sum of `amount_at_risk` over the 46 cases is
+  **₹25,90,26,14,841.73**, and ₹11,43,01,97,991 matches no grouping of it.
+- **D4's period-end test is jurisdiction-bound.** It counts "last four days of a month, or
+  March" — India's financial year end (GFR 2017), correct for the policy implemented and
+  meaningless for California, where March is an ordinary month. The ratio survives, since
+  peers are measured the same way, but `620a5cb2` reports *100% period end over 45
+  transactions falling on two dates*. A supplier with two order dates has no period-end
+  habit; `vendor_min_transactions` counts transactions, not distinct dates, so a multi-line
+  order clears it. **New open issue, beside O-05 and O-07** — and itself an argument for the
+  fix, since the export is what made it visible.
+
 ## What remains
 
-Complete inventory as of 2026-10-22, checked against the live state rather than listed from memory. **Nothing here blocks the system from running** — it builds, CI is green, and every number in `docs/results` traces to a command. What follows is what is unfinished, and which of it needs a person.
+Complete inventory as of 2026-10-23, checked against the live state rather than listed from memory. **Nothing here blocks the system from running** — it builds, CI is green, and every number in `docs/results` traces to a command. What follows is what is unfinished, and which of it needs a person.
 
 ### 🧑 Needs a person — cannot be done by running something
 
@@ -547,6 +626,8 @@ The review batch is the **only** thing that replaces *"Value implicated in real 
 | **O-03** | `reference_amount` in `amount_weight`. Max-in-run makes severity non-comparable across runs — one large transaction rescales every other case | Fixed reference recommended, awaiting decision |
 | **O-05** | D3 pseudo-categories from description clustering | **Measured.** On real data the published UNSPSC taxonomy is not a price norm at any level — this is the difference between D3 working and not. EVALUATION 4.0c, Finding 1 |
 | **O-07** | Should detectors get a first-class `document_id`? | 48.7% of D1's real-data flags pair two lines of the same purchase order. Three options written up. EVALUATION 4.0c, Finding 2 |
+
+| **O-08** | D4's period-end test counts "last four days of a month, **or March**" — India's FY end, an ordinary month in California. And `vendor_min_transactions` counts transactions, not distinct dates, so `620a5cb2` reports 100% period end over 45 transactions on two dates | **New 2026-10-23.** Raised by the re-screen; evidence in `docs/results/real-data-screen.md` |
 
 ~~O-04~~ resolved 2026-10-22.
 
