@@ -154,6 +154,37 @@ When the real batches land, the sentence that belongs in the method section is a
 one about who reviewed — three named reviewers, one shared sample of 46 flags, verdicts
 recorded before any discussion — not a disclosure about tooling.
 
+## A model screen, published under its own name
+
+The sheets stayed empty, but the 46 flags were screened anyway and the result written to
+`docs/results/real-data-screen.md`, with per-verdict reasoning in
+`data/review/model-screen.csv`. It is never imported through `review import`, produces no
+agreement statistic, and does not touch the `Value implicated` line in `headline.md`.
+
+| Detector | plausible | implausible | unclear | screen rate | 95% CI |
+|---|---:|---:|---:|---:|---|
+| D1 duplicates | 8 | 6 | 1 | 57.1% | [32.6%, 78.6%] |
+| D2 splits | 1 | 14 | 0 | 6.7% | [1.2%, 29.8%] |
+| D3 inflation | 0 | 1 | 0 | 0.0% | [0.0%, 79.3%] |
+| D4 vendor flags | 4 | 0 | 11 | 100.0% | [51.0%, 100.0%] |
+| All | 13 | 21 | 12 | 38.2% | [23.9%, 55.0%] |
+
+Three things in it are worth acting on regardless of what the human batch later says:
+
+1. **D2 is hit by O-07 harder than D1 was.** Fourteen of fifteen split flags are lines of
+   one purchase order, thirteen sharing a document number outright, and every flagged line
+   sits at 44-61% of the control threshold where a real split would sit just beneath it.
+   O-07 was raised on D1 evidence; it is a D2 problem too, and worse.
+2. **D4 cannot be reviewed from what the sheet exports.** Eleven of fifteen are `unclear`
+   because the claim is a p-value over hundreds of transactions and the sheet shows twelve
+   rows. That is a defect in the export, not in the detector: `review export` should carry
+   a vendor-level summary for D4 flags or they are unjudgeable by anyone, human or not.
+3. **The single D3 case is a category error**, an interagency traffic-control agreement
+   filed under "Signage and accessories" - O-05, on one real row.
+
+The screen's own limits are stated in the file, the sharpest being that the judge is not
+independent of the system: it knew O-05 and O-07 before reading the cases.
+
 ## Still open
 
 - Three reviewers × 46 cases, ~1 hour each. Brief: `data/review/how-to-review.md`.
