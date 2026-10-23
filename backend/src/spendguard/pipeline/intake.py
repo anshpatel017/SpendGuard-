@@ -104,7 +104,15 @@ def suggest_mapping(headers: list[str]) -> dict[str, str | None]:
 
     # Second pass, only for fields still unclaimed: a header that *contains* a
     # hint, and only when exactly one does - two candidates is not a guess.
-    for canonical in MAPPABLE_FIELDS:
+    #
+    # The three required fields go first, and that ordering is load-bearing. A
+    # column called "Invoice Amount (INR)" contains "invoice", so `invoice_no`
+    # would claim it before `amount` was ever considered - leaving the most
+    # important field in the file unmapped, or worse, mapped to something else.
+    # Nothing downstream survives a wrong `amount`: it is the money at risk and
+    # every severity score computed from it.
+    ordered = [*REQUIRED_FIELDS, *(f for f in MAPPABLE_FIELDS if f not in REQUIRED_FIELDS)]
+    for canonical in ordered:
         if guess[canonical] is not None:
             continue
         for hint in HEADER_HINTS.get(canonical, ()):

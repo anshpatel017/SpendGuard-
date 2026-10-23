@@ -86,6 +86,28 @@ def test_two_equally_good_date_columns_produce_no_guess_at_all() -> None:
     assert candidates_for("txn_date", headers) == ["Creation Date", "Purchase Date"]
 
 
+def test_an_amount_column_is_not_stolen_by_the_invoice_number_field() -> None:
+    """ "Invoice Amount (INR)" contains "invoice", and `invoice_no` is matched first.
+
+    Found while building the demo file. Without the required fields taking their
+    turn first, the most important column in the file - the money - was left
+    unmapped because the invoice-number field had already claimed it. Nothing
+    downstream survives a wrong `amount`: it is the value at risk and every
+    severity score computed from it.
+    """
+    guess = suggest_mapping(["Supplier Name", "Billed On", "Invoice Amount (INR)"])
+    assert guess["amount"] == "Invoice Amount (INR)"
+    assert guess["invoice_no"] is None
+
+    # And with a real invoice-number column present, both still land correctly.
+    both = suggest_mapping(
+        ["Supplier Name", "Invoice Number", "Invoice Date", "Invoice Amount (INR)"]
+    )
+    assert both["amount"] == "Invoice Amount (INR)"
+    assert both["invoice_no"] == "Invoice Number"
+    assert both["txn_date"] == "Invoice Date"
+
+
 def test_a_column_is_never_mapped_to_two_fields() -> None:
     guess = suggest_mapping(["Supplier", "Date", "Amount"])
     used = [h for h in guess.values() if h]
