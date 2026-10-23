@@ -26,7 +26,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from spendguard.api import cases, demo, overview
+from spendguard.api import cases, datasets, demo, overview
 from spendguard.api.deps import AppStores
 from spendguard.api.schemas import ErrorResponse
 from spendguard.config import settings
@@ -117,6 +117,7 @@ def create_app(
     app.include_router(cases.router, prefix=API_PREFIX)
     app.include_router(overview.router, prefix=API_PREFIX)
     app.include_router(demo.router, prefix=API_PREFIX)
+    app.include_router(datasets.router, prefix=API_PREFIX)
 
     dist = Path(frontend_dist or settings.frontend_dist)
     if (dist / "index.html").exists():

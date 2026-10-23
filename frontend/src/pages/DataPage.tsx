@@ -177,10 +177,12 @@ export function DataPage() {
         <Info className="w-4 h-4 text-black shrink-0 mt-0.5" />
         <div>
           <strong className="font-semibold block text-black">
-            Deterministic Columnar Ledger Isolation
+            Read-only over the ingested data
           </strong>
           <span className="text-slate-600">
-            DuckDB executes analytical queries in read-only mode directly over normalized procurement parquet files. Zero write-mutation is permitted to guarantee tamper-proof auditability.
+            Transactions live in DuckDB and are read here through a read-only connection: nothing on
+            this page can change them, and the only writes the API makes are a reviewer's decision
+            and the live demo. Detectors read a view that hides the evaluation answer key.
           </span>
         </div>
       </div>

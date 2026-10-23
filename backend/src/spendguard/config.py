@@ -286,6 +286,12 @@ class Settings(BaseSettings):
     mlflow_dir: Path = PROJECT_ROOT / "mlruns"
     mlflow_experiment: str = "spendguard-detection"
 
+    # ------------------------------------------------------- dataset intake (API)
+    # A ceiling on what the upload endpoint will accept, because ingestion happens
+    # inside the request (D-10 allows it only while bounded). Past this the answer
+    # is `spendguard ingest`, which has no timeout and no request holding memory.
+    intake_max_bytes: int = 64 * 1024 * 1024
+
     # ------------------------------------------------- the agent evaluation plan
     # Which (seed, cases per type, arm) runs make up the reported agent results.
     # Written down because they take days: a free tier allows ~10 investigations

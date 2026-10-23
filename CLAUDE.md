@@ -1,7 +1,7 @@
 # CLAUDE.md — SpendGuard
 
 > Persistent context, loaded every session. Keep it short. Detail lives in `docs/`.
-> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 862 backend + 40 frontend tests · CI green · agent evaluation at 17 notes of a 20-case sample · **the local runtime is proved: Ollama wrote 5 notes with the network blocked** · **the review kit now exports vendor flags a person can actually judge — 15 of 15, from 4** · 8 checklist items left, from 39. **What is left, and what needs a person, is at the end of PROGRESS.**
+> **Status:** Phases 0–8 complete; Phase 9 in progress (steps 1–5 of 7 done, 6 running, 7 started) · 885 backend + 40 frontend tests · CI green · agent evaluation at 17 notes of a 20-case sample · **the local runtime is proved: Ollama wrote 5 notes with the network blocked** · **the review kit now exports vendor flags a person can actually judge — 15 of 15, from 4** · 8 checklist items left, from 39. **What is left, and what needs a person, is at the end of PROGRESS.**
 > Running log: [PROGRESS.md](PROGRESS.md).
 
 ---
@@ -54,7 +54,7 @@ SpendGuard/
 │   │   ├── ablations.py        arm names · demo.py live injection · freeze.py hashed snapshot
 │   │   ├── db/duck.py          DuckDB schema, audit_transactions view, writers
 │   │   ├── db/store.py         case store, review workflow, notes · citations · traces
-│   │   ├── pipeline/           synthetic generator, ingestion, vendor normalization
+│   │   ├── pipeline/           generator · ingestion · vendor norm · intake (new-file preview)
 │   │   ├── detectors/          base · baseline · d1_duplicates · d2_splits · d3_inflation · d4_vendor
 │   │   ├── eval/               injection · matching · metrics · runner · triage · report
 │   │   │                    grading (blinded rubric) · grading_report · agreement (alpha)
@@ -65,7 +65,7 @@ SpendGuard/
 │   │   │                    checks (deterministic) · verifier (judge + revise loop)
 │   │   │                    template (the no-agent ablation arm)
 │   │   └── api/                app (factory, errors, serves the build) · schemas · deps
-│   │                        cases (queue, detail, review) · overview (metrics, eval…)
+│   │                        cases (queue, detail, review) · overview · datasets (upload)
 │   └── tests/                  mirrors src; 832 tests (+7 live, opt-in)
 ├── frontend/                   React dashboard · openapi.json (committed contract)
 │   └── src/                    api (generated schema.d.ts, validate, client, hooks) · pages
