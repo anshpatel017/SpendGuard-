@@ -149,7 +149,17 @@ class Settings(BaseSettings):
     # Switching provider is one line, LLM_PROVIDER: each provider keeps its own
     # key, endpoint and model below (decision D-33). LLM_BASE_URL, LLM_MODEL and
     # LLM_API_KEY, when set, override whichever provider is active.
-    llm_provider: LLMProvider = LLMProvider.GROQ
+    #
+    # The default is **local**, and that is a requirement rather than a taste:
+    # FR-3.11 asks for a local endpoint as the default for the delivered system,
+    # and NFR-1 says the runtime depends on no paid or external API. A fresh clone
+    # with no `.env` therefore talks to Ollama and needs no key and no network.
+    # The reported evaluation runs on Groq, which is what `LLM_PROVIDER=groq` in
+    # `.env` is for - a per-machine choice, not what ships. Flipping this default
+    # back would make the delivered system depend on someone else's free tier,
+    # three of which have already been retired or broken under this project
+    # (D-37), so `test_the_delivered_default_needs_no_external_api` pins it.
+    llm_provider: LLMProvider = LLMProvider.OLLAMA
 
     groq_api_key: str = "not-set"
     groq_base_url: str = "https://api.groq.com/openai/v1"
@@ -256,6 +266,25 @@ class Settings(BaseSettings):
     # so without a floor here a 3-point gap gets the same billing as a 35-point one
     # and a reviewer is handed a reason that is not a reason.
     review_digit_excess_min: float = 0.05
+
+    # ----------------------------------------------- experiment tracking (FR-7.10)
+    # The durable record of a run is `eval_runs` + `eval_results` in DuckDB, and it
+    # stays that; this is a second, comparable view of the same facts for a human.
+    # Off by default because MLflow lives in the optional `track` extra that CI does
+    # not install - on a machine without it, `log_run` reports and returns rather
+    # than failing the evaluation.
+    #
+    # The backend is **SQLite on disk**, not the `./mlruns` file store every MLflow
+    # tutorial shows: 3.x puts that store in maintenance mode and raises outright
+    # unless MLFLOW_ALLOW_FILE_STORE is set, so following the tutorial gets you a
+    # tracker that silently logs nothing. SQLite is also what this project already
+    # uses for operational data (D-09), and it is still one local file - a tracker
+    # is a convenience and does not get to put transaction data on a network
+    # (NFR-1, NFR-3), so pointing this elsewhere has to be a deliberate act.
+    mlflow_enabled: bool = False
+    mlflow_tracking_uri: str = ""  # empty -> sqlite at <mlflow_dir>/mlflow.db
+    mlflow_dir: Path = PROJECT_ROOT / "mlruns"
+    mlflow_experiment: str = "spendguard-detection"
 
     # ------------------------------------------------- the agent evaluation plan
     # Which (seed, cases per type, arm) runs make up the reported agent results.

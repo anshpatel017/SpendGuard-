@@ -49,7 +49,11 @@ detect = [
     "scipy>=1.14",
 ]
 
-# Phase 10: experiment tracking
+# Local experiment tracking (FR-7.10). Optional on purpose: CI does not install
+# this, and `eval/tracking.py` reports and carries on without it, because the
+# durable record of a run is `eval_runs` + `eval_results` in DuckDB either way.
+# Verified against 3.17.2, which is also why the backend is SQLite rather than
+# the `./mlruns` file store every tutorial shows - 3.x raises on that store.
 track = [
     "mlflow>=2.16",
 ]
