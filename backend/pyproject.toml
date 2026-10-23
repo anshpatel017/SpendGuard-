@@ -80,6 +80,9 @@ api = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.31",
     "httpx>=0.27",
+    # Required by FastAPI to accept an uploaded file at all; the dataset intake
+    # endpoints 404 without it. Pure Python and a few tens of kilobytes.
+    "python-multipart>=0.0.9",
 ]
 
 # Optional D1 stage 3. Explicitly an upgrade, not a dependency (see docs/DECISIONS.md D-12).

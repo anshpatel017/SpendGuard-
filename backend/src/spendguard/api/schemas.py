@@ -308,6 +308,41 @@ class HealthResponse(BaseModel):
     llm_model: str | None
 
 
+# --------------------------------------------------------------- dataset intake
+
+
+class DatasetPreviewResponse(BaseModel):
+    """What an uploaded file would become. Produced without writing anything."""
+
+    filename: str
+    rows: int
+    headers: list[str]
+    # canonical field -> the source column guessed for it, or null if undecided
+    suggested: dict[str, str | None]
+    unmapped_headers: list[str]
+    missing_required: list[str]
+    problems: list[str]
+    # Date formats that fit the date column. Exactly one means it is settled;
+    # several means the column is ambiguous (01-04-2024 is two different dates)
+    # and the caller must pick; none means every row would be dropped.
+    date_formats: list[str]
+    usable: bool
+    # Stringified so a preview of an unknown file cannot fail on an odd type.
+    sample: list[dict[str, str | None]]
+
+
+class DatasetIngestResponse(BaseModel):
+    dataset: str
+    db_path: str
+    source_sha256: str
+    rows_read: int
+    rows_loaded: int
+    rows_dropped: int
+    dropped: dict[str, int]
+    duration_seconds: float
+    next_steps: list[str]
+
+
 # ------------------------------------------------------------------ live demo
 
 

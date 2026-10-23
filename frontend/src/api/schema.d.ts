@@ -148,6 +148,50 @@ export interface paths {
         patch: operations["update_status_api_v1_cases__case_id__status_patch"];
         trace?: never;
     };
+    "/api/v1/datasets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Dataset
+         * @description Ingest an uploaded CSV into a new dataset of its own.
+         *
+         *     The three required columns are required here too rather than defaulted from
+         *     the guess: a mis-assigned `amount` would silently distort every severity
+         *     score downstream, so the caller states it.
+         */
+        post: operations["create_dataset_api_v1_datasets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/datasets/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Dataset
+         * @description Report what an uploaded file would become. Writes nothing.
+         */
+        post: operations["preview_dataset_api_v1_datasets_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/demo/inject": {
         parameters: {
             query?: never;
@@ -406,6 +450,38 @@ export interface components {
              */
             verification_status: "verified" | "unverified" | "failed_after_retries";
         };
+        /** Body_create_dataset_api_v1_datasets_post */
+        Body_create_dataset_api_v1_datasets_post: {
+            /** Amount */
+            amount: string;
+            /** Dataset */
+            dataset: string;
+            /** Date Format */
+            date_format?: string | null;
+            /** File */
+            file: string;
+            /** Invoice No */
+            invoice_no?: string | null;
+            /** Item Category */
+            item_category?: string | null;
+            /** Item Desc */
+            item_desc?: string | null;
+            /** Officer Id */
+            officer_id?: string | null;
+            /** Quantity */
+            quantity?: string | null;
+            /** Txn Date */
+            txn_date: string;
+            /** Unit Price */
+            unit_price?: string | null;
+            /** Vendor Name */
+            vendor_name: string;
+        };
+        /** Body_preview_dataset_api_v1_datasets_preview_post */
+        Body_preview_dataset_api_v1_datasets_preview_post: {
+            /** File */
+            file: string;
+        };
         /** Case */
         Case: {
             /** Amount At Risk */
@@ -615,6 +691,59 @@ export interface components {
             supports_claim: boolean | null;
             /** Values Match */
             values_match: boolean | null;
+        };
+        /** DatasetIngestResponse */
+        DatasetIngestResponse: {
+            /** Dataset */
+            dataset: string;
+            /** Db Path */
+            db_path: string;
+            /** Dropped */
+            dropped: {
+                [key: string]: number;
+            };
+            /** Duration Seconds */
+            duration_seconds: number;
+            /** Next Steps */
+            next_steps: string[];
+            /** Rows Dropped */
+            rows_dropped: number;
+            /** Rows Loaded */
+            rows_loaded: number;
+            /** Rows Read */
+            rows_read: number;
+            /** Source Sha256 */
+            source_sha256: string;
+        };
+        /**
+         * DatasetPreviewResponse
+         * @description What an uploaded file would become. Produced without writing anything.
+         */
+        DatasetPreviewResponse: {
+            /** Date Formats */
+            date_formats: string[];
+            /** Filename */
+            filename: string;
+            /** Headers */
+            headers: string[];
+            /** Missing Required */
+            missing_required: string[];
+            /** Problems */
+            problems: string[];
+            /** Rows */
+            rows: number;
+            /** Sample */
+            sample: {
+                [key: string]: string | null;
+            }[];
+            /** Suggested */
+            suggested: {
+                [key: string]: string | null;
+            };
+            /** Unmapped Headers */
+            unmapped_headers: string[];
+            /** Usable */
+            usable: boolean;
         };
         /** DemoInjectRequest */
         DemoInjectRequest: {
@@ -1312,6 +1441,109 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_dataset_api_v1_datasets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_create_dataset_api_v1_datasets_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetIngestResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description That dataset name is taken, or would overwrite served data */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description File too large for the API; use the CLI */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not a CSV */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    preview_dataset_api_v1_datasets_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_preview_dataset_api_v1_datasets_preview_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DatasetPreviewResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
             /** @description Validation Error */
             422: {

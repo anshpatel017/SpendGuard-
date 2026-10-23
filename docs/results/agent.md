@@ -1,6 +1,6 @@
 # Agent results - investigation and verification
 
-Generated 2026-10-22 17:21 UTC from commit `d921efe`. Regenerate with `spendguard report agent`.
+Generated 2026-10-23 19:08 UTC from commit `4df74a6`. Regenerate with `spendguard report agent`.
 
 Read from the evaluation stores, not from any single run: notes accumulate a few a day against a free-tier daily quota (D-30), and the newest note per (case, model, arm) is the one that stands. **Numbers are per model** - two models are never merged into one row (D-33) - and ablation arms sit beside the main run, never inside it (D-35).
 
@@ -10,7 +10,7 @@ Read from the evaluation stores, not from any single run: notes accumulate a few
 
 | Seed | Model | Arm | Notes | Citations | First draft | Released (deterministic) | Supported (model-judged) | Regenerated |
 |---:|---|---|---:|---:|---:|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 17 | 164 | 100.0% | **100.0%** | 87.8% | 10 |
+| 42 | qwen/qwen3.8-27b | agent | 19 | 183 | 100.0% | **100.0%** | 88.0% | 12 |
 | 42 | qwen2.5:3b-instruct-q4_K_M | agent | 5 | 12 | - | **100.0%** | 83.3% | 3 |
 | 42 | template | template | 17 | 97 | 100.0% | **100.0%** | 73.0% | 0 |
 
@@ -22,7 +22,7 @@ Over the seeded sample of real and spurious cases for each seed. *Real kept* is 
 
 | Seed | Model | Arm | Sample | Investigated | Real kept | Spurious filtered | Decisive accuracy |
 |---:|---|---|---:|---:|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 20 | 15 | 100% | 75% | **93%** |
+| 42 | qwen/qwen3.8-27b | agent | 20 | 17 | 92% | 75% | **88%** |
 | 42 | qwen2.5:3b-instruct-q4_K_M | agent | 5 | 5 | 75% | 0% | **60%** |
 | 42 | template | template | 15 | 14 | 100% | 0% | **79%** |
 
@@ -30,7 +30,7 @@ Over the seeded sample of real and spurious cases for each seed. *Real kept* is 
 
 | Seed | Model | Arm | Tool calls | Tokens | Seconds of model time |
 |---:|---|---|---:|---:|---:|
-| 42 | qwen/qwen3.8-27b | agent | 9.6 | 33,702 | 30.3 |
+| 42 | qwen/qwen3.8-27b | agent | 10.0 | 34,078 | 29.9 |
 | 42 | qwen2.5:3b-instruct-q4_K_M | agent | 17.0 | 27,064 | 47.9 |
 | 42 | template | template | 0.0 | 391 | 0.3 |
 

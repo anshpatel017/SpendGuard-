@@ -7,6 +7,7 @@ import { DataPage } from "./pages/DataPage";
 import { DemoPage } from "./pages/DemoPage";
 import { EvaluationPage } from "./pages/EvaluationPage";
 import { HealthPage } from "./pages/HealthPage";
+import { IntakePage } from "./pages/IntakePage";
 import { LandingPage } from "./pages/LandingPage";
 import { QueuePage } from "./pages/QueuePage";
 import { RunsPage } from "./pages/RunsPage";
@@ -22,6 +23,7 @@ export function App() {
           <Route path="/queue" element={<QueuePage />} />
           <Route path="/cases/:caseId" element={<CasePage />} />
           <Route path="/data" element={<DataPage />} />
+          <Route path="/intake" element={<IntakePage />} />
           <Route path="/runs" element={<RunsPage />} />
           <Route path="/evaluation" element={<EvaluationPage />} />
           <Route path="/demo" element={<DemoPage />} />
