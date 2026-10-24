@@ -442,12 +442,39 @@ def evaluate_investigation(
         llm = _optional_llm() if ablation == TEMPLATE_ARM else _default_llm()
     with connect(db_path, read_only=True) as con:
         groups = load_ground_truth(con)
+        detect_started = datetime.now()
         cases = [c for name in PRODUCTION_DETECTORS for c in REGISTRY[name]().detect(con)]
+        detect_seconds = round((datetime.now() - detect_started).total_seconds(), 3)
         chosen, truth = sample_for_triage(cases, groups, per_type, seed)
         # Every flagged case goes to the store, not just the sample: the store then
         # shows what an auditor would see - everything flagged, some of it
         # investigated - and the dashboard's coverage line is honest about it.
         save_cases(engine, run_id, dataset, cases)
+        # This *is* a detection run - all four detectors over 100% of the rows - and
+        # it is what put these cases in the store. Recording it only as an
+        # investigation left the operational audit trail unable to answer "when were
+        # these cases detected, and with which thresholds", which is the first thing
+        # anyone asks of a flagged case months later.
+        record_run(
+            engine,
+            f"detect-eval-{detect_started:%Y%m%dT%H%M%S}-seed{seed}",
+            "detect",
+            dataset,
+            config={
+                "detectors": list(PRODUCTION_DETECTORS),
+                "db_path": str(db_path),
+                "seed": seed,
+                "approval_threshold": settings.approval_threshold,
+                "duplicate_match_threshold": settings.duplicate_match_threshold,
+                "split_score_threshold": settings.split_score_threshold,
+            },
+            summary={
+                "cases": len(cases),
+                "by_detector": dict(Counter(c.detector for c in cases)),
+                "seconds": detect_seconds,
+            },
+            started_at=detect_started,
+        )
         # Per model: switching provider starts that model's sample afresh (D-33).
         model = TEMPLATE_ARM if ablation == TEMPLATE_ARM else str(getattr(llm, "model", "unknown"))
         arm_of = {"model_name": model, "ablation_name": ablation}

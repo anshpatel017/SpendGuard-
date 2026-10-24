@@ -106,10 +106,10 @@ once hid a bug that flagged 1,732 false duplicates — the clean run is what cau
 
 | | |
 |---|---:|
-| Citations checked | 204 |
+| Citations checked | 226 |
 | **Rule-checked valid** | **100.0%** |
-| Model-judged supported | 89.4% |
-| Notes verified | 11 of 20 |
+| Model-judged supported | 89.0% |
+| Notes verified | 11 of 21 |
 
 **Say:** the rule-checked number involves no model at all — the row either exists and the
 stated value either matches, or it does not. We report the model-judged number beside it and
@@ -121,14 +121,14 @@ never average the two, because one is checkable and one is an opinion.
 
 | Arm | Real kept | **Spurious filtered** | Decisive accuracy |
 |---|---:|---:|---:|
-| **Full agent** | 87% | **75%** | **89%** |
+| **Full agent** | 93% | **75%** | **90%** |
 | Template (no agent) | 100% | **0%** | 78.6% |
 
 **Say:** we built a deliberately stupid arm that writes a note from the detector output and
 never dismisses anything. It keeps every real anomaly — and filters none of the false alarms,
 because it has no way to weigh an innocent explanation. **That column is the contribution,
 measured rather than asserted.** If asked why the agent keeps 92% and not 100%: it wrongly
-dismissed two genuine anomalies of fifteen, which is the cost of being able to dismiss
+dismissed one genuine anomaly of fifteen, which is the cost of being able to dismiss
 anything at all, and it is in the report rather than rounded away.
 
 ---
@@ -203,9 +203,9 @@ issues with the measurement that motivates them already recorded (O-05, O-07).
 |---|---|
 | "How does D1 decide?" | Fellegi–Sunter: blocks on amount+date, scores pairs by MAP-EM |
 | "Why not Benford for D4?" | It accused 61 of 210 real suppliers. Peer tests + Fisher + FDR instead |
-| "Cost per investigation?" | 33,965 tokens, 9.9 tool calls, 30.0 s |
+| "Cost per investigation?" | 34,275 tokens, 10.0 tool calls, 32.5 s |
 | "How big is the real dataset?" | 346,018 line items read, 336,995 loaded |
-| "Is the agent sample complete?" | **20 of 20 on seed 42.** Held-out seeds 7 and 2026 have detection metrics but no agent run — stated in the report |
+| "Is the agent sample complete?" | **Yes — 21 notes on seed 42.** Held-out seeds 7 and 2026 have detection metrics but no agent run — stated in the report |
 | "Can you prove a note is not invented?" | Corrupt one by hand — the Verifier rejects it on value, row id and clause |
 
 ---

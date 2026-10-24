@@ -56,19 +56,19 @@ The ± is the sample standard deviation across the three seeds, not a confidence
 
 | Figure | Value | Caveat you must say with it |
 |---|---|---|
-| Notes written (seed 42) | **20 of a 20-case sample** | Complete. `headline.md` quotes the citation rate rather than withholding it |
+| Notes written (seed 42) | **21** | Complete and then some: a case that had failed twice produced a note on 2026-10-24. `headline.md` quotes the rate |
 | **Local model, same seed** | **5 notes, 3 verified, 100% rule-checked** over 12 citations | Qwen2.5-3B under Ollama. Its own row, never pooled with the hosted model (D-33) |
-| **Citation validity, rule-checked** | **100.0%** over 204 citations | This is the headline number — no model involved |
-| Citation validity, model-judged | 89.4% | Always reported *beside* the above, never blended into it (D-13) |
+| **Citation validity, rule-checked** | **100.0%** over 226 citations | This is the headline number — no model involved |
+| Citation validity, model-judged | 89.0% | Always reported *beside* the above, never blended into it (D-13) |
 | First-draft validity | 100.0% | What the Investigator produced unaided |
-| Notes verified | 11 of 20 (7 failed checks, 2 unverified) | `verified` requires **both** checks to pass |
-| Cost per investigation | 33,965 tokens, 9.9 tool calls, 30.0 s | Free tier, ~10 investigations a day |
+| Notes verified | 11 of 21 (8 failed checks, 2 unverified) | `verified` requires **both** checks to pass |
+| Cost per investigation | 34,275 tokens, 10.0 tool calls, 32.5 s | Free tier, ~10 investigations a day |
 
 ### The ablation — the strongest single table you have
 
 | Arm | Released (rule-checked) | Model-judged | Real kept | **Spurious filtered** | **Decisive accuracy** |
 |---|---:|---:|---:|---:|---:|
-| **agent** | 100% | 89.4% | 87% | **75%** | **89%** |
+| **agent** | 100% | 89.0% | 93% | **75%** | **90%** |
 | template | 100% | 73.0% | 100% | **0%** | **79%** |
 
 **Spurious filtered is the column that is the contribution.** The template keeps every real
@@ -147,7 +147,7 @@ to do before you print.
 | "investigates every flagged case" | "detects across 100% of transactions, then autonomously **investigates prioritized cases**" |
 | "more accurate than commercial tools" | "the contribution is the layer *after* detection" |
 | "fraud detected" on California data | "**value implicated** by flagged transactions" |
-| a citation rate with no sample size | "100% over 20 notes" — the sample size travels with the rate |
+| a citation rate with no sample size | "100% over 21 notes" — the sample size travels with the rate |
 
 ---
 
