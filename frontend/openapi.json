@@ -312,6 +312,132 @@
         "title": "AuditNote",
         "type": "object"
       },
+      "Body_create_dataset_api_v1_datasets_post": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "dataset": {
+            "pattern": "^[a-z0-9_]+$",
+            "title": "Dataset",
+            "type": "string"
+          },
+          "date_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Format"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "invoice_no": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice No"
+          },
+          "item_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Category"
+          },
+          "item_desc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Item Desc"
+          },
+          "officer_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Officer Id"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "txn_date": {
+            "title": "Txn Date",
+            "type": "string"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
+          },
+          "vendor_name": {
+            "title": "Vendor Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "dataset",
+          "vendor_name",
+          "amount",
+          "txn_date"
+        ],
+        "title": "Body_create_dataset_api_v1_datasets_post",
+        "type": "object"
+      },
+      "Body_preview_dataset_api_v1_datasets_preview_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_preview_dataset_api_v1_datasets_preview_post",
+        "type": "object"
+      },
       "Case": {
         "properties": {
           "amount_at_risk": {
@@ -909,6 +1035,162 @@
           "failure_reason"
         ],
         "title": "Citation",
+        "type": "object"
+      },
+      "DatasetIngestResponse": {
+        "properties": {
+          "dataset": {
+            "title": "Dataset",
+            "type": "string"
+          },
+          "db_path": {
+            "title": "Db Path",
+            "type": "string"
+          },
+          "dropped": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Dropped",
+            "type": "object"
+          },
+          "duration_seconds": {
+            "title": "Duration Seconds",
+            "type": "number"
+          },
+          "next_steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Next Steps",
+            "type": "array"
+          },
+          "rows_dropped": {
+            "title": "Rows Dropped",
+            "type": "integer"
+          },
+          "rows_loaded": {
+            "title": "Rows Loaded",
+            "type": "integer"
+          },
+          "rows_read": {
+            "title": "Rows Read",
+            "type": "integer"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dataset",
+          "db_path",
+          "source_sha256",
+          "rows_read",
+          "rows_loaded",
+          "rows_dropped",
+          "dropped",
+          "duration_seconds",
+          "next_steps"
+        ],
+        "title": "DatasetIngestResponse",
+        "type": "object"
+      },
+      "DatasetPreviewResponse": {
+        "description": "What an uploaded file would become. Produced without writing anything.",
+        "properties": {
+          "date_formats": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Date Formats",
+            "type": "array"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "headers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Headers",
+            "type": "array"
+          },
+          "missing_required": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Required",
+            "type": "array"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "rows": {
+            "title": "Rows",
+            "type": "integer"
+          },
+          "sample": {
+            "items": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "title": "Sample",
+            "type": "array"
+          },
+          "suggested": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Suggested",
+            "type": "object"
+          },
+          "unmapped_headers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unmapped Headers",
+            "type": "array"
+          },
+          "usable": {
+            "title": "Usable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "filename",
+          "rows",
+          "headers",
+          "suggested",
+          "unmapped_headers",
+          "missing_required",
+          "problems",
+          "date_formats",
+          "usable",
+          "sample"
+        ],
+        "title": "DatasetPreviewResponse",
         "type": "object"
       },
       "DemoInjectRequest": {
@@ -2723,6 +3005,112 @@
         "summary": "Update Status",
         "tags": [
           "cases"
+        ]
+      }
+    },
+    "/api/v1/datasets": {
+      "post": {
+        "description": "Ingest an uploaded CSV into a new dataset of its own.\n\nThe three required columns are required here too rather than defaulted from\nthe guess: a mis-assigned `amount` would silently distort every severity\nscore downstream, so the caller states it.",
+        "operationId": "create_dataset_api_v1_datasets_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_dataset_api_v1_datasets_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetIngestResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "That dataset name is taken, or would overwrite served data"
+          },
+          "413": {
+            "description": "File too large for the API; use the CLI"
+          },
+          "415": {
+            "description": "Not a CSV"
+          },
+          "422": {
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Dataset",
+        "tags": [
+          "datasets"
+        ]
+      }
+    },
+    "/api/v1/datasets/preview": {
+      "post": {
+        "description": "Report what an uploaded file would become. Writes nothing.",
+        "operationId": "preview_dataset_api_v1_datasets_preview_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_preview_dataset_api_v1_datasets_preview_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetPreviewResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Preview Dataset",
+        "tags": [
+          "datasets"
         ]
       }
     },

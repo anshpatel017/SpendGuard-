@@ -558,14 +558,24 @@ export function QueuePage() {
 
         {/* Checkbox row */}
         <div className="pt-2 flex items-center justify-between border-t border-slate-100">
-          <label className="inline-flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+          {/* Narrows to the agent's dismissals; it does not widen the queue.
+              "Include" was wrong twice over: nothing is hidden to begin with
+              (every case is listed, FR-5.4), and ticking it took the list from
+              263 to 0 rather than adding to it. */}
+          <label
+            className="inline-flex items-center gap-2 text-xs text-slate-600 cursor-pointer"
+            title="Show only the cases the agent recommended dismissing, so you can check what it threw away. It never closes a case itself - a person decides."
+          >
             <input
               type="checkbox"
               checked={dismissedVal}
               onChange={(e) => setParam("dismissed_by_agent", e.target.checked ? "true" : "")}
               className="rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
             />
-            <span>Include cases dismissed by agent</span>
+            <span>
+              Only cases the agent recommended dismissing{" "}
+              <span className="text-slate-400">— check what it filtered out</span>
+            </span>
           </label>
         </div>
       </div>

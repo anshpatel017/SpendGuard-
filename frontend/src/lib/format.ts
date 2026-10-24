@@ -80,9 +80,13 @@ export const STATUS_LABEL: Record<CaseStatus, string> = {
   dismissed: "Dismissed",
 };
 
+// Read beside "Agent recommends:", "Likely genuine" said the opposite of what it
+// meant - a reader takes it as "this transaction is fine", when the verdict is
+// that the *flag* is real and an auditor should act. The pair has to be
+// unambiguous in isolation, because it appears on a queue row with no context.
 export const VERDICT_LABEL: Record<Verdict, string> = {
-  likely_true_positive: "Likely genuine",
-  likely_false_positive: "Likely false positive",
+  likely_true_positive: "Likely a real issue",
+  likely_false_positive: "Likely a false alarm",
   inconclusive: "Inconclusive",
 };
 

@@ -7,6 +7,7 @@ import {
   Database,
   Activity,
   HeartPulse,
+  Upload,
   ExternalLink,
   ChevronRight,
   ChevronLeft,
@@ -45,6 +46,11 @@ export function Sidebar({
       name: "Data Explorer",
       path: "/data",
       icon: Database,
+    },
+    {
+      name: "Add Data",
+      path: "/intake",
+      icon: Upload,
     },
     {
       name: "Pipeline Runs",

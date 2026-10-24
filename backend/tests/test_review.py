@@ -326,3 +326,407 @@ def test_one_hidden_row_is_not_described_as_rows(store: Any, tmp_path: Path) -> 
     text = (batch.out_dir / CASES_FILE).read_text(encoding="utf-8")
     assert "1 more row in this case" in text
     assert "1 more rows" not in text
+
+
+# ------------------------------------------------------- what a vendor flag shows
+
+
+def _vendor_case(rows: list[int], indicators: dict[str, Any], **extra: Any) -> Case:
+    """A D4-shaped case: the metadata the vendor detector actually writes."""
+    return Case.build(
+        detector="d4", anomaly_type=AnomalyType.VENDOR_FLAG, row_ids=rows,
+        detector_score=0.9, amount_at_risk=9_000_000.0, vendor_key="acme",
+        metadata={
+            "policy_clauses": ["SG-PP-5.5", "SG-PP-7.1"],
+            "vendor_name": "Acme Fuel",
+            "transactions": len(rows),
+            "combined_p_value": "1.2e-09",
+            "first_seen": "2013-01-07",
+            "officers": [f"Department {n}" for n in range(9)],
+            "indicators": indicators,
+            **extra,
+        },
+    )  # fmt: skip
+
+
+ALL_ROWS = list(range(1, 41))
+ROUND_ROWS = {31, 33, 35}  # amounts divisible by the round-number unit
+PERIOD_END_ROWS = {37, 38}  # dated in the last four days of a month
+EARLY_ROWS = {39, 40}  # inside the new-vendor window, and large
+
+
+def _vendor_evidence(ids: list[int]) -> dict[int, dict[str, Any]]:
+    """Rows where every interesting one sits past the cut-off a naive slice takes.
+
+    Row ids 1-30 are small and ordinary; the rows carrying the flagged behaviour
+    are 31-40, so anything that shows `row_ids[:12]` shows a reviewer none of it.
+    """
+    rows = {}
+    for i in ids:
+        amount, txn_date = 100.0 + i, "2014-06-15"
+        if i in ROUND_ROWS:
+            amount = 1_000.0 * i
+        if i in PERIOD_END_ROWS:
+            amount, txn_date = 2_000_000.0 + i, "2014-06-29"
+        if i in EARLY_ROWS:
+            amount, txn_date = 5_000_000.0 + i, "2013-02-11"  # inside new_vendor_days
+        rows[i] = {
+            "row_id": i, "vendor_name": "Acme Fuel", "txn_date": txn_date,
+            "amount": amount, "officer_id": "Transportation, Department of",
+            "item_desc": "diesel", "quantity": 1.0, "unit_price": amount,
+            "source_row_ref": f"PO-{i}",
+        }  # fmt: skip
+    return rows
+
+
+ROUND_TEST = {
+    "p_value": "1.29e-12", "unit": 1000.0, "observed_rate": 0.106,
+    "expected_rate": 0.0419, "risk_ratio": 2.53, "observations": 680,
+}  # fmt: skip
+PERIOD_TEST = {
+    "p_value": "1.05e-18", "definition": "last four days of a month, or March",
+    "observed_rate": 0.645, "expected_rate": 0.2179, "risk_ratio": 2.96,
+    "observations": 93,
+}  # fmt: skip
+DIGIT_TEST = {
+    "p_value": "4.92e-24", "chi_square": 128.84, "distinct_amounts": 680,
+    "observed_share": [0.21, 0.169, 0.288, 0.131, 0.063, 0.057, 0.04, 0.021, 0.021],
+    "peer_share": [0.292, 0.197, 0.151, 0.095, 0.071, 0.061, 0.049, 0.042, 0.041],
+}  # fmt: skip
+
+
+def _block(text: str, case: Case) -> str:
+    """One case's section of the sheet, so a sibling case cannot satisfy an assertion."""
+    marker = f"## {case.case_id[:8]}"
+    assert marker in text, f"{marker} is not in the sheet"
+    return text.split(marker, 1)[1].split("\n## ", 1)[0]
+
+
+def _row_table(block: str) -> list[str]:
+    """The evidence table: header, rule and rows, stopping at the end of the table."""
+    lines = block.splitlines()
+    start = next(i for i, line in enumerate(lines) if line.startswith("| row |"))
+    table = []
+    for line in lines[start:]:
+        if not line.startswith("|"):
+            break
+        table.append(line)
+    return table
+
+
+def _row_ids(block: str) -> set[int]:
+    return {
+        int(cell)
+        for line in _row_table(block)[2:]
+        if (cell := line.split("|")[1].strip()).isdigit()
+    }
+
+
+def _vendor_block(store: Any, tmp_path: Path, case: Case) -> str:
+    save_cases(store, "detect-vendor", "california_po", [case])
+    batch = _export(store, tmp_path, per_detector=99, load_evidence=_vendor_evidence)
+    return _block((batch.out_dir / CASES_FILE).read_text(encoding="utf-8"), case)
+
+
+def test_a_vendor_flag_carries_the_test_that_produced_it(store: Any, tmp_path: Path) -> None:
+    """The claim is a rate measured against peers, and the sheet has to state it.
+
+    Without it a reviewer sees a p-value and twelve rows out of hundreds, and the
+    only honest verdict is `unclear` - which is not a measurement of anything.
+    """
+    block = _vendor_block(store, tmp_path, _vendor_case(ALL_ROWS, {"round_numbers": ROUND_TEST}))
+    assert "round numbers" in block
+    assert "10.6%" in block, "the supplier's own rate"
+    assert "4.2%" in block, "the rate expected for what it sells"
+    assert "2.53x" in block
+    assert "1.29e-12" in block
+
+
+def test_the_leading_digit_comparison_is_not_dropped_on_the_way_to_the_sheet(
+    store: Any, tmp_path: Path
+) -> None:
+    """It lives in a nested dict, and the export used to discard those wholesale."""
+    block = _vendor_block(store, tmp_path, _vendor_case(ALL_ROWS, {"first_digit": DIGIT_TEST}))
+    assert "28.8%" in block, "the supplier's share of leading 3s"
+    assert "15.1%" in block, "its peers' share, which is the comparison"
+    assert "128.84" in block
+
+
+def test_an_indicator_nobody_has_written_a_renderer_for_is_printed_not_skipped(
+    store: Any, tmp_path: Path
+) -> None:
+    """Silently dropping an unrecognised shape is the defect being fixed here.
+
+    A fifth vendor test added later must not vanish from the sheet merely because
+    this module has not been taught what it looks like.
+    """
+    unknown = {"weekend_orders": {"p_value": "0.004", "seen": 19}}
+    block = _vendor_block(store, tmp_path, _vendor_case(ALL_ROWS, unknown))
+    assert "weekend orders" in block
+    assert "0.004" in block
+    assert "19" in block
+
+
+def test_the_rows_under_a_vendor_flag_show_the_behaviour_that_was_flagged(
+    store: Any, tmp_path: Path
+) -> None:
+    """Twelve arbitrary rows of a supplier's history are evidence for nothing.
+
+    Every row carrying the flagged habit here sits past the first twelve by row
+    id, so a naive slice puts none of it in front of the reviewer.
+    """
+    case = _vendor_case(ALL_ROWS, {"round_numbers": ROUND_TEST, "period_end": PERIOD_TEST})
+    block = _vendor_block(store, tmp_path, case)
+    shown = _row_ids(block)
+    assert ROUND_ROWS & shown, "a round-amount row is in front of the reviewer"
+    assert PERIOD_END_ROWS & shown, "a period-end row is too"
+    assert "round multiple of 1,000" in block
+    assert "period end" in block
+
+
+def test_a_supplier_flagged_as_a_new_vendor_shows_its_opening_orders(
+    store: Any, tmp_path: Path
+) -> None:
+    """The flag is about what it billed just after appearing, so show those rows.
+
+    Two of the fifteen vendor flags screened on 2026-10-23 were `unclear` for the
+    lack of them: flagged for taking large orders as a new supplier, with not one
+    row near `first_seen` among the twelve shown.
+    """
+    case = _vendor_case(ALL_ROWS, {"round_numbers": ROUND_TEST}, new_vendor_high_value=True)
+    block = _vendor_block(store, tmp_path, case)
+    assert f"largest in the first {settings.new_vendor_days} days" in block
+    assert EARLY_ROWS & _row_ids(block), "an order from the opening window is visible"
+
+
+def test_no_single_test_is_allowed_to_spend_the_whole_row_budget(
+    store: Any, tmp_path: Path
+) -> None:
+    """A supplier flagged on three tests needs rows for all three, not twelve for one."""
+    case = _vendor_case(
+        ALL_ROWS,
+        {"round_numbers": ROUND_TEST, "period_end": PERIOD_TEST},
+        new_vendor_high_value=True,
+    )
+    block = _vendor_block(store, tmp_path, case)
+    reasons = {line.split("|")[-2].strip() for line in _row_table(block)[2:]}
+    assert "period end" in reasons
+    assert "round multiple of 1,000" in reasons
+    assert f"largest in the first {settings.new_vendor_days} days" in reasons
+
+
+def test_every_chosen_row_says_which_test_put_it_there(store: Any, tmp_path: Path) -> None:
+    """A chosen sample without its reasons is only a different arbitrary slice."""
+    case = _vendor_case(ALL_ROWS, {"round_numbers": ROUND_TEST, "period_end": PERIOD_TEST})
+    table = _row_table(_vendor_block(store, tmp_path, case))
+    assert "why shown" in table[0]
+    assert {line.count("|") for line in table} == {11}, "every row matches the header"
+
+
+def test_a_row_is_never_shown_twice_to_pad_the_sample(store: Any, tmp_path: Path) -> None:
+    """Rows 31-35 qualify on two tests at once; the sample must not repeat them."""
+    case = _vendor_case(ALL_ROWS, {"round_numbers": ROUND_TEST, "period_end": PERIOD_TEST})
+    rows = _row_table(_vendor_block(store, tmp_path, case))[2:]
+    ids = [cell for line in rows if (cell := line.split("|")[1].strip()).isdigit()]
+    assert len(ids) == len(set(ids))
+    assert len(ids) == settings.review_max_rows
+
+
+def test_the_count_behind_a_rate_says_what_it_counted(store: Any, tmp_path: Path) -> None:
+    """`n = 680` beside a supplier with 93 transactions reads as a contradiction.
+
+    The round-number test runs over distinct amounts - billing one round figure
+    fifty times is one habit, not fifty - and the period-end test over every
+    transaction. Saying which is the difference between a figure a reviewer can
+    use and one that makes them distrust the sheet.
+    """
+    case = _vendor_case(ALL_ROWS, {"round_numbers": ROUND_TEST, "period_end": PERIOD_TEST})
+    block = _vendor_block(store, tmp_path, case)
+    assert "680 distinct amounts" in block
+    assert "93 transactions" in block
+
+
+def test_the_departments_a_flagged_supplier_billed_reach_the_sheet(
+    store: Any, tmp_path: Path
+) -> None:
+    """A supplier selling to nine departments is part of what the flag is about.
+
+    `officers` is a list, and lists went out of the sheet along with the dicts.
+    """
+    block = _vendor_block(store, tmp_path, _vendor_case(ALL_ROWS, {"round_numbers": ROUND_TEST}))
+    assert "`officers` (9)" in block
+    assert "Department 0" in block
+    assert "(+3 more)" in block, "a long list is truncated, not dumped"
+
+
+def test_a_flag_with_no_indicators_still_shows_its_own_rows_in_order(
+    store: Any, tmp_path: Path
+) -> None:
+    """D1 and D2 cases *are* their rows; nothing about them needs choosing.
+
+    Choosing rows is for vendor flags alone, so a case without indicators must
+    come out of the export in the order the case itself holds - unsorted by
+    amount, unlabelled, exactly as before.
+    """
+    case = _case("d1", "duplicate", [7, 3, 9], 50_000.0)
+    save_cases(store, "detect-plain", "california_po", [case])
+    batch = _export(store, tmp_path, per_detector=99)
+    block = _block((batch.out_dir / CASES_FILE).read_text(encoding="utf-8"), case)
+
+    assert "why shown" not in block
+    ids = [line.split("|")[1].strip() for line in _row_table(block)[2:]]
+    assert ids == [str(r) for r in case.row_ids], "the case's own order, untouched"
+
+
+def test_the_guide_tells_a_reviewer_what_a_vendor_flag_even_claims(
+    store: Any, tmp_path: Path
+) -> None:
+    """The rules were written for duplicates. A statistical flag is judged differently.
+
+    It also has to name the innocent explanations, because a reviewer who does not
+    know that fuel is sold at round figures cannot weigh the round-number test.
+    """
+    batch = _export(store, tmp_path)
+    guide = (batch.out_dir / GUIDE_FILE).read_text(encoding="utf-8")
+    assert "Vendor flags are about a supplier, not about the rows" in guide
+    assert "why shown" in guide
+    assert "re-derive" in guide, "a reviewer is told not to recompute the statistic"
+
+
+def test_a_detectors_internal_matching_state_is_not_shown_to_a_reviewer(
+    store: Any, tmp_path: Path
+) -> None:
+    """Plain lists are evidence; lists of dicts are the detector talking to itself.
+
+    D1 records `pairs`, its own per-pair scoring state. Printing a truncated Python
+    repr of that above the rows tells a reviewer nothing and costs them attention.
+    """
+    case = Case.build(
+        detector="d1", anomaly_type=AnomalyType.DUPLICATE, row_ids=[4, 5],
+        detector_score=0.9, amount_at_risk=1_000.0, vendor_key="acme",
+        metadata={
+            "stages": ["probabilistic"],
+            "pairs": [{"row_ids": [4, 5], "stage": "probabilistic"}],
+        },
+    )  # fmt: skip
+    save_cases(store, "detect-pairs", "california_po", [case])
+    batch = _export(store, tmp_path, per_detector=99)
+    block = _block((batch.out_dir / CASES_FILE).read_text(encoding="utf-8"), case)
+
+    assert "`stages` (1): probabilistic" in block, "how the match was made is useful"
+    assert "pairs" not in block
+    assert "row_ids" not in block
+
+
+def test_a_leading_digit_flag_shows_rows_carrying_that_digit(store: Any, tmp_path: Path) -> None:
+    """ "The twelve largest" illustrates a distribution claim not at all.
+
+    `5497f8b8` in the California sample was flagged because 51.5% of its amounts
+    start with 3 against 16.9% for its peers - and not one of the twelve rows the
+    sheet showed started with a 3.
+    """
+    case = _vendor_case(ALL_ROWS, {"first_digit": DIGIT_TEST})
+    block = _vendor_block(store, tmp_path, case)
+
+    assert "amount starts with 3" in block
+    amounts = [line.split("|")[5].strip().replace(",", "") for line in _row_table(block)[2:-1]]
+    assert any(a.startswith("3") for a in amounts), "the over-used digit is visible"
+
+
+def test_the_digit_singled_out_is_the_one_furthest_above_its_peers() -> None:
+    """Not the most common digit - the most *unexpected* one.
+
+    Leading 1s are the plurality for almost every supplier, so picking the biggest
+    observed share would point at 1 nearly every time and say nothing.
+    """
+    from spendguard.eval.review import _most_over_represented_digit
+
+    # 1 is still this supplier's commonest digit; 7 is the one out of line.
+    skewed = {
+        "observed_share": [0.40, 0.10, 0.08, 0.07, 0.06, 0.05, 0.18, 0.03, 0.03],
+        "peer_share": [0.42, 0.18, 0.13, 0.10, 0.07, 0.04, 0.02, 0.02, 0.02],
+    }
+    chosen = _most_over_represented_digit(skewed)
+    assert chosen is not None
+    assert chosen[0] == 7
+    assert chosen[1] == pytest.approx(0.16)
+
+
+def test_a_supplier_that_bills_like_its_peers_has_no_digit_worth_pointing_at() -> None:
+    """Every digit is at or below its peers, so the sheet must not invent a reason."""
+    from spendguard.eval.review import _most_over_represented_digit
+
+    flat = {"observed_share": [0.1] * 9, "peer_share": [0.2] * 9}
+    assert _most_over_represented_digit(flat) is None
+    assert _most_over_represented_digit({"p_value": "0.4"}) is None, "no shares recorded"
+    assert _most_over_represented_digit(None) is None
+
+
+def test_the_leading_digit_here_is_the_one_the_detector_computed() -> None:
+    """A label disagreeing with the test that raised the flag is worse than none.
+
+    The detector works on a numpy array of a whole supplier's amounts; the export
+    needs one value at a time. They have to agree on every float, not most.
+    """
+    import numpy as np
+
+    from spendguard.detectors.d4_vendor import first_digits
+    from spendguard.eval.review import _leading_digit
+
+    values = np.concatenate(
+        [
+            np.random.default_rng(0).uniform(0.01, 1e9, 5_000),
+            np.array([1.0, 9.999, 10.0, 99.999, 100.0, 999_999.0, 1e9, 0.001]),
+        ]
+    )
+    assert [_leading_digit(v) for v in values] == list(first_digits(values))
+    assert _leading_digit(0) is None, "a zero amount has no leading digit"
+    assert _leading_digit(-5) is None
+    assert _leading_digit("not a number") is None
+
+
+def test_an_amount_is_not_shown_to_a_reviewer_as_a_raw_float(store: Any, tmp_path: Path) -> None:
+    """`32001146.999999996` in an audit sheet reads as bad data, not bad printing.
+
+    Grouping is the project's own lakh/crore convention (FR-6.10), and the symbol
+    stays in the column header rather than repeating down every row.
+    """
+    case = _vendor_case(ALL_ROWS, {"round_numbers": ROUND_TEST})
+    block = _vendor_block(store, tmp_path, case)
+    cells = [line.split("|")[5].strip() for line in _row_table(block)[2:-1]]
+
+    assert cells, "there are amounts to check"
+    assert all(cell.endswith(".00") for cell in cells), "two decimals, always"
+    assert "35,000.00" in cells, "lakh/crore grouping, not 35000.0"
+    assert settings.currency_symbol not in block.split("| row |")[1]
+
+
+def test_a_digit_barely_above_its_peers_is_not_offered_as_a_reason() -> None:
+    """D4 records a leading-digit result for every supplier, significant or not.
+
+    W.W. Grainger leads with 1 on 30.9% of its amounts against 27.5% for its
+    peers, at p = 0.83. Pointing rows at a 3-point gap hands a reviewer a reason
+    that is not a reason, and they have no way to tell it from a 35-point one.
+    """
+    from spendguard.eval.review import _most_over_represented_digit
+
+    grainger = {
+        "observed_share": [0.309, 0.133, 0.127, 0.103, 0.079, 0.085, 0.073, 0.042, 0.048],
+        "peer_share": [0.275, 0.169, 0.147, 0.109, 0.085, 0.067, 0.057, 0.049, 0.043],
+    }
+    assert _most_over_represented_digit(grainger) is None
+
+    # Sterling Adaptives, same sample: 51.5% against 16.9%, which is worth rows.
+    sterling = {
+        "observed_share": [0.094, 0.105, 0.515, 0.123, 0.041, 0.047, 0.035, 0.006, 0.035],
+        "peer_share": [0.195, 0.127, 0.169, 0.148, 0.117, 0.110, 0.049, 0.039, 0.047],
+    }
+    chosen = _most_over_represented_digit(sterling)
+    assert chosen is not None and chosen[0] == 3
+
+
+def test_the_bar_for_singling_out_a_digit_is_configurable() -> None:
+    """Rule 1: no threshold is hardcoded. A reviewer kit is no exception."""
+    from spendguard.config import settings
+
+    assert 0.0 < settings.review_digit_excess_min < 1.0

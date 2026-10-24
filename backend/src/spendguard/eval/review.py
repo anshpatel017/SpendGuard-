@@ -40,6 +40,7 @@ import random
 import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +50,7 @@ from sqlalchemy.orm import Session
 
 from spendguard.config import settings
 from spendguard.db.store import CaseRecord, FlagReviewRecord
+from spendguard.detectors.d4_vendor import _is_period_end
 
 PLAUSIBLE = "plausible"
 IMPLAUSIBLE = "implausible"
@@ -169,6 +171,19 @@ same document number are two lines of *one* purchase order, not two orders - a
 repeat there is usually how the order was written up, not a duplicate record.
 Two rows with *different* document numbers are the ones worth attention.
 
+**Vendor flags are about a supplier, not about the rows.** The claim is that some
+habit of theirs - round amounts, billing at period end, an odd spread of leading
+digits - runs well above the rate of other suppliers selling the *same kinds of
+things*. The tables under the flag give you that comparison, and the rows beneath
+are a sample chosen to show the habit, with a `why shown` column saying which test
+each one illustrates. Do not try to re-derive the statistic from twelve rows; you
+cannot, and you are not being asked to. Judge whether an auditor should look -
+then ask the opposite question, because trades differ: bulk fuel and software
+licences are genuinely negotiated at round figures, annual renewals genuinely fall
+at the end of a quarter, and a supplier with one product has few distinct amounts
+by nature. If the rows show you a reason like that, `{IMPLAUSIBLE}` with a comment
+is the useful answer.
+
 **Use `{UNCLEAR}` freely.** It is a real answer, reported separately, and it
 costs the project nothing. Guessing does: a guess lands in the precision figure
 and makes it wrong in a way nobody can detect afterwards.
@@ -185,13 +200,305 @@ def _cell(value: Any, limit: int = CELL_LIMIT) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
+def _leading_digit(amount: Any) -> int | None:
+    """Leading significant digit of an amount, 1-9, matching `d4_vendor.first_digits`.
+
+    Restated here on a scalar rather than imported, because the detector's version
+    is vectorised over a numpy array of a whole supplier's amounts. `math.log10`
+    gives the same answer as its `np.log10` for every positive float.
+    """
+    try:
+        value = float(amount)
+    except (TypeError, ValueError):
+        return None
+    if value <= 0:
+        return None
+    return int(value / 10 ** math.floor(math.log10(value)))
+
+
+def _most_over_represented_digit(test: Any) -> tuple[int, float] | None:
+    """The leading digit this supplier uses most beyond its peers, and by how much.
+
+    A leading-digit flag is a claim about a distribution, so "the twelve largest"
+    illustrates nothing - in the California sample `5497f8b8` was flagged because
+    51.5% of its amounts start with 3 against 16.9% for its peers, and not one of
+    the twelve rows shown started with a 3. The reviewer needs to see that digit.
+
+    Returns None unless the gap clears ``settings.review_digit_excess_min``. D4
+    records a leading-digit result for every supplier it tests, significant or not,
+    because Fisher combines all of them - W.W. Grainger's leads 1 only 3 points
+    above its peers at p = 0.83, and labelling rows with that invites a reviewer to
+    read a reason into noise.
+    """
+    if not isinstance(test, dict):
+        return None
+    observed, peers = test.get("observed_share"), test.get("peer_share")
+    if not isinstance(observed, list) or not isinstance(peers, list):
+        return None
+    excesses = [
+        (float(o) - float(p), i + 1)
+        for i, (o, p) in enumerate(zip(observed[:9], peers[:9], strict=False))
+    ]
+    if not excesses:
+        return None
+    excess, digit = max(excesses)
+    return (digit, excess) if excess >= settings.review_digit_excess_min else None
+
+
+def _amount(value: Any) -> str:
+    """An amount in a reviewer's table: grouped, two decimals, no repeated symbol.
+
+    Straight out of the store an amount reads `32001146.999999996`, and in an
+    audit sheet that looks like a defect in the data rather than in the printing.
+    Grouping goes through `settings.money` so these tables use the same lakh/crore
+    convention as everything else (FR-6.10); the currency is in the column header,
+    so the symbol is dropped rather than repeated down every row.
+    """
+    try:
+        return settings.money(float(value)).removeprefix(settings.currency_symbol)
+    except (TypeError, ValueError):
+        return _cell(value)
+
+
+def _as_date(value: Any) -> date | None:
+    """A row's date, whether the loader handed back a `date` or an ISO string."""
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value)[:10])
+    except (TypeError, ValueError):
+        return None
+
+
+def _rate(value: Any) -> str:
+    """A measured rate as a percentage; anything unparseable passes through as text."""
+    try:
+        return f"{float(value):.1%}"
+    except (TypeError, ValueError):
+        return _cell(value)
+
+
+# What each vendor test counted, because they do not all count the same thing and a
+# bare "n = 680" invites a reviewer to read it as 680 transactions. D4 runs the round
+# and leading-digit tests over a supplier's *distinct amounts* - billing the same
+# round figure fifty times is one habit, not fifty - and the period-end test over
+# every transaction. An unlisted test falls back to the neutral "observations".
+DENOMINATOR = {"round_numbers": "distinct amounts", "period_end": "transactions"}
+
+
+def render_indicators(details: dict[str, Any]) -> list[str]:
+    """The evidence behind a statistical flag, in a form a reviewer can judge.
+
+    A D4 flag asserts a combined p-value over a supplier's whole history - hundreds
+    of transactions in some cases - while the sheet shows at most
+    ``settings.review_max_rows`` of them. A reviewer looking only at those rows
+    cannot establish or refute the claim, and the honest answer to every such case
+    is `unclear`, which is no measurement at all. Eleven of fifteen vendor flags
+    came back that way on the first screen of the California sample.
+
+    The detector already records what each test measured, what it compared against
+    and by how much the supplier differs. That detail lives under a dict key, and
+    ``render_cases`` previously kept only scalar fields, so all of it was dropped
+    on the way to the sheet. This puts it back.
+
+    Anything unrecognised is printed as plain key/value rather than skipped: a new
+    indicator shape silently vanishing is the whole defect being fixed here.
+    """
+    indicators = details.get("indicators")
+    if not isinstance(indicators, dict) or not indicators:
+        return []
+
+    lines = [
+        "Why this supplier was flagged. Each test compares it with other suppliers in "
+        "its own categories, not with a fixed rule:",
+        "",
+    ]
+
+    proportions = {
+        name: d
+        for name, d in indicators.items()
+        if isinstance(d, dict) and "observed_rate" in d and "expected_rate" in d
+    }
+    if proportions:
+        lines += [
+            "| test | what it measures | this supplier | its categories | ratio | out of | p |",
+            "|---|---|---:|---:|---:|---:|---:|",
+        ]
+        for name, d in sorted(proportions.items()):
+            measures = d.get("definition") or (
+                f"amounts that are a round multiple of {d['unit']:,.0f}"
+                if d.get("unit") is not None
+                else ""
+            )
+            ratio = d.get("risk_ratio")
+            lines.append(
+                f"| {name.replace('_', ' ')} | {_cell(measures, 46)} "
+                f"| {_rate(d.get('observed_rate'))} | {_rate(d.get('expected_rate'))} "
+                f"| {ratio}x | {_cell(d.get('observations'))} {DENOMINATOR.get(name, 'observations')} "
+                f"| {_cell(d.get('p_value'))} |"
+            )
+        lines.append("")
+
+    digits = indicators.get("first_digit")
+    if isinstance(digits, dict) and isinstance(digits.get("observed_share"), list):
+        observed = digits["observed_share"]
+        peers = digits.get("peer_share") or []
+        count = digits.get("distinct_amounts")
+        over = f"{count} distinct amounts" if count else "its distinct amounts"
+        lines += [
+            f"Leading digit across {over}, against the same categories "
+            f"(chi-square {digits.get('chi_square')}, p = {digits.get('p_value')}). "
+            f"A supplier that prices freely looks like its peers here:",
+            "",
+            "| leading digit | " + " | ".join(str(i) for i in range(1, 10)) + " |",
+            "|---|" + "---:|" * 9,
+            "| this supplier | " + " | ".join(_rate(v) for v in observed[:9]) + " |",
+        ]
+        if peers:
+            lines.append("| its categories | " + " | ".join(_rate(v) for v in peers[:9]) + " |")
+        lines.append("")
+
+    handled = set(proportions) | {"first_digit"}
+    for name, d in sorted(indicators.items()):
+        if name in handled:
+            continue
+        if isinstance(d, dict):
+            body = ", ".join(f"`{k}` = {v}" for k, v in sorted(d.items()))
+        else:
+            body = str(d)
+        lines += [f"{name.replace('_', ' ')}: {_cell(body, 200)}", ""]
+
+    return lines
+
+
+def select_evidence_rows(
+    case: SampledCase, rows: dict[int, dict[str, Any]]
+) -> list[tuple[int, str]]:
+    """Which of a case's rows to put in front of a reviewer, and why each is there.
+
+    For D1-D3 the case *is* its rows - a duplicate pair, a split run - so the first
+    ``settings.review_max_rows`` of them are the evidence and nothing needs choosing.
+
+    A vendor flag is not like that. Its rows are the supplier's entire history, up to
+    1,029 of them in the California run, and the first twelve by row id are an
+    arbitrary slice that may contain no instance of the behaviour that was flagged.
+    Two of the fifteen vendor flags screened on 2026-10-23 were marked `unclear` for
+    exactly this: flagged for taking large orders as a new supplier, with no row near
+    `first_seen` among the twelve shown.
+
+    So for a flag carrying indicators the rows are *chosen* - a few for each test that
+    fired, plus the largest overall - and each is labelled with the reason it appears.
+    Round-robin rather than in priority order, so a supplier flagged on three tests
+    does not spend all twelve rows on the first one.
+
+    ``_is_period_end`` is imported from the detector rather than restated here: a
+    label that disagreed with the test that produced the flag would be worse than no
+    label at all.
+    """
+    budget = settings.review_max_rows
+    indicators = case.details.get("indicators") if case.details else None
+    if not isinstance(indicators, dict) or not indicators:
+        return [(rid, "") for rid in case.row_ids[:budget]]
+
+    present = [(rid, rows[rid]) for rid in case.row_ids if rid in rows]
+    by_amount = sorted(present, key=lambda pair: (-(pair[1].get("amount") or 0.0), pair[0]))
+
+    buckets: list[tuple[str, list[int]]] = []
+
+    if case.details.get("new_vendor_high_value"):
+        first_seen = _as_date(case.details.get("first_seen"))
+        if first_seen is not None:
+            window = timedelta(days=settings.new_vendor_days)
+            buckets.append(
+                (
+                    f"largest in the first {settings.new_vendor_days} days",
+                    [
+                        rid
+                        for rid, row in by_amount
+                        if (d := _as_date(row.get("txn_date"))) is not None
+                        and first_seen <= d <= first_seen + window
+                    ],
+                )
+            )
+
+    if "period_end" in indicators:
+        buckets.append(
+            (
+                "period end",
+                [
+                    rid
+                    for rid, row in by_amount
+                    if (d := _as_date(row.get("txn_date"))) is not None and _is_period_end(d)
+                ],
+            )
+        )
+
+    if "round_numbers" in indicators:
+        raw = indicators["round_numbers"]
+        unit = float(
+            (raw.get("unit") if isinstance(raw, dict) else None) or settings.round_number_unit
+        )
+        buckets.append(
+            (
+                f"round multiple of {unit:,.0f}",
+                [
+                    rid
+                    for rid, row in by_amount
+                    if (a := row.get("amount")) is not None and float(a) % unit == 0
+                ],
+            )
+        )
+
+    if (over := _most_over_represented_digit(indicators.get("first_digit"))) is not None:
+        digit, excess = over
+        buckets.append(
+            (
+                f"amount starts with {digit} ({excess:+.0%} vs its categories)",
+                [
+                    rid
+                    for rid, row in by_amount
+                    if (a := row.get("amount")) is not None and _leading_digit(a) == digit
+                ],
+            )
+        )
+
+    buckets.append(("largest", [rid for rid, _ in by_amount]))
+
+    picked: list[tuple[int, str]] = []
+    seen: set[int] = set()
+    cursors = [0] * len(buckets)
+    while len(picked) < budget:
+        progressed = False
+        for i, (label, candidates) in enumerate(buckets):
+            if len(picked) >= budget:
+                break
+            while cursors[i] < len(candidates) and candidates[cursors[i]] in seen:
+                cursors[i] += 1
+            if cursors[i] >= len(candidates):
+                continue
+            rid = candidates[cursors[i]]
+            cursors[i] += 1
+            seen.add(rid)
+            picked.append((rid, label))
+            progressed = True
+        if not progressed:
+            break
+    return picked
+
+
 def render_cases(
     sample: Sequence[SampledCase], load_evidence: EvidenceLoader, currency: str
 ) -> str:
     """The cases as a reviewer sees them: what was flagged, why, and the rows behind it."""
-    evidence = load_evidence(
-        sorted({r for c in sample for r in c.row_ids[: settings.review_max_rows]})
-    )
+    # A vendor flag's rows have to be chosen (see `select_evidence_rows`), which
+    # means loading all of them, not the first `review_max_rows`.
+    wanted: set[int] = set()
+    for case in sample:
+        chooses = isinstance((case.details or {}).get("indicators"), dict)
+        wanted.update(case.row_ids if chooses else case.row_ids[: settings.review_max_rows])
+    evidence = load_evidence(sorted(wanted))
     lines = [
         "# Flagged transactions to review",
         "",
@@ -217,33 +524,68 @@ def render_cases(
                     + ", ".join(f"`{k}` = {v}" for k, v in sorted(shown.items())),
                     "",
                 ]
-        lines += [
-            f"| row | document | supplier | date | amount ({currency}) | department | item "
-            "| qty | unit price |",
-            "|---:|---|---|---|---:|---|---|---:|---:|",
-        ]
-        for row_id in case.row_ids[: settings.review_max_rows]:
+            # A plain list used to be dropped along with everything else non-scalar,
+            # which hid how many departments a flagged supplier billed - part of what
+            # the flag is about. Only lists of plain values: D1 also records `pairs`,
+            # a list of dicts of its own matching state, and a reviewer reading a
+            # truncated Python repr of it learns nothing.
+            listed = {
+                k: v
+                for k, v in case.details.items()
+                if isinstance(v, list)
+                and k != "row_ids"
+                and all(not isinstance(item, list | dict) for item in v)
+            }
+            for key, values in sorted(listed.items()):
+                if not values:
+                    continue
+                joined = ", ".join(_cell(v, 40) for v in values[:6])
+                more = f" (+{len(values) - 6} more)" if len(values) > 6 else ""
+                lines += [f"`{key}` ({len(values)}): {joined}{more}", ""]
+            lines += render_indicators(case.details)
+        picked = select_evidence_rows(case, evidence)
+        labelled = any(why for _, why in picked)
+        if labelled:
+            lines += [
+                f"{len(picked)} of this supplier's {len(case.row_ids)} transactions, chosen to "
+                "show the behaviour each test flagged rather than the first few by row id:",
+                "",
+            ]
+        head = [
+            "row", "document", "supplier", "date", f"amount ({currency})",
+            "department", "item", "qty", "unit price",
+        ]  # fmt: skip
+        align = ["---:", "---", "---", "---", "---:", "---", "---", "---:", "---:"]
+        if labelled:
+            head.append("why shown")
+            align.append("---")
+        lines += ["| " + " | ".join(head) + " |", "|" + "|".join(align) + "|"]
+        for row_id, why in picked:
             row = evidence.get(row_id)
             if row is None:
-                lines.append(f"| {row_id} | | _row not found_ | | | | | | |")
-                continue
-            lines.append(
-                f"| {row_id} | {_cell(row.get('source_row_ref'), 24)} "
-                f"| {_cell(row.get('vendor_name'), 34)} | {_cell(row.get('txn_date'))} "
-                f"| {_cell(row.get('amount'))} | {_cell(row.get('officer_id'), 34)} "
-                f"| {_cell(row.get('item_desc'))} | {_cell(row.get('quantity'))} "
-                f"| {_cell(row.get('unit_price'))} |"
-            )
-        if len(case.row_ids) > settings.review_max_rows:
+                cells = [str(row_id), "", "_row not found_", "", "", "", "", "", ""]
+            else:
+                cells = [
+                    str(row_id),
+                    _cell(row.get("source_row_ref"), 24),
+                    _cell(row.get("vendor_name"), 34),
+                    _cell(row.get("txn_date")),
+                    _amount(row.get("amount")),
+                    _cell(row.get("officer_id"), 34),
+                    _cell(row.get("item_desc")),
+                    _cell(row.get("quantity")),
+                    _amount(row.get("unit_price")),
+                ]
+            if labelled:
+                cells.append(_cell(why, 56))
+            lines.append("| " + " | ".join(cells) + " |")
+        hidden = len(case.row_ids) - len(picked)
+        if hidden > 0:
             # One empty cell per remaining column. This line was written before the
             # `document` column existed and was never widened, so it rendered as a
             # broken row - on a D4 case, the row saying "763 more rows".
-            hidden = len(case.row_ids) - settings.review_max_rows
-            lines.append(
-                f"| … | _{hidden} more row{'' if hidden == 1 else 's'} in this case_"
-                + " |" * 7
-                + " |"
-            )
+            note = f"_{hidden} more row{'' if hidden == 1 else 's'} in this case_"
+            lines.append("| … | " + note + " |" * (len(head) - 1))
         lines.append("")
     return "\n".join(lines) + "\n"
 

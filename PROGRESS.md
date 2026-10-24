@@ -491,6 +491,16 @@ there is one list rather than two that can drift apart. Two tests pin it, one of
 a threshold and checks the snapshot follows; making the snapshot return zeros fails it.
 Re-running the evaluation after the change reproduced every figure exactly.
 
+**A clean machine builds it, and gets the same answers.** Fresh clone to a separate drive,
+fresh venv, then only the commands in CLAUDE.md §5 — including the heavy
+`pip install -e "./backend[dev,detect,agent,api]"` with PyTorch, which CI never exercises
+because it installs the light extras. Backend: 0 failures, 7 skips (the opt-in live LLM
+tests), ruff and mypy clean. Frontend: `npm install`, tsc clean, 40 tests, build succeeds.
+Then `generate` → `ingest` → `detect` from nothing, which produced **154 cases, 12 high /
+129 medium / 13 low, ₹1,79,93,524.70 at risk — identical to this machine**. The pins
+resolved exactly as intended: duckdb 1.5.6, polars 1.44.2, pydantic 2.13.5, which is the
+first independent confirmation that capping them actually works on a fresh resolve.
+
 **[PRESENTATION.md](docs/PRESENTATION.md) is the other half of the walkthrough** — which
 figures may be quoted and the sentence each belongs in, the limitations slide written out
 rather than left as eight fragments in EVALUATION §9, and a wording table for the slides,
@@ -498,9 +508,234 @@ which have not had the pass the repository has. Every figure in it was checked a
 `detection.json` and `agent.json`, which caught the ablation table already carrying the
 agent arm's pre-widening numbers.
 
+### Phase 9 step 7b — the vendor flags were unreviewable, and the sheet was the reason (2026-10-23)
+
+The model screen of the 46 real-data flags came back with **11 of 15 vendor flags answered
+`unclear`**, and the reason was not the detector. D4 asserts a combined p-value over a
+supplier's whole history — 1,029 transactions in one case — and `review export` showed the
+reviewer twelve rows picked by row id. Twelve arbitrary rows cannot establish or refute a
+claim about a distribution, so `unclear` was the only honest answer, and `unclear` is not a
+measurement. **Two thirds of one detector's output was outside the evaluation.**
+
+Three defects, all in the export, none in D4, which had recorded everything needed:
+
+- **The evidence was discarded.** `render_cases` kept only scalar detail fields, so
+  `indicators` (a dict) and `officers` (a list) never reached the sheet. Each flag now
+  carries a table of its tests — the supplier's rate, the rate expected for *its* peer
+  categories, the risk ratio, what was counted, and p — plus the leading-digit comparison.
+  An unrecognised indicator shape now prints as key/value rather than vanishing; silent
+  dropping was the whole bug, so it must not be able to recur.
+- **The rows were arbitrary.** `select_evidence_rows` now *chooses* a vendor flag's rows —
+  round amounts, period-end dates, the over-used leading digit, opening orders for a new
+  supplier — round-robin so no one test spends the whole budget, each row labelled with
+  which test put it there. D1–D3 are untouched: those cases *are* their rows.
+- **Amounts read as bad data.** `32001146.999999996` in an audit sheet looks like a defect
+  in the data rather than in the printing. Amounts now go through `settings.money` (FR-6.10),
+  symbol dropped since the column header carries it.
+
+`_is_period_end` is imported from the detector rather than restated, and `_leading_digit` —
+which has to be scalar where the detector's is vectorised — was checked against
+`first_digits` over 20,007 values, 0 mismatches. A label that disagreed with the test that
+raised the flag would be worse than no label.
+
+One threshold came out of this: D4 records a leading-digit result for *every* supplier it
+tests, significant or not, because Fisher combines them. W.W. Grainger leads with 1 on 30.9%
+of its amounts against 27.5% for peers at p = 0.83, and the first cut of the fix spent rows
+pointing at that 3-point gap. `review_digit_excess_min` (0.05, in `config.py` per rule 1)
+is the floor; the surviving labels span +7% to +35%.
+
+**18 tests, and every fix was neutered to prove its test bites** — the two that pass either
+way are deliberate regression guards (D1–D3 unchanged, no row shown twice), and the dedup
+guard was sabotaged separately to confirm it does. 847 passed, ruff/format/mypy clean,
+`check-policy` and `check-evaluation` both green.
+
+**The sample was not redrawn.** `cases.md` and `how-to-review.md` were re-rendered from the
+recorded `sample.json`; the three sheets and the manifest are byte-identical, because a
+sample drawn before anything is judged has to stay fixed.
+
+#### What the fix was worth, measured
+
+The 15 vendor flags were screened a second time against the fixed sheet:
+
+| | before | after |
+|---|---:|---:|
+| Judgeable | 4 of 15 | **15 of 15** |
+| `unclear` | 11 | **0** |
+| D4 screen rate | 100.0% on n=4 | **60.0%** on n=15 |
+
+The first number was not a better result, it was a smaller one. Nine plausible are
+suppliers clustering just under a round figure — `5497f8b8` has six amounts between
+₹3,88,725 and ₹3,98,025 — or new suppliers taking large value at once. The six implausible
+share one shape: **the trade explains the habit.** Three are bulk fuel, where contracts are
+written against round ceilings (₹7,50,00,000, ₹1,08,00,00,000); one is sack lunches priced
+per unit across thousands of units; one is annual software renewals; one is produce billed
+monthly. None of that was visible before, and all of it is D4 working as designed — it
+compares a supplier with its peers, and the residual is the judgement a human has to make.
+
+Two corrections fell out of the re-screen, both recorded in
+[docs/results/real-data-screen.md](docs/results/real-data-screen.md):
+
+- **The first pass's value figures were wrong** and are withdrawn. It reported
+  ₹11,43,01,97,991 sampled; the sum of `amount_at_risk` over the 46 cases is
+  **₹25,90,26,14,841.73**, and ₹11,43,01,97,991 matches no grouping of it.
+- **D4's period-end test is jurisdiction-bound.** It counts "last four days of a month, or
+  March" — India's financial year end (GFR 2017), correct for the policy implemented and
+  meaningless for California, where March is an ordinary month. The ratio survives, since
+  peers are measured the same way, but `620a5cb2` reports *100% period end over 45
+  transactions falling on two dates*. A supplier with two order dates has no period-end
+  habit; `vendor_min_transactions` counts transactions, not distinct dates, so a multi-line
+  order clears it. **New open issue, beside O-05 and O-07** — and itself an argument for the
+  fix, since the export is what made it visible.
+
+### Phase 9 step 7c — two MUST requirements closed, and three things the UI was saying wrongly (2026-10-24)
+
+**Both outstanding MUST requirements are now met**, and the remaining six gaps are 1 MAY,
+2 SHOULDs and 3 waiting on people or quota. 885 backend tests (from 847), 40 frontend.
+
+**FR-3.11 — the delivered system defaults to local.** `config.py` shipped
+`LLMProvider.GROQ`, which reads against FR-3.11's "a local endpoint as the default for the
+delivered system" and sits badly beside NFR-1's "no paid or external API". The code default
+is now `OLLAMA`, and so is `.env.example` — the file a fresh clone actually copies, and the
+one that would have quietly undone the fix on its own. A clone with no `.env` now resolves
+to `ollama` / `localhost:11434` / no key. This machine's `.env` still says `groq`, so the
+evaluation continues on one model (D-33); that is a per-machine choice, not what ships.
+Three tests pin it, each sabotage-proved: the code default *and* that its endpoint is on
+localhost, the template agreeing with the code default, and every `*_API_KEY` shipping
+empty. The test it replaced asserted the default was Groq — true of the dev machine, wrong
+for the delivered system, which is exactly the conflation the requirement is about.
+
+**FR-7.10 — a local experiment tracker that is not the tutorial's.** Recorded in the
+"deliberately not finished" section above, with the finding worth repeating here: MLflow 3.x
+put the `./mlruns` file store in maintenance mode and *raises* on it. Because the tracker
+swallows failures by design, the tutorial default produced a tracker that reported success
+and logged nothing, caught only because a run left no store behind. The backend is SQLite.
+
+#### Three things the dashboard was asserting that were not true
+
+- **A verdict label said the opposite of what it meant.** `likely_true_positive` rendered as
+  **"Likely genuine"**, read beside "Agent recommends:". A reader takes that as *this
+  transaction is fine*; it means *the flag is real, act on it*. On a duplicate case that is
+  backwards, and it is the first thing a panel would read. Now **"Likely a real issue"** and
+  **"Likely a false alarm"** — unambiguous in isolation, which they must be, because they
+  also appear on a queue row with no context around them.
+- **The Data Explorer claimed parquet and tamper-proofing.** *"…read-only mode directly over
+  normalized procurement **parquet files**. Zero write-mutation is permitted to guarantee
+  **tamper-proof** auditability."* It is DuckDB tables, not parquet, and "tamper-proof" is
+  stronger than anything measured. Replaced with what is actually true and checkable: a
+  read-only connection, the only writes being a reviewer's decision and the live demo, and
+  the answer-key-free view detectors read.
+- **Both decks carried agent figures from before the last two notes**, and
+  `PRESENTATION.md`'s ablation table **overstated the agent on two columns at 100%** —
+  spurious filtered is 75%, decisive accuracy 88%. It also said "both arms on the same
+  15-case sample", no longer true at 17-of-20 against 14-of-15. Corrected from regenerated
+  results, with the severity-bias caveat `agent.md` already states on its face. Real kept is
+  92%, not 100%: the agent wrongly dismissed one genuine anomaly, which is the cost of being
+  able to dismiss anything at all, and `SLIDES.md` now carries that answer.
+
+#### Adding data without a command line (FR-1.3 over HTTP)
+
+A company's first act is to hand the system a CSV, and until now that needed
+`spendguard ingest` and a hand-written mapping YAML. New **Add Data** page, two steps, and
+the split is the design: `POST /datasets/preview` reads a file and reports what it would
+become while **writing nothing**; `POST /datasets` ingests, and only ever into a **new**
+DuckDB file. That restriction is not politeness — `ingest` replaces the whole `transactions`
+table, so an upload named after the served dataset would delete the rows a reviewer is
+working through, mid-session, with no undo. It returns 409 by name, and 409 again on a
+repeat name so a correction stays comparable with what it corrects.
+
+`suggest_mapping` guesses the canonical field for each header and **declines when two
+headers match equally well** — the California export has both `Creation Date` and
+`Purchase Date`, and which is the transaction date is a judgement its own mapping records in
+a comment. The preview names the candidates instead of picking one.
+
+**The bug this nearly shipped with.** The first version validated amounts and not dates. On
+the real synthetic file it reported *"usable, no problems"* — and ingestion then loaded
+**0 of 199 rows**, every one dropped for an unparseable date. A preview that does that is
+worse than no preview. Date detection now runs on the column, and immediately found
+something sharper: `01-04-2024` parses as **1 April and 4 January**, and nothing in the
+column settles which. The system reports both and makes the caller choose, in the API and in
+the UI; ingesting an ambiguous file without saying which format is a 422. 23 tests, and the
+whole flow was driven in a real browser — upload, preview, choose format, load, with the
+dates verified day-first in DuckDB afterwards.
+
+**There is deliberately no edit path, and a test enforces it**: no `PUT`/`PATCH`/`DELETE`
+route may touch a transaction. An auditor's first question about a system like this is
+whether the evidence can be altered, and the answer has to be no. A correction is a fresh
+ingestion into its own dataset. What a person may change is their own review decision, which
+is a separate append-only record (D-04).
+
+One new dependency, `python-multipart`, in the `api` extra that CI installs — FastAPI cannot
+accept an upload at all without it.
+
+#### "There are no vendor red flags" — there were, in the other store
+
+Reported as missing data across every detector filter. It was not. Plain `spendguard serve`
+opens the **clean** dataset, where D1, D2 and D4 correctly find nothing and D3 finds its 154
+— which is a *published result* (clean-data false positives), not a gap. The evaluation store
+has all four types: 177 duplicate, 98 split, 230 inflation, 6 vendor_flag. The filter was
+verified working end to end in the browser.
+
+The one dimension genuinely empty was **status**: every case was `new`, because a case only
+moves when a person decides (D-04). Fixed by the system being *used* rather than by inventing
+cases — **7 review decisions through the same endpoint the dashboard's buttons call**, with
+reviewer names and real notes. Every filter value now returns cases except
+`verdict=inconclusive`, which is honestly 0: across 20 investigations the agent was always
+decisive. Nothing reported moved - `check-evaluation` passes, `report agent` is unchanged,
+and the frozen snapshot is untouched at 511 `new`, so its hashes still verify.
+
+**A proposal was declined**: planting fabricated cases so every filter combination had an
+entry. Those 511 cases are what precision, recall and F1 are computed over, so hand-written
+ones would stop those figures being measurements of the detectors — and the frozen demo is
+hash-verified, so rows cannot be added without breaking the integrity check that is itself a
+slide. The legitimate version of this already exists and is what produced the four types in
+the first place: `spendguard inject`, which plants *labelled* anomalies on purpose.
+
+**For the demonstration, serve the evaluation store:** `spendguard serve --eval-seed 42`.
+
+### Phase 9 step 8 — the agent sample is complete, and the headline stops hedging (2026-10-24)
+
+**20 of 20 on `qwen/qwen3.8-27b`.** Three `investigate --matrix` runs across three days, each
+stopping itself on the provider's daily quota and resuming from the same case (D-30). The
+last one added a verified vendor-flag note with **21 of 21 citations checked**, then hit 429.
+
+| | |
+|---|---|
+| Notes | **20** — 11 verified, 2 unverified, 7 failed after retries |
+| Citations | **204**, **100.0% valid by rule**, 89.4% model-judged |
+| First draft | 100.0% unaided; 12 notes regenerated after the Verifier objected |
+| Cost | 33,965 tokens, 9.9 tool calls, 30.0 s of model time per case |
+
+`headline.md` withholds a citation rate below 20 notes, and that threshold is the only
+reason this run mattered. The quotable sentence now carries the figure without a hedge:
+
+> …Every claim in a released note is checked against the data: **100.0%** of cited values
+> matched exactly, by rule and with no model involved, **over 20 notes**.
+
+The `Value implicated in real spend` clause still reads *not yet measured*, correctly - that
+one waits on the human review batch and nothing automated can produce it.
+
+**One figure moved the wrong way and is worth rehearsing.** *Real kept* fell from 92% to
+**87%**: the agent wrongly dismissed two genuine anomalies out of fifteen, not one. That is
+the price of being able to dismiss anything at all - the template arm scores 100% on that
+column precisely because it never dismisses, which is also why it filters **0%** of false
+alarms against the agent's **75%**. The trade is the ablation's whole argument, and
+`SLIDES.md` carries the answer rather than leaving it to be improvised.
+
+**One case still produces no note.** `66d1ddd8`, a vendor flag, failed again on the step
+limit, as it did the day before. Documented behaviour rather than a surprise (the
+attempts-ordering stops a repeat failure starving the queue), and the sample is complete
+without it.
+
+Both decks were re-synced from the regenerated results - notes, citations, model-judged
+rate, verified count, cost per case and the ablation row - and grepped for every superseded
+value. `check-evaluation` passes.
+
+**Still to do before the demonstration:** `spendguard freeze --seed 42`. The snapshot was
+frozen on 2026-10-22 at 17 investigated and now understates the run.
+
 ## What remains
 
-Complete inventory as of 2026-10-22, checked against the live state rather than listed from memory. **Nothing here blocks the system from running** — it builds, CI is green, and every number in `docs/results` traces to a command. What follows is what is unfinished, and which of it needs a person.
+Complete inventory as of 2026-10-24, checked against the live state rather than listed from memory. **Nothing here blocks the system from running** — it builds, CI is green, and every number in `docs/results` traces to a command. What follows is what is unfinished, and which of it needs a person.
 
 ### 🧑 Needs a person — cannot be done by running something
 
@@ -522,13 +757,15 @@ The review batch is the **only** thing that replaces *"Value implicated in real 
 
 | # | Run | Sample | Done | Left |
 |---|---|---:|---|---|
-| 1 | seed 42, agent | **20** (widened) | **17 notes**, 15 investigated | **3 cases → unlocks a quotable citation rate** |
+| 1 | seed 42, agent | **20** (widened) | ✅ **20 notes, complete 2026-10-24** | — |
 | 2 | seed 42, template | 15 | 17 notes, 14 investigated | 1 case |
 | 3 | seed 42, no-verifier | 15 | **0 — not started** | 15 cases |
 | 4 | seed 7, agent | 5 | **0 — no store exists** | 5 cases |
 | 5 | seed 2026, agent | 5 | **0 — no store exists** | 5 cases |
 
-**29 investigations at roughly ten a day.** Run 1 is the one that matters: `headline.md` refuses to quote a citation rate below 20 notes and currently reads *"100.0% over only 17 note(s)"*, which is the honest form and stays honest if the rest never land. **One run clears it.**
+**Run 1 is done — and it was the one that mattered.** `headline.md` refuses to quote a citation rate below 20 notes; the arm reached 20 on 2026-10-24 and the sentence now reads **"100.0% of cited values matched exactly, by rule and with no model involved, over 20 notes"** with no provisional hedge. The remaining 25 investigations are the no-verifier ablation and the two held-out seeds, all SHOULD-level (FR-7.11) and all described as absent in the reports.
+
+**They must not be run on Ollama to finish faster.** It would work — 47.9 s a case, about two hours for all of them — and it would make the numbers meaningless: a no-verifier arm on a 3B local model against an agent arm on a 27B hosted one changes two variables at once, so no difference could be attributed to the verifier. Same for the held-out seeds, whose whole point is that only the seed changed. D-33, and the measured gap is large (triage 89% against 60%).
 
 ### 🤔 Decisions — one line each, all yours
 
@@ -538,13 +775,15 @@ The review batch is the **only** thing that replaces *"Value implicated in real 
 | **O-05** | D3 pseudo-categories from description clustering | **Measured.** On real data the published UNSPSC taxonomy is not a price norm at any level — this is the difference between D3 working and not. EVALUATION 4.0c, Finding 1 |
 | **O-07** | Should detectors get a first-class `document_id`? | 48.7% of D1's real-data flags pair two lines of the same purchase order. Three options written up. EVALUATION 4.0c, Finding 2 |
 
+| **O-08** | D4's period-end test counts "last four days of a month, **or March**" — India's FY end, an ordinary month in California. And `vendor_min_transactions` counts transactions, not distinct dates, so `620a5cb2` reports 100% period end over 45 transactions on two dates | **New 2026-10-23.** Raised by the re-screen; evidence in `docs/results/real-data-screen.md` |
+
 ~~O-04~~ resolved 2026-10-22.
 
 ### 📦 Before the demo
 
 Everything here is measured now. What is left in this section is the one thing that has to happen tomorrow:
 
-- **Three more notes, then re-freeze.** The agent arm is at 17 of a 20-case sample and `headline.md` will not quote a citation rate below 20. One `spendguard investigate --matrix` run clears it, then `spendguard freeze --seed 42` once more so the snapshot carries the final count. **Keep `LLM_PROVIDER=groq` for that run** — notes from a different model land in a separate row (D-33) and would not advance the arm.
+- ✅ **The agent arm is complete (2026-10-24).** 20 of 20 on `qwen/qwen3.8-27b`: 11 verified, 2 unverified, 7 failed, over **204 citations at 100.0% rule-checked** and 89.4% model-judged. Three runs across three days got there, each stopping itself on quota and resuming (D-30). **One thing is still outstanding: `spendguard freeze --seed 42`**, so the demo snapshot carries the final count rather than the 17 it was frozen with on 2026-10-22.
 
 - ✅ **Re-frozen 2026-10-22** at 17 investigated and 9 verified, up from 12 and 6, and shown not to change under use: a case confirmed through the API while serving left all four hashes identical and came back `new` on relaunch. **Re-freeze once more after the final matrix run.**
 - ✅ **The timing claim is fixed.** It was never 3–8 s for the run that matters: measured over eight consecutive runs the first takes **13.2 s** and every one after it 4.0–5.0 s. DEMO.md now tells the presenter to fire one injection before the room fills.
@@ -555,7 +794,7 @@ Everything here is measured now. What is left in this section is the one thing t
 Each is accurately described as absent in the reports, which is better than a rushed number.
 
 - ~~**Ollama local-runtime proof.**~~ **Done 2026-10-22.** Installed on `D:`, 2,158 MiB of the 4 GB card, and a full investigation written with every non-loopback connection blocked. D-37 made it matter more than it looked: three free-tier models have now been lost to retirement or an API change, so the local runtime is the only one nobody can withdraw.
-- **MLflow.** Declared in the `track` extra, imported nowhere, and **no longer the gap it looked like**. FR-7.10 asks for a *local experiment tracker* carrying parameters, seeds and results; DuckDB now carries all three (see the `eval_runs` work above) and the generated reports carry them for people. MLflow would be a nicer interface over the same facts, which is Phase 10 work.
+- ~~**MLflow.**~~ **Done 2026-10-23/24.** `eval/tracking.py` logs every evaluation run - 22 params including the whole threshold set, 335 metrics, both reports as artifacts - behind `MLFLOW_ENABLED`, off by default because CI does not install the extra. Three rules, each with tests: it never fails a run (proved on a real run in a CI-shaped venv with MLflow absent and tracking *on* - exit 0, reports written, DuckDB row intact), never becomes a second source of truth (a test walks the AST of every module and fails if anything but the tracker imports mlflow; another asserts every logged metric equals its `eval_results` row), and never leaves the machine. **The backend is SQLite, not `./mlruns`:** MLflow 3.x put the file store in maintenance mode and *raises* on it, and since rule 1 swallows failures the tutorial default produced a tracker that reported success and logged nothing - caught only because a run left no store behind.
 - ~~**Alembic.**~~ **Done 2026-10-22.** `backend/alembic/`, one revision over all eight tables, generated from the models. The test that matters is not that migrations run but that a migrated store and a `create_all` store end up with the same schema — two descriptions of one store is where drift lives.
 - **Held-out seeds 7 and 2026 for the agent.** No store exists for either. Any claim about generalisation across seeds currently rests on detection metrics, which do have all three seeds.
 
@@ -563,26 +802,29 @@ Each is accurately described as absent in the reports, which is better than a ru
 
 - **D3 ties or loses to the baseline on F1.** True, documented (D-23), and DEMO.md already scripts an honest answer. Honest premium purchases share the injected price band, which is the argument for the investigation layer rather than against the detector.
 - **Some cases never produce a note.** `dd3f8ece` failed on consecutive days before succeeding; others may not. The attempts-ordering stops them starving the queue, and the failure is reported rather than hidden.
-- **Attribution regression.** The broken merge re-attached the pre-rewrite history, so `main` again carries 47 `Co-Authored-By` trailers and 50 commits on the old email. Removing them means another full rewrite and force-push — which is what collided with the teammate's clone the first time. Left deliberately.
+- ~~**Attribution regression.**~~ **Not a regression — checked properly on 2026-10-23 and the history is clean.** Every commit object in the local clone was read, not just those `git log --all` walks: 185 commits, of which **47 carry `Co-Authored-By: Claude Opus 5` and 50 use the typo email `andhgpatel017@gmail.com`** — and **none of the 47 is reachable from any ref**, local, remote or reflog. They are orphans of the earlier rewrite, sitting in this one clone's object database and nowhere else; unreachable objects are never pushed, so GitHub has never held them. All four branches carry only the three teammates' real identities, and `main`/`ansh`/`shreya`/`Om` are byte-identical to their `origin/` counterparts. `.claude/settings.json` is committed (`4ce52d4`) with `includeCoAuthoredBy: false`, so no teammate's Claude Code adds the trailer again. **No rewrite and no force-push are needed** — `git gc --prune=now` drops the 185 KiB of orphans locally whenever anyone cares to.
 
-### ✅ Remaining checklist items: 9 (from 39 on 2026-10-22)
+### ✅ Remaining checklist items: 8 (from 39 on 2026-10-22)
 
 ```
   6  Pre-demonstration      three rehearsals, projector, video fallback,
                             stopwatch timing, numbers traced, limitations slide
   2  Evaluation             the review batch and the grading batch, both
                             waiting on three people each
-  1  System and privacy     a clean-machine setup from the documented commands
 ```
 
 Of the six pre-demonstration items, **two are now transcription**: every figure is traced in
 [PRESENTATION.md](docs/PRESENTATION.md) §2 and the limitations are written out slide-ready
 in §3. The other four need a person in a room with a projector.
 
+**Requirements: 66 of 72 implemented, and no MUST is open.** FR-3.11 (local default) and FR-7.10 (experiment tracker) closed on 2026-10-24; what remains is FR-2.13 (MAY, open as O-05), FR-7.11 and FR-7.12 (SHOULD, waiting on quota and on people), and the grading batch. Two FR texts describe the system as designed rather than as built and should be reworded or defended aloud: **FR-2.8** says D4 tests leading digits against *Benford*, which it does not (it tests against category peers, D-24, because Benford accused 61 of 210 real suppliers), and **FR-2.12** names *Splink*, where the implementation is a custom Fellegi-Sunter by MAP-EM (D-21). Both are improvements on the spec; a marker comparing doc to code will find them either way.
+
 **Twenty-eight were settled on 2026-10-22, each with its figure attached rather than a tick.** The
 section above lists them; the local-runtime three closed last, once Ollama was in.
 
-What is left divides cleanly, and **none of it can be closed by running something**: six items are the
-demonstration itself, two wait on three people each, one is MLflow, one is Alembic migrations that were
-never written, and one is a clean-machine install from the documented commands — which CI performs on
-every push for the backend-without-agent path, but not for the heavy `agent` extra.
+What is left divides cleanly. **One thing can still be closed by running something** —
+`spendguard freeze --seed 42`, so the demo snapshot carries 20 investigated rather than the 17 it was
+frozen with on 2026-10-22. Everything else cannot: six items are the demonstration itself and two wait
+on three people each. Two of the six are transcription — the figures and the limitations are already
+written in [PRESENTATION.md](docs/PRESENTATION.md) and the deck is laid out slide by slide in
+[SLIDES.md](docs/SLIDES.md) — but a slide has to exist before the box can be ticked.

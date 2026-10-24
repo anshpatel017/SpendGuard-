@@ -62,13 +62,61 @@ def test_split_windows_are_sorted_and_deduplicated() -> None:
     assert settings.split_windows_all == [3, 7, 14]
 
 
-def test_llm_provider_defaults_to_groq() -> None:
-    """Development default (D-26). The test pins the code, not whatever .env says.
+def test_the_delivered_default_needs_no_external_api() -> None:
+    """FR-3.11 and NFR-1: what ships runs locally, with no key and no network.
 
-    Read through ``settings``, this failed the day the dev machine switched to
-    Gemini for the evaluation runs - which is exactly what LLM_PROVIDER is for.
+    This pins the *code* default, not whatever `.env` says on the machine running
+    the tests - the distinction the whole provider switch exists for. The reported
+    evaluation runs on Groq via `LLM_PROVIDER=groq`, and that is a per-machine
+    choice; a fresh clone must not reach for someone else's free tier, three of
+    which have already been retired or broken under this project (D-37).
+
+    The earlier version of this test asserted the default was Groq, which was
+    true of the development machine and wrong for the delivered system.
     """
-    assert Settings.model_fields["llm_provider"].default is LLMProvider.GROQ
+    default = Settings.model_fields["llm_provider"].default
+    assert default is LLMProvider.OLLAMA
+    assert Settings.model_fields[f"{default.value}_base_url"].default.startswith(
+        "http://localhost"
+    ), "the default endpoint is on this machine"
+
+
+def test_the_shipped_env_template_does_not_reach_for_an_external_api() -> None:
+    """`.env.example` is what a fresh clone copies, so it is the real default.
+
+    Pinning only `Settings` would leave the guarantee half-made: someone follows
+    the README, copies the template, and the delivered system is back on a free
+    tier it has no key for. A key left blank beside `LLM_PROVIDER=groq` fails at
+    the first investigation rather than at setup, which is the worse of the two.
+    """
+    from spendguard.config import PROJECT_ROOT
+
+    template = PROJECT_ROOT / ".env.example"
+    assert template.is_file(), "the setup the README documents has to exist"
+    assigned = dict(
+        line.split("=", 1)
+        for line in template.read_text(encoding="utf-8").splitlines()
+        if "=" in line and not line.lstrip().startswith("#")
+    )
+    assert assigned["LLM_PROVIDER"].strip() == LLMProvider.OLLAMA.value
+    assert assigned["LLM_PROVIDER"].strip() == Settings.model_fields["llm_provider"].default.value
+
+    # And no secret rode along into the template.
+    for key, value in assigned.items():
+        if key.endswith("_API_KEY"):
+            assert value.strip() == "", f"{key} must ship empty, not pre-filled"
+
+
+def test_no_provider_default_carries_a_usable_key() -> None:
+    """A real key must come from the environment, never from the source tree.
+
+    If a default ever reads like a key, it is either a committed secret or it
+    makes an unconfigured clone look configured. Both are worse than failing.
+    """
+    for provider in LLMProvider:
+        field = f"{provider.value}_api_key"
+        if field in Settings.model_fields:
+            assert Settings.model_fields[field].default == "not-set"
 
 
 @pytest.mark.parametrize(
