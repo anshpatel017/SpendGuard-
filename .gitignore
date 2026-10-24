@@ -80,3 +80,6 @@ frontend/*.tsbuildinfo
 
 # --- UI Reference ---
 /Frontend_Reference
+# Local assistant context and settings - deliberately untracked
+CLAUDE.md
+.claude/
