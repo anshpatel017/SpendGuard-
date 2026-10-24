@@ -1,7 +1,7 @@
 {
   "manifest": {
-    "generated_at": "2026-10-23 21:07 UTC",
-    "commit": "9bcdbac",
+    "generated_at": "2026-10-24 17:41 UTC",
+    "commit": "426cd17",
     "dirty": true,
     "python": "3.13.5",
     "packages": {
@@ -24,15 +24,15 @@
       "seed": 42,
       "model": "qwen/qwen3.8-27b",
       "arm": "agent",
-      "notes": 20,
+      "notes": 21,
       "sampled": 20,
-      "citations_checked": 204,
+      "citations_checked": 226,
       "deterministic_valid": 1.0,
-      "semantic_valid": 0.8939,
+      "semantic_valid": 0.8905,
       "first_draft_valid": 1.0,
-      "regenerated": 12,
+      "regenerated": 13,
       "released": {
-        "failed_after_retries": 7,
+        "failed_after_retries": 8,
         "unverified": 2,
         "verified": 11
       },
@@ -42,10 +42,10 @@
         "spurious": 4,
         "confusion": {
           "real": {
-            "likely_true_positive": 13,
+            "likely_true_positive": 14,
             "likely_false_positive": 1,
             "inconclusive": 0,
-            "failed": 1
+            "failed": 0
           },
           "spurious": {
             "likely_true_positive": 1,
@@ -54,19 +54,19 @@
             "failed": 0
           }
         },
-        "real_kept": 0.867,
+        "real_kept": 0.933,
         "real_wrongly_dismissed": 0.067,
         "spurious_filtered": 0.75,
         "inconclusive": 0.0,
-        "failed": 0.053,
-        "decisive_accuracy": 0.889
+        "failed": 0.0,
+        "decisive_accuracy": 0.895
       },
-      "avg_tool_calls": 9.95,
-      "avg_tokens": 33965.3,
-      "avg_seconds": 30.0329,
+      "avg_tool_calls": 10.0476,
+      "avg_tokens": 34275.381,
+      "avg_seconds": 32.5006,
       "quota_stopped": true,
-      "triage_accuracy": 0.889,
-      "real_kept": 0.867,
+      "triage_accuracy": 0.895,
+      "real_kept": 0.933,
       "spurious_filtered": 0.75
     },
     {

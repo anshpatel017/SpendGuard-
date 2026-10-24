@@ -76,13 +76,45 @@ def ingest(
     source: Annotated[Path, typer.Argument(help="Source CSV file.", exists=True, dir_okay=False)],
     mapping: Annotated[str, typer.Option(help="Mapping name or YAML path.")] = "synthetic_inr",
     db: Annotated[Path | None, typer.Option(help="DuckDB path.")] = None,
+    store: Annotated[
+        Path | None, typer.Option(help="Case store to record this run in (Pipeline Runs).")
+    ] = None,
 ) -> None:
     """Ingest a CSV into the DuckDB transactions table."""
+    from datetime import datetime
+
+    from spendguard.db.store import get_engine, record_run
     from spendguard.pipeline.ingest import ingest as run_ingest
     from spendguard.pipeline.mapping import load_mapping
 
+    started = datetime.now()
     with console.status(f"Ingesting {source.name}..."):
         result = run_ingest(source, load_mapping(mapping), db_path=db)
+
+    # The operational audit trail: `detect` and `investigate` already record a run,
+    # so an ingestion that did not left the Pipeline Runs page claiming a category it
+    # could never fill. The dataset card is the detailed record; this is the one line
+    # that says the step happened, when, and over how many rows.
+    record_run(
+        get_engine(f"sqlite:///{store.as_posix()}" if store else None),
+        f"ingest-{started:%Y%m%dT%H%M%S}",
+        "ingest",
+        result.dataset,
+        config={
+            "source": result.source_path.name,
+            "source_sha256": result.source_sha256,
+            "mapping": mapping,
+            "db_path": str(result.db_path),
+        },
+        summary={
+            "rows_read": result.rows_read,
+            "rows_loaded": result.rows_loaded,
+            "rows_dropped": result.rows_dropped,
+            "dropped": result.dropped,
+            "seconds": result.duration_seconds,
+        },
+        started_at=started,
+    )
 
     table = Table(title=f"Ingested {result.dataset}", show_header=False)
     table.add_row("Rows read", f"{result.rows_read:,}")
@@ -207,8 +239,14 @@ def evaluate(
         int, typer.Option(help="Seed of the injected database.")
     ] = settings.random_seed,
     db: Annotated[Path | None, typer.Option(help="Injected DuckDB to evaluate.")] = None,
+    store: Annotated[
+        Path | None, typer.Option(help="Case store to record this run in (Pipeline Runs).")
+    ] = None,
 ) -> None:
     """Score detectors against the planted anomalies."""
+    from datetime import datetime
+
+    from spendguard.db.store import get_engine, record_run
     from spendguard.eval.injection import default_injected_path
     from spendguard.eval.metrics import ALL
     from spendguard.eval.runner import run_evaluation
@@ -218,8 +256,37 @@ def evaluate(
         console.print(f"[red]No injected database at {path}.[/red] Run `spendguard inject` first.")
         raise typer.Exit(code=1)
 
+    started = datetime.now()
     with console.status("Running detectors..."):
         run = run_evaluation(path, detector or ["baseline"])
+
+    # `eval_runs` in DuckDB stays the experiment record - parameters, seeds and the
+    # numbers, beside the results they explain (FR-7.10). This is the separate,
+    # operational "what ran and when" line, in the same place as detect and
+    # investigate, so the Pipeline Runs page can account for all four stages.
+    headline = next(
+        (m for m in run.metrics if m.granularity == "case" and m.anomaly_type == ALL), None
+    )
+    record_run(
+        get_engine(f"sqlite:///{store.as_posix()}" if store else None),
+        run.run_id,
+        "evaluate",
+        run.db_path.stem,
+        config={
+            "seed": run.seed,
+            "detectors": sorted(run.cases),
+            "db_path": str(run.db_path),
+            **{k: v for k, v in run.config.items()},
+        },
+        summary={
+            "transactions": run.transactions,
+            "ground_truth_groups": run.ground_truth_groups,
+            "cases": {name: len(found) for name, found in run.cases.items()},
+            "f1": round(headline.f1, 4) if headline else None,
+            "seconds": run.seconds,
+        },
+        started_at=started,
+    )
 
     for granularity in ("case", "row"):
         table = Table(title=f"Per {granularity} - {run.run_id}")
