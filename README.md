@@ -124,3 +124,4 @@ retrieval, `api` for FastAPI, `track` for MLflow, `linkage` for optional Splink.
 ## Honest scope
 
 SpendGuard does **not** claim better raw detection accuracy than commercial systems trained on hundreds of millions of documents. The contribution is the layer *after* detection: automated investigation with machine-verified citations, delivered open-source and fully local.
+

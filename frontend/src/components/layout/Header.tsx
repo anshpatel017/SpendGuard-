@@ -40,6 +40,9 @@ export function Header({
   } else if (currentPath === "/data") {
     breadcrumb = "Data Lake";
     pageTitle = "Data Explorer";
+  } else if (currentPath === "/intake") {
+    breadcrumb = "Data Lake";
+    pageTitle = "Add Data";
   } else if (currentPath === "/runs") {
     breadcrumb = "Pipeline";
     pageTitle = "Pipeline Runs History";

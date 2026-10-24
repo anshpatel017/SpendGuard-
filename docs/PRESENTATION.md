@@ -19,7 +19,7 @@ spendguard check-evaluation      # fails if any figure in EVALUATION.md has drif
 ## 1. The one sentence
 
 Generated, never typed. It lives in `docs/results/headline.md` and refuses to quote a
-citation rate until the sample reaches 20 notes:
+citation rate until the sample reaches 20 notes, which it now has:
 
 > On 50,963 seeded synthetic transactions carrying 508 planted anomalies, across 3 seeds,
 > SpendGuard's four detectors reach a pooled per-case **F1 of 0.689 ± 0.006** against a
@@ -56,25 +56,32 @@ The ± is the sample standard deviation across the three seeds, not a confidence
 
 | Figure | Value | Caveat you must say with it |
 |---|---|---|
-| Notes written (seed 42) | 17 of a 20-case sample | Sample still filling — 3 short of the 20 the headline needs |
-| **Local model, same seed** | **5 notes, 3 verified, 100% rule-checked** | Qwen2.5-3B under Ollama. Its own row, never pooled with the hosted model (D-33) |
-| **Citation validity, rule-checked** | **100.0%** over 164 citations | This is the headline number — no model involved |
-| Citation validity, model-judged | 87.8% | Always reported *beside* the above, never blended into it (D-13) |
+| Notes written (seed 42) | **20 of a 20-case sample** | Complete. `headline.md` quotes the citation rate rather than withholding it |
+| **Local model, same seed** | **5 notes, 3 verified, 100% rule-checked** over 12 citations | Qwen2.5-3B under Ollama. Its own row, never pooled with the hosted model (D-33) |
+| **Citation validity, rule-checked** | **100.0%** over 204 citations | This is the headline number — no model involved |
+| Citation validity, model-judged | 89.4% | Always reported *beside* the above, never blended into it (D-13) |
 | First-draft validity | 100.0% | What the Investigator produced unaided |
-| Notes verified | 9 of 17 (6 failed checks, 2 unverified) | `verified` requires **both** checks to pass |
-| Cost per investigation | 33,700 tokens, 9.6 tool calls, 30 s | Free tier, ~10 investigations a day |
+| Notes verified | 11 of 20 (7 failed checks, 2 unverified) | `verified` requires **both** checks to pass |
+| Cost per investigation | 33,965 tokens, 9.9 tool calls, 30.0 s | Free tier, ~10 investigations a day |
 
 ### The ablation — the strongest single table you have
 
-| Arm | Released | Model-judged | Real kept | **Spurious filtered** | **Decisive accuracy** |
+| Arm | Released (rule-checked) | Model-judged | Real kept | **Spurious filtered** | **Decisive accuracy** |
 |---|---:|---:|---:|---:|---:|
-| **agent** | 100% | 86.1% | 82% | **100%** | **100%** |
+| **agent** | 100% | 89.4% | 87% | **75%** | **89%** |
 | template | 100% | 73.0% | 100% | **0%** | **79%** |
 
-Both arms on the same 15-case sample. The template keeps every real anomaly because it
-never dismisses anything, and filters none of the spurious ones for the same reason — it
-cannot weigh an innocent explanation. **That is the whole argument for the investigation
-layer, measured rather than asserted.**
+**Spurious filtered is the column that is the contribution.** The template keeps every real
+anomaly because it never dismisses anything, and filters none of the spurious ones for the
+same reason — it cannot weigh an innocent explanation. **That is the argument for the
+investigation layer, measured rather than asserted.**
+
+Two caveats to say with it, because a panel will find them otherwise. **The arms are not the same
+size:** the agent has 19 investigated of 20 sampled, the template 14 of 15,
+so this is a comparison of two partial runs rather than a matched one. And **the investigated
+subset is severity-biased** (FR-7.6) — cases are worked highest-severity first and a spent
+daily quota stops the run where it stands, so these are rates over the harder cases, not over
+the whole sample. `agent.md` states both on its face.
 
 ### Real data — `docs/EVALUATION.md` §4.0c
 
@@ -140,7 +147,7 @@ to do before you print.
 | "investigates every flagged case" | "detects across 100% of transactions, then autonomously **investigates prioritized cases**" |
 | "more accurate than commercial tools" | "the contribution is the layer *after* detection" |
 | "fraud detected" on California data | "**value implicated** by flagged transactions" |
-| a citation rate with no sample size | "100% over 17 notes" — the sample size travels with the rate |
+| a citation rate with no sample size | "100% over 20 notes" — the sample size travels with the rate |
 
 ---
 
@@ -163,7 +170,7 @@ labelled as value implicated, never as fraud detected.
 
 **"Is it actually local?"**
 Yes, and it was run that way. Qwen2.5-3B-Instruct under Ollama, 2,158 MiB of a 4 GB
-RTX 2050, writing **5 audit notes with 2 verified** while every non-loopback connection
+RTX 2050, writing **5 audit notes with 3 verified** while every non-loopback connection
 was blocked. The provider is one line of configuration; the evaluation numbers come from
 the hosted free tier because it is faster per case, not because anything needs it.
 
